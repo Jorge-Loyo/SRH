@@ -23,10 +23,10 @@ services:
     container_name: dotacion_db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_password_super_segura
-      MYSQL_DATABASE: dotacion_db
-      MYSQL_USER: dotacion_user
-      MYSQL_PASSWORD: dotacion_password_segura
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
