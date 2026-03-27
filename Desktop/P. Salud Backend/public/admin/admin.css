@@ -1,0 +1,6 @@
+/* Ajustes suaves del panel AdminJS (no del login) */
+/* Oculta cualquier footer genérico si llegara a aparecer (fallback) */
+footer a[href*="adminjs"] { display: none !important; }
+
+/* El sidebar ahora muestra información del usuario - NO ocultamos */
+/* Mantenemos el sidebar visible para mostrar datos del usuario */

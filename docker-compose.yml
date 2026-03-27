@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      # Contexto a la carpeta anidada
+      context: "./Desktop/P. Salud Backend" 
+      dockerfile: Dockerfile
+    container_name: dotacion_app
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8091:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # Mapea los logs desde la carpeta anidada del contenedor
+      - ./app_logs:/usr/src/app/logs 
+
+  db:
+    image: core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/mysql:8.0
+    container_name: dotacion_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_super_segura
+      MYSQL_DATABASE: dotacion_db
+      MYSQL_USER: dotacion_user
+      MYSQL_PASSWORD: dotacion_password_segura
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  mysql_data:
