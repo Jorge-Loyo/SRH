@@ -1,7 +1,7 @@
 stages:
   - deploy
 
-deploy_app:
+deploy_dev:
   stage: deploy
   # Usamos la imagen oficial de DevOps ASI que ya tiene SSH y herramientas instaladas
   image: core-harbor-devops-msgc.gcba.gob.ar/devops-images/docker-compose-deploy
