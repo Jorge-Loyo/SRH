@@ -228,7 +228,35 @@ const UserInfo = () => {
       sessionStorage.setItem('sidebar_collapsed', nowCollapsed ? 'true' : 'false')
     })
 
-    document.body.appendChild(btn)
+    // Intentar inyectar en el topbar de AdminJS (al lado del sidebar, inicio del header)
+    const topbar =
+      document.querySelector('[class*="TopBar"]') ||
+      document.querySelector('[class*="Topbar"]') ||
+      document.querySelector('[class*="top-bar"]') ||
+      document.querySelector('[data-testid="topbar"]') ||
+      document.querySelector('header[class]')
+
+    if (topbar) {
+      // Adaptar estilos para el fondo oscuro del topbar (sobreescribe el CSS fijo)
+      btn.style.cssText = [
+        'position: static',
+        'top: auto',
+        'left: auto',
+        'z-index: auto',
+        'background: rgba(255,255,255,0.15)',
+        'border: 1px solid rgba(255,255,255,0.3)',
+        'color: #fff',
+        'box-shadow: none',
+        'margin-right: 8px',
+        'flex-shrink: 0',
+      ].join(';')
+      btn.addEventListener('mouseenter', () => { btn.style.background = 'rgba(255,255,255,0.28)' })
+      btn.addEventListener('mouseleave', () => { btn.style.background = 'rgba(255,255,255,0.15)' })
+      topbar.prepend(btn)
+    } else {
+      // Fallback: posición fija esquina superior izquierda (comportamiento original)
+      document.body.appendChild(btn)
+    }
 
     return () => {
       const existing = document.getElementById('sidebar-toggle-btn')

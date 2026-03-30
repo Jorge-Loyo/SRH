@@ -781,7 +781,7 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
                 <Button 
                   size="sm"
                   style={{ 
-                    background: 'rgba(16, 185, 129, 0.9)', 
+                    background: 'rgba(255,255,255,0.15)', 
                     border: '1px solid rgba(255,255,255,0.3)',
                     color: '#fff',
                     fontSize: 12
@@ -796,7 +796,7 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
                 <Button 
                   size="sm"
                   style={{ 
-                    background: 'rgba(59, 130, 246, 0.9)', 
+                    background: 'rgba(255,255,255,0.15)', 
                     border: '1px solid rgba(255,255,255,0.3)',
                     color: '#fff',
                     fontSize: 12
@@ -840,7 +840,7 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
               size="sm"
               onClick={handleOpenTablaAmpliada}
               style={{ 
-                background: 'rgba(255,255,255,0.2)', 
+                background: 'rgba(59, 130, 246, 0.9)', 
                 border: '1px solid rgba(255,255,255,0.3)',
                 color: '#fff',
                 fontSize: 12
