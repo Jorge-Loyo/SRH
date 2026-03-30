@@ -22,7 +22,8 @@ function generateJWT(user, expiresIn = null, jti = null) {
     email: user.email,
     role: user.role,
     username: user.username,
-    hospital_code: user.hospital_code || null
+    hospital_code: user.hospital_code || null,
+    user_id: user.id || user.user_id || null
   };
   
   // Include jti if provided (for token revocation tracking)
@@ -86,7 +87,9 @@ async function validateJWTAndLoadUser(token) {
     return {
       username: payload.sub,
       email: payload.sub,
-      role: payload.role
+      role: payload.role,
+      user_id: payload.user_id || null,
+      id: payload.user_id || null
     };
   } catch (err) {
     // JWT verification failed (invalid signature, expired, malformed, etc.)

@@ -82,7 +82,7 @@ const AuditoriaPage = () => {
       },
       page: 1
     }))
-    setTimeout(() => loadLogs(), 100)
+    // El useEffect reacciona al cambio de filtros y recarga automáticamente
   }
 
   const totalPages = Math.ceil(state.total / state.perPage)

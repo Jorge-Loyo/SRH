@@ -78,7 +78,7 @@ async function createUser(req, res, AppDataSource) {
     const { hashPassword } = require('../utils/passwordHelpers');
     const repo = AppDataSource.getRepository(User);
     
-    const { username, email, role, password, hospital_code } = req.body;
+    const { username, email, role, password, hospital_code } = req.fields || req.body || {};
     
     if (!username || !password || !role) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
@@ -117,10 +117,10 @@ async function createUser(req, res, AppDataSource) {
 async function updateUser(req, res, AppDataSource) {
   try {
     const { User } = require('../entities-class/User');
-    const bcrypt = require('bcryptjs');
+    const { hashPassword } = require('../utils/passwordHelpers');
     const repo = AppDataSource.getRepository(User);
     
-    const { id, username, email, role, password, hospital_code } = req.body;
+    const { id, username, email, role, password, hospital_code } = req.fields || req.body || {};
     
     if (!id) {
       return res.status(400).json({ error: 'ID requerido' });
@@ -313,7 +313,7 @@ async function updatePermission(req, res, AppDataSource) {
     const { Permission } = require('../entities-class/Permission');
     const repo = AppDataSource.getRepository(Permission);
     
-    const { id, description, can_create, can_update, can_delete, can_alter_structure, can_manage_users, filter_by_hospital, hospital_code } = req.body;
+    const { id, description, can_create, can_update, can_delete, can_alter_structure, can_manage_users, filter_by_hospital, hospital_code } = req.fields || req.body || {};
     
     if (!id) {
       return res.status(400).json({ error: 'ID requerido' });
