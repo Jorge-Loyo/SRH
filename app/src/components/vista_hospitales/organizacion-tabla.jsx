@@ -485,20 +485,20 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
   // Estilos reutilizables para KPIs
   const kpiStyles = useMemo(() => ({
     activo: {
-      background: '#cd5137',
-      shadow: '0 4px 16px rgba(205, 81, 55, 0.6)'
+      background: '#8DE2D6',
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.6)'
     },
     comision: {
-      background: '#b5e6e7',
-      shadow: '0 4px 16px rgba(181, 230, 231, 0.6)'
+      background: '#FFCC00',
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.6)'
     },
     retencion: {
-      background: '#213a4d',
-      shadow: '0 4px 16px rgba(33, 58, 77, 0.6)'
+      background: '#153244',
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.6)'
     },
     bloqueado: {
-      background: '#e9b714',
-      shadow: '0 4px 16px rgba(233, 183, 20, 0.6)'
+      background: '#3C3C3B',
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.6)'
     }
   }), [])
 
