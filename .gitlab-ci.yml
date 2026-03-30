@@ -1,20 +1,21 @@
 stages:
   - deploy
 
-deploy_app:
+deploy_dev:
   stage: deploy
+  # Usamos la imagen oficial de DevOps ASI que ya tiene SSH y herramientas instaladas
+  image: core-harbor-devops-msgc.gcba.gob.ar/devops-images/docker-compose-deploy
   only:
     - develop
   before_script:
-    # Iniciamos el agente SSH y cargamos la llave privada
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    # Configuramos SSH para que no pida confirmación manual y le damos permisos estrictos
+    # Configuramos SSH para evitar el prompt de validación de host
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
     - chmod 600 ~/.ssh/config
   script:
-    - echo "Iniciando despliegue en la VM $SERVER_IP..."
-    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && git pull origin desarrollo-back && docker-compose up -d --build app"
+    - echo "Conectando a la VM $SERVER_IP para actualizar la App Dotación..."
+    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && git pull origin develop && docker-compose up -d --build app"
     - echo "¡Despliegue finalizado con éxito!"
