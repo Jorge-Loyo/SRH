@@ -4,7 +4,7 @@ services:
   app:
     build: 
       # Contexto a la carpeta anidada
-      context: "./Desktop/P. Salud Backend" 
+      context: "./app" 
       dockerfile: Dockerfile
     container_name: dotacion_app
     restart: unless-stopped

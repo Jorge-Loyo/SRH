@@ -1,0 +1,28 @@
+# Dependencias de Node
+app/node_modules/
+node_modules/
+
+# Logs de la aplicación
+app/logs/
+app_logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Archivos de Base de Datos y Dumps
+*.sql
+*.sql.save
+*.sqlite
+
+# Frameworks / Cache
+app/.adminjs/
+.adminjs/
+.DS_Store
+
+# Archivos temporales de Linux/Git
+*~

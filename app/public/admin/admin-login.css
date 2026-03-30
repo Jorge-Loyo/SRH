@@ -1,0 +1,86 @@
+/* Login limpio y moderno (solo visual) */
+:root {
+  /* Paleta cercana al login nativo de AdminJS */
+  --brand: #3a5af8; /* azul AdminJS */
+  --bg: #f8fafc;   /* fondo muy claro */
+  --card: #ffffff; /* tarjetas blancas */
+  --text: #111827; /* gris muy oscuro */
+  --muted: #6b7280; /* labels y subtítulos */
+  --danger: #dc2626;
+  --radius: 14px;
+  --shadow: 0 10px 24px rgba(31, 41, 55, 0.08);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: var(--bg);
+}
+
+.login {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 3rem 1rem;
+}
+.card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  display: grid;
+  gap: 1.25rem;
+}
+.brand { text-align: center; }
+.logo { width: 56px; height: 56px; display: block; margin: 0 auto .25rem; }
+.brand h1 { margin: .25rem 0 0; font-size: 1.25rem; }
+.subtitle { margin: .25rem 0 0; color: var(--muted); font-size: .9375rem; }
+
+.form { display: grid; gap: .9rem; }
+.field { display: grid; gap: .35rem; }
+label { font-size: .9rem; color: var(--muted); }
+input[type="text"], input[type="email"], input[type="password"] {
+  width: 100%;
+  padding: .8rem .9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(100,116,139,0.25);
+  outline: none;
+  background: #ffffff;
+  background-color: #ffffff;
+  appearance: none;
+  -webkit-appearance: none;
+  background-clip: padding-box;
+  color: inherit;
+}
+input:focus {
+  border-color: color-mix(in oklab, var(--brand) 65%, white);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent);
+}
+/* Evitar oscurecimiento por autocompletado del navegador */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  transition: background-color 9999s ease-in-out 0s;
+  box-shadow: 0 0 0px 1000px #ffffff inset;
+}
+.btn {
+  margin-top: .25rem;
+  width: 100%;
+  padding: .85rem 1rem;
+  border-radius: 12px;
+  border: 0;
+  background: linear-gradient(135deg, var(--brand), color-mix(in oklab, var(--brand) 85%, black));
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover { filter: brightness(1.05); }
+.btn:active { transform: translateY(0.5px); }
+
+.error { color: var(--danger); text-align: center; margin: .25rem 0 0; }
+.meta { text-align: center; color: var(--muted); }
