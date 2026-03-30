@@ -1,0 +1,22 @@
+stages:
+  - deploy
+
+deploy_dev:
+  stage: deploy
+  image: alpine:latest
+  only:
+    - develop  # El pipeline solo corre cuando se pushea a esta rama
+  before_script:
+    # Instalamos el cliente SSH y Git en el runner de GitLab
+    - apk update && apk add openssh-client git
+    # Iniciamos el agente SSH y cargamos la llave privada
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    # Deshabilitamos el chequeo estricto del host para que no pida confirmación manual
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
+  script:
+    - echo "Iniciando despliegue en la VM $SERVER_IP..."
+    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && git pull origin desarrollo-back && docker-compose up -d --build app"
+    - echo "¡Despliegue finalizado con éxito!"
