@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Box, H3, Text, Button, Input, Label, Icon } from '@adminjs/design-system'
 import Modal from '../reutilizables/Modal'
 import LoadingSpinner from '../reutilizables/LoadingSpinner'
@@ -29,21 +29,64 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: null, id: null })
+  const [hasDraft, setHasDraft] = useState(false)
 
   const isEditing = !!editData
+  const draftKey = `minuta_draft_${hospitalCode}`
 
-  // Cargar datos al abrir en modo edición
+  // Cargar datos al abrir
   useEffect(() => {
     if (isOpen && editData) {
       setTitulo(editData.titulo || '')
       setColumns(editData.datos_tabla?.columns || [{ id: 'col_1', name: 'Columna 1', type: 'text' }])
       setRows(editData.datos_tabla?.rows || [{}])
+      setHasDraft(false)
     } else if (isOpen && !editData) {
+      // Intentar recuperar borrador de localStorage
+      try {
+        const saved = localStorage.getItem(draftKey)
+        if (saved) {
+          const d = JSON.parse(saved)
+          const hasMeaningfulData = d.titulo || (d.columns && d.columns.length > 1) ||
+            (d.rows && d.rows.some(r => Object.keys(r).length > 0))
+          if (hasMeaningfulData) {
+            setTitulo(d.titulo || '')
+            setColumns(d.columns || [{ id: 'col_1', name: 'Columna 1', type: 'text' }])
+            setRows(d.rows || [{}])
+            setHasDraft(true)
+            return
+          }
+        }
+      } catch {}
       setTitulo('')
       setColumns([{ id: 'col_1', name: 'Columna 1', type: 'text' }])
       setRows([{}])
+      setHasDraft(false)
     }
-  }, [isOpen, editData])
+  }, [isOpen, editData, draftKey])
+
+  // Auto-guardar borrador en localStorage (debounced 500ms)
+  const draftTimerRef = useRef(null)
+  useEffect(() => {
+    if (isEditing || !isOpen) return
+    clearTimeout(draftTimerRef.current)
+    draftTimerRef.current = setTimeout(() => {
+      const hasMeaningfulData = titulo || columns.length > 1 ||
+        rows.some(r => Object.keys(r).length > 0)
+      if (hasMeaningfulData) {
+        try { localStorage.setItem(draftKey, JSON.stringify({ titulo, columns, rows })) } catch {}
+      }
+    }, 500)
+    return () => clearTimeout(draftTimerRef.current)
+  }, [titulo, columns, rows, isEditing, isOpen, draftKey])
+
+  const discardDraft = () => {
+    try { localStorage.removeItem(draftKey) } catch {}
+    setTitulo('')
+    setColumns([{ id: 'col_1', name: 'Columna 1', type: 'text' }])
+    setRows([{}])
+    setHasDraft(false)
+  }
 
   // Agregar nueva columna
   const handleAddColumn = () => {
@@ -157,6 +200,10 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
 
       const data = await response.json()
 
+      // Limpiar borrador guardado tras guardar exitosamente
+      try { localStorage.removeItem(draftKey) } catch {}
+      setHasDraft(false)
+
       if (onSuccess) {
         onSuccess(data)
       }
@@ -226,6 +273,33 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
           </>
         }
       >
+        {hasDraft && (
+          <Box
+            mb="md"
+            p="md"
+            style={{
+              backgroundColor: '#fffbe6',
+              border: '1px solid #ffe58f',
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8
+            }}
+          >
+            <Text style={{ margin: 0, fontSize: 13 }}>
+              ⚠️ Se recuperó un borrador guardado localmente. Podés continuar editando o descartarlo.
+            </Text>
+            <Button
+              variant="text"
+              onClick={discardDraft}
+              style={{ fontSize: 12, padding: '2px 8px', whiteSpace: 'nowrap', color: '#d4380d' }}
+            >
+              Descartar borrador
+            </Button>
+          </Box>
+        )}
+
         {error && (
           <Box mb="md" p="md" style={{ backgroundColor: '#fee', border: '1px solid #fcc', borderRadius: 4 }}>
             <Text color="error">{error}</Text>

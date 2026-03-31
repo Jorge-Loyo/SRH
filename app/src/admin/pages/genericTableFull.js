@@ -363,7 +363,15 @@ function buildGenericTableFull(tableKey, { AppDataSource, toCsvBase64 }) {
     const exportParam = (req?.query?.export || '').toString().toLowerCase()
     if (exportParam === 'xlsx' || exportParam === 'csv') {
       const { toExcelBase64 } = require('../../utils/excel')
-      const base64 = await toExcelBase64(rows, columns)
+      // Construir filtros con etiquetas legibles usando la configuración de la tabla
+      const labelMap = Object.fromEntries(config.filters.map(f => [f.field, f.label]))
+      const labeledFilters = {}
+      for (const [k, v] of Object.entries(appliedFilters)) {
+        const val = Array.isArray(v) ? v.join(', ') : String(v ?? '')
+        if (val) labeledFilters[labelMap[k] || k] = val
+      }
+      const filters = Object.keys(labeledFilters).length ? labeledFilters : null
+      const base64 = await toExcelBase64(rows, columns, { filters })
       return {
         xlsxBase64: base64,
         filename: `${config.key}_${Date.now()}.xlsx`,

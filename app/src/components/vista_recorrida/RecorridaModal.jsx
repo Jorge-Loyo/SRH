@@ -270,23 +270,59 @@ const RecorridaModal = ({ isOpen, onClose, hospitalCode, onSuccess, editData = n
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [hasDraft, setHasDraft] = useState(false)
 
   const isEditing = !!editData
+  const draftKey = `recorrida_draft_${hospitalCode}`
 
-  // Cargar datos al abrir en modo edición
+  // Cargar datos al abrir
   useEffect(() => {
     if (isOpen && editData) {
       setTitulo(editData.titulo || '')
       setContenidoHtml(editData.contenido_html || '')
+      setHasDraft(false)
     } else if (isOpen && draftData) {
-      // Cargar desde draft si existe (persistencia)
+      // Cargar desde draft prop si existe (persistencia vía padre)
       setTitulo(draftData.titulo || '')
       setContenidoHtml(draftData.contenidoHtml || '')
+      setHasDraft(false)
     } else if (isOpen && !editData && !draftData) {
+      // Intentar recuperar borrador de localStorage
+      try {
+        const saved = localStorage.getItem(draftKey)
+        if (saved) {
+          const d = JSON.parse(saved)
+          if (d.titulo || d.contenidoHtml) {
+            setTitulo(d.titulo || '')
+            setContenidoHtml(d.contenidoHtml || '')
+            setHasDraft(true)
+            return
+          }
+        }
+      } catch {}
       setTitulo('')
       setContenidoHtml('')
+      setHasDraft(false)
     }
-  }, [isOpen, editData, draftData])
+  }, [isOpen, editData, draftData, draftKey])
+
+  // Auto-guardar borrador en localStorage (debounced 500ms)
+  useEffect(() => {
+    if (isEditing || !isOpen) return
+    const timer = setTimeout(() => {
+      if (titulo || contenidoHtml) {
+        try { localStorage.setItem(draftKey, JSON.stringify({ titulo, contenidoHtml })) } catch {}
+      }
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [titulo, contenidoHtml, isEditing, isOpen, draftKey])
+
+  const discardDraft = () => {
+    try { localStorage.removeItem(draftKey) } catch {}
+    setTitulo('')
+    setContenidoHtml('')
+    setHasDraft(false)
+  }
 
   // Guardar draft cuando cambia el contenido (sin re-renders excesivos)
   // Usar un timeout para evitar guardar en cada keystroke
@@ -404,7 +440,10 @@ const RecorridaModal = ({ isOpen, onClose, hospitalCode, onSuccess, editData = n
       }
 
       setSuccess(true)
-      
+      // Limpiar borrador guardado tras guardar exitosamente
+      try { localStorage.removeItem(draftKey) } catch {}
+      setHasDraft(false)
+
       // Si no es modo "no redirigir", limpiar formulario
       if (!disableRedirect) {
         setTitulo('')
@@ -489,6 +528,34 @@ const RecorridaModal = ({ isOpen, onClose, hospitalCode, onSuccess, editData = n
         </>
       }
     >
+      {/* Aviso de borrador recuperado */}
+      {hasDraft && (
+        <Box
+          mb="md"
+          p="md"
+          style={{
+            backgroundColor: '#fffbe6',
+            border: '1px solid #ffe58f',
+            borderRadius: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8
+          }}
+        >
+          <Text style={{ margin: 0, fontSize: 13 }}>
+            ⚠️ Se recuperó un borrador guardado localmente. Podés continuar editando o descartarlo.
+          </Text>
+          <Button
+            variant="text"
+            onClick={discardDraft}
+            style={{ fontSize: 12, padding: '2px 8px', whiteSpace: 'nowrap', color: '#d4380d' }}
+          >
+            Descartar borrador
+          </Button>
+        </Box>
+      )}
+
       {/* Mensajes de error/éxito */}
       {error && (
         <Box

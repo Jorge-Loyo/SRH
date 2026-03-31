@@ -41,7 +41,7 @@ const config = {
     jwtSecret: process.env.JWT_SECRET,  // ⚠️ Requerido (validado en envValidator, mínimo 32 chars)
     usersJson: process.env.USERS_JSON || '[]',
     cookies: toBool(process.env.AUTH_COOKIES, false),
-    idleMinutes: Number(process.env.AUTH_IDLE_MINUTES || 15),
+    idleMinutes: Number(process.env.AUTH_IDLE_MINUTES || 30),
   },
   export: {
     maxBatch: Number(process.env.MAX_EXPORT_BATCH || 20000),

@@ -38,6 +38,48 @@ function registerAdminExportRoutes({ adminRouter, AppDataSource, entities }) {
   // Métricas simples en memoria
   const metrics = { exportsTotal: 0, datosCompletos: 0, xlsx: { personas:0, cargos:0, roles:0, siglas:0, bajas:0 }, rateLimited:0 }
 
+  // Parámetros de sistema que no son filtros de datos
+  const SYSTEM_PARAMS = new Set(['sortBy', 'sortDir', 'batchSize', 'export', 'page', 'perPage', 'hospital', 'procesos_concursales'])
+
+  // Etiquetas legibles para los filtros de exportación de hospital
+  const HOSPITAL_FILTER_LABELS = {
+    unificador_puesto:        'Unificador Puesto',
+    especialidad:             'Especialidad',
+    literal_puesto:           'Puesto',
+    literal_codigo_registro:  'Carrera',
+    escalafon:                'Escalafón',
+    situacion_revista:        'Situación de Revista',
+    agrupador:                'Agrupamiento',
+    sexo:                     'Sexo',
+    reparticion:              'Repartición',
+    estado:                   'Estado',
+    codigo_cargo:             'Código de Cargo',
+    nombre_apellido:          'Nombre y Apellido',
+    cuil:                     'CUIL',
+    codigo_rol:               'Código SIAL',
+    mail_laboral:             'Mail Laboral',
+    telefono:                 'Teléfono',
+    edad_min:                 'Edad mínima',
+    edad_max:                 'Edad máxima',
+    antiguedad_min:           'Antigüedad mínima',
+    antiguedad_max:           'Antigüedad máxima',
+  }
+
+  /**
+   * Extrae los filtros activos de req.query excluyendo params del sistema.
+   * @param {Request} req
+   * @param {Object} [extra]  - Pares extra { "Etiqueta": valor } a incluir siempre
+   * @param {Object} [labels] - Mapa { fieldName: "Etiqueta legible" }
+   */
+  function buildQueryFilters(req, extra = {}, labels = {}) {
+    const result = { ...extra }
+    for (const [k, v] of Object.entries(req.query || {})) {
+      if (SYSTEM_PARAMS.has(k) || !v || String(v).trim() === '') continue
+      result[labels[k] || k] = v
+    }
+    return Object.keys(result).length ? result : null
+  }
+
   // Datos Completos (JOIN múltiple)
   const { config } = require('../config/env')
   const MAX_BATCH = Math.max(1000, config.export.maxBatch || 20000)
@@ -196,6 +238,7 @@ LEFT JOIN bajas_concursos b ON c.id_cargo = b.id_cargo AND c.periodo = b.periodo
         filename: `datos_completos_${Date.now()}.xlsx`,
         columns,
         batchSize,
+        filters: buildQueryFilters(req, { 'Exportación': 'Datos Completos' }),
         fetchBatch: async (offset, size) => {
           const exportSql = `${selectSql} ${baseFrom} ${whereSql} ${orderSql} LIMIT ? OFFSET ?`
           return AppDataSource.query(exportSql, [...values, size, offset])
@@ -245,6 +288,7 @@ LEFT JOIN bajas_concursos b ON c.id_cargo = b.id_cargo AND c.periodo = b.periodo
           filename: `${baseName}_${Date.now()}.xlsx`,
           columns: cols,
           batchSize,
+          filters: buildQueryFilters(req, { 'Tabla': baseName }),
           fetchBatch: async (offset, size) => {
             const sql = `SELECT ${cols.map(c => `${alias}.${c}`).join(', ')} FROM ${meta.tableName} ${alias}${whereSql} ORDER BY ${alias}.${safeOrderCol} ${safeOrderDir} LIMIT ? OFFSET ?`
             return AppDataSource.query(sql, [...values, size, offset])
@@ -289,7 +333,19 @@ LEFT JOIN bajas_concursos b ON c.id_cargo = b.id_cargo AND c.periodo = b.periodo
       const rows = result.rows || []
       const columns = result.columns || []
       const periodo = (req.query.periodo || Date.now()).toString().replace(/[^\w\-]/g, '_')
-      const buffer = await toExcelBuffer(rows, columns)
+
+      // Construir filtros con etiquetas legibles
+      const exportFilters = {
+        'Hospital': hospital,
+        'Período':  req.query.periodo || '-',
+        'Vista':    tipo === 'bajas-concursos' ? 'Procesos Concursales (Bajas)' : 'Dotación',
+      }
+      for (const [k, v] of Object.entries(req.query)) {
+        if (SYSTEM_PARAMS.has(k) || !v || String(v).trim() === '') continue
+        exportFilters[HOSPITAL_FILTER_LABELS[k] || k] = v
+      }
+
+      const buffer = await toExcelBuffer(rows, columns, { filters: exportFilters })
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       res.setHeader('Content-Disposition', `attachment; filename="${tipo}_${hospital}_${periodo}.xlsx"`)

@@ -82,7 +82,7 @@ async function findValidRefreshToken(raw) {
   const rt = await repo.findOne({ where: { token_hash, revoked: false }, relations: ['user'] });
   if (!rt) return null;
   if (rt.expires_at <= now) return null;
-  const idleMs = (config.auth.idleMinutes || 15) * 60 * 1000;
+  const idleMs = (config.auth.idleMinutes || 30) * 60 * 1000;
   if (rt.last_used && now.getTime() - new Date(rt.last_used).getTime() > idleMs) {
     rt.revoked = true;
     rt.revoked_reason = 'idle';

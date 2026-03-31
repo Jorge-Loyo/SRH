@@ -7,8 +7,29 @@ const logger = require('../utils/logger')
 const periodoCache = new Map();
 const PERIODO_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
-/**
- * Obtiene el período más reciente para un hospital (con caché)
+// Etiquetas legibles para los filtros de la vista OrganizacionTabla
+const HOSPITAL_FILTER_LABELS = {
+  unificador_puesto:        'Unificador Puesto',
+  especialidad:             'Especialidad',
+  literal_puesto:           'Puesto',
+  literal_codigo_registro:  'Carrera',
+  escalafon:                'Escalafón',
+  situacion_revista:        'Situación de Revista',
+  agrupador:                'Agrupamiento',
+  sexo:                     'Sexo',
+  reparticion:              'Repartición',
+  estado:                   'Estado',
+  codigo_cargo:             'Código de Cargo',
+  nombre_apellido:          'Nombre y Apellido',
+  cuil:                     'CUIL',
+  codigo_rol:               'Código SIAL',
+  mail_laboral:             'Mail Laboral',
+  telefono:                 'Teléfono',
+  edad_min:                 'Edad mínima',
+  edad_max:                 'Edad máxima',
+  antiguedad_min:           'Antigüedad mínima',
+  antiguedad_max:           'Antigüedad máxima',
+}
  * @param {Object} AppDataSource - TypeORM data source
  * @param {string} hospital - Código del hospital
  * @returns {Promise<string|null>} Período más reciente o null
@@ -68,8 +89,18 @@ async function handleOrganizacionTabla({ AppDataSource, req }){
   if (req.query.export === 'xlsx' || req.query.export === 'csv') {
     try {
       const { toExcelBase64 } = require('../utils/excel')
-      result.xlsxBase64 = await toExcelBase64(result.rows || [], result.columns || [])
+      // Construir contexto de filtros para la hoja "Filtros"
       const tipo = req.query.procesos_concursales === 'true' ? 'bajas_concursos' : 'dotacion'
+      const exportFilters = {
+        'Hospital':  hospital,
+        'Período':   req.query.periodo || '-',
+        'Vista':     tipo === 'bajas_concursos' ? 'Procesos Concursales (Bajas)' : 'Dotación',
+      }
+      for (const [k, label] of Object.entries(HOSPITAL_FILTER_LABELS)) {
+        const v = (req.query[k] || '').toString().trim()
+        if (v) exportFilters[label] = v
+      }
+      result.xlsxBase64 = await toExcelBase64(result.rows || [], result.columns || [], { filters: exportFilters })
       result.filename = `${tipo}_${hospital}_${req.query.periodo}_p${req.query.page || 1}.xlsx`
     } catch (e) {
       // Fallback: si excel falla, intentar sin estilos

@@ -69,7 +69,18 @@ const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange }) =>
           items = [currentPeriod, ...items]
           periodsMetadata.unshift({ periodo: currentPeriod, hasData: false, isCurrent: true })
         }
-        
+
+        // Limitar a MAX_PERIODOS_CON_DATOS periodos con datos + todos los que no tienen datos
+        const MAX_PERIODOS_CON_DATOS = 12
+        const metaMap = new Map(periodsMetadata.map(m => [m.periodo, m]))
+        let contadorConDatos = 0
+        items = items.filter(p => {
+          const meta = metaMap.get(p) || { hasData: true }
+          if (!meta.hasData) return true  // siempre incluir periodos sin datos
+          contadorConDatos++
+          return contadorConDatos <= MAX_PERIODOS_CON_DATOS
+        })
+
         setData({ 
           loading: false, 
           items, 
