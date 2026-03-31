@@ -64,22 +64,21 @@ async function handleOrganizacionTabla({ AppDataSource, req }){
   const { handleOrganizacionTabla: handleGeneric } = require('./common/organizacion-tabla-handler')
   let result = await handleGeneric({ AppDataSource, req }, hospital)
 
-  // Export CSV si se solicita
-  if (req.query.export === 'csv') {
+  // Export Excel si se solicita
+  if (req.query.export === 'xlsx' || req.query.export === 'csv') {
     try {
-      const { toCsvBase64 } = require('../utils/csv')
-      result.csvBase64 = toCsvBase64(result.rows || [], result.columns || [])
+      const { toExcelBase64 } = require('../utils/excel')
+      result.xlsxBase64 = await toExcelBase64(result.rows || [], result.columns || [])
       const tipo = req.query.procesos_concursales === 'true' ? 'bajas_concursos' : 'dotacion'
-      result.filename = `${tipo}_${hospital}_${req.query.periodo}_p${req.query.page || 1}.csv`
+      result.filename = `${tipo}_${hospital}_${req.query.periodo}_p${req.query.page || 1}.xlsx`
     } catch (e) {
-      // Fallback minimal en caso de error inesperado
-      const csv = [
-        (result.columns || []).join(','),
-        ...(result.rows || []).map(r => (result.columns || []).map(c => JSON.stringify(r[c] ?? '')).join(','))
-      ].join('\n')
-      result.csvBase64 = Buffer.from(csv, 'utf8').toString('base64')
+      // Fallback: si excel falla, intentar sin estilos
+      const cols = result.columns || []
+      const rowsData = result.rows || []
+      const lines = [cols.join(','), ...rowsData.map(r => cols.map(c => JSON.stringify(r[c] ?? '')).join(','))]
+      result.xlsxBase64 = Buffer.from(lines.join('\n'), 'utf8').toString('base64')
       const tipo = req.query.procesos_concursales === 'true' ? 'bajas_concursos' : 'dotacion'
-      result.filename = `${tipo}_${hospital}_${req.query.periodo}_p${req.query.page || 1}.csv`
+      result.filename = `${tipo}_${hospital}_${req.query.periodo}_p${req.query.page || 1}.xlsx`
     }
   }
 

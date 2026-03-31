@@ -169,33 +169,39 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
     }
   }
 
-  // Exportar a Excel (descarga CSV)
-  const handleExportExcel = () => {
+  // Exportar a Excel (genera xlsx en el servidor y lo descarga)
+  const handleExportExcel = async () => {
     if (columns.length === 0 || rows.length === 0) {
       alert('No hay datos para exportar')
       return
     }
 
-    // Generar CSV
-    const headers = columns.map(col => `"${col.name}"`).join(',')
-    const data = rows.map(row => {
-      return columns.map(col => {
-        const value = row[col.id] || ''
-        return `"${String(value).replace(/"/g, '""')}"`
-      }).join(',')
-    }).join('\n')
+    try {
+      const response = await fetch('/admin/export/minuta.xlsx', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ titulo, hospitalCode, columns, rows })
+      })
 
-    const csv = `${headers}\n${data}`
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${titulo || 'minuta'}_${hospitalCode}.csv`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.error || `Error ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${titulo || 'minuta'}_${hospitalCode}.xlsx`
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      alert('No se pudo exportar el archivo Excel: ' + (e?.message || e))
+    }
   }
 
   if (!isOpen) return null

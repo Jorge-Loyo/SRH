@@ -31,7 +31,7 @@ const TABLES_CONFIG = {
     label: 'Personas',
     description: 'Vista completa de personas',
     pageName: 'PersonasFull',
-    exportRoute: '/admin/export/personas.csv',
+    exportRoute: '/admin/export/personas.xlsx',
     defaultSort: { column: 'id_persona', direction: 'ASC' },
     defaultPerPage: 50,
     
@@ -81,7 +81,7 @@ const TABLES_CONFIG = {
     label: 'Cargos',
     description: 'Vista completa de cargos',
     pageName: 'CargosFull',
-    exportRoute: '/admin/export/cargos.csv',
+    exportRoute: '/admin/export/cargos.xlsx',
     defaultSort: { column: 'id_cargo', direction: 'ASC' },
     defaultPerPage: 50,
     
@@ -103,7 +103,7 @@ const TABLES_CONFIG = {
     label: 'Roles',
     description: 'Vista completa de roles',
     pageName: 'RolesFull',
-    exportRoute: '/admin/export/roles.csv',
+    exportRoute: '/admin/export/roles.xlsx',
     defaultSort: { column: 'id_rol', direction: 'ASC' },
     defaultPerPage: 50,
     
@@ -152,7 +152,7 @@ const TABLES_CONFIG = {
     label: 'Siglas',
     description: 'Vista completa de siglas',
     pageName: 'SiglasFull',
-    exportRoute: '/admin/export/siglas.csv',
+    exportRoute: '/admin/export/siglas.xlsx',
     defaultSort: { column: 'id_sigla', direction: 'ASC' },
     defaultPerPage: 50,
     
@@ -175,7 +175,7 @@ const TABLES_CONFIG = {
     label: 'Bajas y Concursos',
     description: 'Vista completa de bajas y concursos',
     pageName: 'BajasFull',
-    exportRoute: '/admin/export/bajas-concursos.csv',
+    exportRoute: '/admin/export/bajas.xlsx',
     defaultSort: { column: 'id_baja', direction: 'ASC' },
     defaultPerPage: 50,
     

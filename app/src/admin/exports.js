@@ -1,7 +1,7 @@
-// Rutas de exportación CSV (streaming) para AdminJS
+// Rutas de exportación Excel (xlsx) para AdminJS
 // Centraliza lógica para entidades simples y la vista combinada DatosCompletos
 
-const { escapeCsvValue } = require('../utils/csv')
+const { streamExcelResponse, toExcelBuffer, toMinutaExcelBuffer } = require('../utils/excel')
 const logger = require('../utils/logger')
 
 // Rate limiting simple en memoria (ventana fija)
@@ -36,7 +36,7 @@ function registerAdminExportRoutes({ adminRouter, AppDataSource, entities }) {
   const { Persona, Cargo, Rol, Sigla, BajaConcurso } = entities
   const exportLimiter = makeRateLimiter({ limit: 30, windowMs: 60_000 })
   // Métricas simples en memoria
-  const metrics = { exportsTotal: 0, datosCompletos: 0, simple: { personas:0, cargos:0, roles:0, siglas:0, bajas:0 }, rateLimited:0 }
+  const metrics = { exportsTotal: 0, datosCompletos: 0, xlsx: { personas:0, cargos:0, roles:0, siglas:0, bajas:0 }, rateLimited:0 }
 
   // Datos Completos (JOIN múltiple)
   const { config } = require('../config/env')
@@ -52,7 +52,7 @@ function registerAdminExportRoutes({ adminRouter, AppDataSource, entities }) {
     return res.status(401).json({ error: 'Unauthorized export' });
   }
 
-  adminRouter.get('/export/datos-completos.csv', ensureAdmin, exportLimiter, async (req, res) => {
+  adminRouter.get('/export/datos-completos.xlsx', ensureAdmin, exportLimiter, async (req, res) => {
     metrics.exportsTotal++
     metrics.datosCompletos++
     try {
@@ -188,41 +188,31 @@ LEFT JOIN bajas_concursos b ON c.id_cargo = b.id_cargo AND c.periodo = b.periodo
       const safeSortDir = sortDirRaw === 'DESC' ? 'DESC' : 'ASC'
       const orderSql = safeSortBy ? ` ORDER BY ${keyMap(safeSortBy)} ${safeSortDir}` : ' ORDER BY c.id_cargo ASC, r.id_rol ASC, p.id_persona ASC'
 
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-      res.setHeader('Content-Disposition', `attachment; filename="datos_completos_${Date.now()}.csv"`)
-      res.setHeader('Cache-Control', 'no-store')
-      res.write(columns.join(',') + '\n')
-
-  const batchSizeReq = parseInt((req?.query?.batchSize || '5000'), 10) || 5000
-  const batchSize = Math.max(1000, Math.min(MAX_BATCH, batchSizeReq))
-      let offset = 0
+      const batchSizeReq = parseInt((req?.query?.batchSize || '5000'), 10) || 5000
+      const batchSize = Math.max(1000, Math.min(MAX_BATCH, batchSizeReq))
       try { res.setTimeout(1000 * 60 * 30) } catch {}
-      while (true) {
-        const exportSql = `${selectSql} ${baseFrom} ${whereSql} ${orderSql} LIMIT ? OFFSET ?`
-  const chunk = await AppDataSource.query(exportSql, [...values, batchSize, offset])
-        if (!chunk.length) break
-        for (const r of chunk) {
-          const line = columns.map(k => escapeCsvValue(r[k])).join(',')
-          res.write(line + '\n')
+      await streamExcelResponse({
+        res,
+        filename: `datos_completos_${Date.now()}.xlsx`,
+        columns,
+        batchSize,
+        fetchBatch: async (offset, size) => {
+          const exportSql = `${selectSql} ${baseFrom} ${whereSql} ${orderSql} LIMIT ? OFFSET ?`
+          return AppDataSource.query(exportSql, [...values, size, offset])
         }
-        offset += chunk.length
-        if (chunk.length < batchSize) break
-        if (res.writableEnded || res.destroyed) break
-        if (typeof res.flush === 'function') try { res.flush() } catch {}
-      }
-      return res.end()
+      })
     } catch (err) {
       logger.error('[Export datos-completos] Error', { error: err.message, stack: err.stack })
-      if (!res.headersSent) res.status(500).json({ error: 'Error exportando CSV', detail: err?.message })
+      if (!res.headersSent) res.status(500).json({ error: 'Error exportando Excel', detail: err?.message })
       try { res.end() } catch {}
     }
   })
 
-  function registerSimpleExportCsv(pathSuffix, table, alias) {
+  function registerSimpleExportXlsx(pathSuffix, table, alias) {
     adminRouter.get('/export/' + pathSuffix, ensureAdmin, exportLimiter, async (req, res) => {
       metrics.exportsTotal++
-      const key = pathSuffix.replace(/\.csv$/,'')
-      if (metrics.simple[key] !== undefined) metrics.simple[key]++
+      const key = pathSuffix.replace(/\.xlsx$/, '')
+      if (metrics.xlsx[key] !== undefined) metrics.xlsx[key]++
       try {
         const meta = AppDataSource.getMetadata(table)
         const cols = meta.columns.map(c => c.propertyName)
@@ -245,42 +235,105 @@ LEFT JOIN bajas_concursos b ON c.id_cargo = b.id_cargo AND c.periodo = b.periodo
         const orderDirRaw = ((req?.query?.sortDir || '') + '').toUpperCase()
         const safeOrderCol = cols.includes(orderColRaw) ? orderColRaw : cols[0]
         const safeOrderDir = orderDirRaw === 'DESC' ? 'DESC' : 'ASC'
-  const batchSizeReq = parseInt((req?.query?.batchSize || '2000'), 10) || 2000
-  const batchSize = Math.max(1000, Math.min(MAX_BATCH, batchSizeReq))
+        const batchSizeReq = parseInt((req?.query?.batchSize || '2000'), 10) || 2000
+        const batchSize = Math.max(1000, Math.min(MAX_BATCH, batchSizeReq))
+        const baseName = pathSuffix.replace(/\.xlsx$/, '')
 
-        res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-        res.setHeader('Content-Disposition', `attachment; filename="${pathSuffix.replace(/\.csv$/,'')}_${Date.now()}.csv"`)
-        res.setHeader('Cache-Control', 'no-store')
-        res.write(cols.join(',') + '\n')
-        let offset = 0
         try { res.setTimeout(1000 * 60 * 15) } catch {}
-        while (true) {
-          const sql = `SELECT ${cols.map(c => `${alias}.${c}`).join(', ')} FROM ${meta.tableName} ${alias}${whereSql} ORDER BY ${alias}.${safeOrderCol} ${safeOrderDir} LIMIT ? OFFSET ?`
-          const chunk = await AppDataSource.query(sql, [...values, batchSize, offset])
-          if (!chunk.length) break
-          for (const row of chunk) {
-            const line = cols.map(c => escapeCsvValue(row[c])).join(',')
-            res.write(line + '\n')
+        await streamExcelResponse({
+          res,
+          filename: `${baseName}_${Date.now()}.xlsx`,
+          columns: cols,
+          batchSize,
+          fetchBatch: async (offset, size) => {
+            const sql = `SELECT ${cols.map(c => `${alias}.${c}`).join(', ')} FROM ${meta.tableName} ${alias}${whereSql} ORDER BY ${alias}.${safeOrderCol} ${safeOrderDir} LIMIT ? OFFSET ?`
+            return AppDataSource.query(sql, [...values, size, offset])
           }
-          offset += chunk.length
-          if (chunk.length < batchSize) break
-          if (res.writableEnded || res.destroyed) break
-          if (typeof res.flush === 'function') try { res.flush() } catch {}
-        }
-        return res.end()
+        })
       } catch (err) {
-        logger.error('[Export simple] Error', { error: err.message, stack: err.stack })
-        if (!res.headersSent) res.status(500).json({ error: 'Error exportando CSV', detail: err?.message })
+        logger.error('[Export xlsx simple] Error', { error: err.message, stack: err.stack })
+        if (!res.headersSent) res.status(500).json({ error: 'Error exportando Excel', detail: err?.message })
         try { res.end() } catch {}
       }
     })
   }
 
-  registerSimpleExportCsv('personas.csv', Persona, 'p')
-  registerSimpleExportCsv('cargos.csv', Cargo, 'c')
-  registerSimpleExportCsv('roles.csv', Rol, 'r')
-  registerSimpleExportCsv('siglas.csv', Sigla, 's')
-  registerSimpleExportCsv('bajas.csv', BajaConcurso, 'b')
+  registerSimpleExportXlsx('personas.xlsx', Persona, 'p')
+  registerSimpleExportXlsx('cargos.xlsx', Cargo, 'c')
+  registerSimpleExportXlsx('roles.xlsx', Rol, 'r')
+  registerSimpleExportXlsx('siglas.xlsx', Sigla, 's')
+  registerSimpleExportXlsx('bajas.xlsx', BajaConcurso, 'b')
+
+  // Ruta dinámica por hospital: /admin/:hospital/export/dotacion-total.xlsx
+  //                           y /admin/:hospital/export/bajas-concursos.xlsx
+  adminRouter.get('/:hospitalCode/export/:tipoFile', ensureAdmin, exportLimiter, async (req, res) => {
+    metrics.exportsTotal++
+    try {
+      const { hospitalCode, tipoFile } = req.params
+      if (!tipoFile.endsWith('.xlsx')) {
+        return res.status(404).json({ error: 'Not found' })
+      }
+      const tipo = tipoFile.slice(0, -5) // 'dotacion-total' o 'bajas-concursos'
+      if (!['dotacion-total', 'bajas-concursos'].includes(tipo)) {
+        return res.status(404).json({ error: 'Tipo de exportación no válido' })
+      }
+      const hospital = hospitalCode.toUpperCase()
+      req.query.hospital = hospital
+      req.query.procesos_concursales = tipo === 'bajas-concursos' ? 'true' : 'false'
+      req.query.page = '1'
+      req.query.perPage = '100000'
+
+      const { handleOrganizacionTabla } = require('../hospitals/pages')
+      const result = await handleOrganizacionTabla({ AppDataSource, req })
+
+      const rows = result.rows || []
+      const columns = result.columns || []
+      const periodo = (req.query.periodo || Date.now()).toString().replace(/[^\w\-]/g, '_')
+      const buffer = await toExcelBuffer(rows, columns)
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${tipo}_${hospital}_${periodo}.xlsx"`)
+      res.setHeader('Cache-Control', 'no-store')
+      return res.end(buffer)
+    } catch (err) {
+      logger.error('[Export hospital xlsx] Error', { error: err.message, stack: err.stack })
+      if (!res.headersSent) res.status(500).json({ error: 'Error exportando Excel', detail: err?.message })
+      try { res.end() } catch {}
+    }
+  })
+
+  // Endpoint para exportar minutas: el cliente envía columns + rows y recibe un xlsx
+  adminRouter.post('/export/minuta.xlsx', ensureAdmin, async (req, res) => {
+    try {
+      const body = req.body || req.fields || {}
+      let colDefs = body.columns
+      let rows    = body.rows
+      let titulo  = body.titulo
+      let hospitalCode = body.hospitalCode
+
+      // Si llega como string (JSON serializado), parsear
+      if (typeof colDefs === 'string') colDefs = JSON.parse(colDefs)
+      if (typeof rows === 'string')    rows    = JSON.parse(rows)
+
+      if (!Array.isArray(colDefs) || !Array.isArray(rows)) {
+        return res.status(400).json({ error: 'columns y rows son requeridos' })
+      }
+
+      const buffer = await toMinutaExcelBuffer(colDefs, rows, titulo || 'Minuta')
+
+      const safeName = (titulo || 'minuta').replace(/[^\w\- áéíóúÁÉÍÓÚñÑ]/g, '_').substring(0, 50)
+      const hospital = (hospitalCode || '').toString().replace(/[^\w]/g, '')
+      const filename = `${safeName}_${hospital}.xlsx`
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+      res.setHeader('Cache-Control', 'no-store')
+      return res.end(buffer)
+    } catch (err) {
+      logger.error('[Export minuta xlsx] Error', { error: err.message, stack: err.stack })
+      if (!res.headersSent) res.status(500).json({ error: 'Error exportando minuta', detail: err?.message })
+    }
+  })
 
   // Endpoint interno de métricas (solo admin)
   adminRouter.get('/export/metrics', ensureAdmin, (req, res) => {

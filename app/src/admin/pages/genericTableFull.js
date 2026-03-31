@@ -358,15 +358,16 @@ function buildGenericTableFull(tableKey, { AppDataSource, toCsvBase64 }) {
     const rows = await qb.skip((page - 1) * perPage).take(perPage).getMany()
 
     // ============================================================================
-    // EXPORTACIÓN CSV
+    // EXPORTACIÓN EXCEL
     // ============================================================================
     const exportParam = (req?.query?.export || '').toString().toLowerCase()
-    if (exportParam === 'csv') {
-      const base64 = toCsvBase64(rows, columns)
+    if (exportParam === 'xlsx' || exportParam === 'csv') {
+      const { toExcelBase64 } = require('../../utils/excel')
+      const base64 = await toExcelBase64(rows, columns)
       return {
-        csvBase64: base64,
-        filename: `${config.key}_${Date.now()}.csv`,
-        mime: 'text/csv',
+        xlsxBase64: base64,
+        filename: `${config.key}_${Date.now()}.xlsx`,
+        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         count: rows.length,
         total,
         sortBy: safeSortBy,

@@ -306,7 +306,7 @@ const GenericTableFull = ({ tableKey }) => {
   const exportCsvPage = useCallback(async () => {
     try {
       const activeFilters = buildActiveFilters(form)
-      const params = { page: state.page, perPage: state.perPage, sortBy: state.sortBy, sortDir: state.sortDir, export: 'csv', ...activeFilters }
+      const params = { page: state.page, perPage: state.perPage, sortBy: state.sortBy, sortDir: state.sortDir, export: 'xlsx', ...activeFilters }
       let res
       if (typeof api.getPage === 'function') {
         res = await api.getPage({ pageName: config.pageName, params })
@@ -314,15 +314,15 @@ const GenericTableFull = ({ tableKey }) => {
         res = await api.request({ method: 'GET', url: `pages/${config.pageName}`, params })
       }
       const data = res.data || res
-      if (!data.csvBase64) throw new Error('Exportación no disponible')
+      if (!data.xlsxBase64) throw new Error('Exportación no disponible')
       const a = document.createElement('a')
-      a.href = 'data:text/csv;base64,' + data.csvBase64
-      a.download = data.filename || `${config.key}_${Date.now()}.csv`
+      a.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.xlsxBase64
+      a.download = data.filename || `${config.key}_${Date.now()}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
     } catch(e) { 
-      alert('No se pudo exportar CSV: ' + (e?.message || e)) 
+      alert('No se pudo exportar Excel: ' + (e?.message || e)) 
     }
   }, [form, state.page, state.perPage, state.sortBy, state.sortDir, buildActiveFilters, api, config])
 
@@ -337,7 +337,7 @@ const GenericTableFull = ({ tableKey }) => {
       const url = `${config.exportRoute}?${params.toString()}`
       const a = document.createElement('a')
       a.href = url
-      a.download = `${config.key}_completo_${Date.now()}.csv`
+      a.download = `${config.key}_completo_${Date.now()}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -402,10 +402,10 @@ const GenericTableFull = ({ tableKey }) => {
               <Icon icon="Filter" />&nbsp;Filtrar ({Object.values(form).filter(v => Array.isArray(v) ? v.length > 0 : v !== '').length})
             </Button>
             <Button variant="secondary" onClick={exportCsvPage}>
-              <Icon icon="Download" />&nbsp;CSV página
+              <Icon icon="Download" />&nbsp;Excel página
             </Button>
             <Button variant="secondary" onClick={exportCsvAll}>
-              <Icon icon="Download" />&nbsp;CSV completo
+              <Icon icon="Download" />&nbsp;Excel completo
             </Button>
             <select
               value={state.perPage}

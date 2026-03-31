@@ -338,10 +338,10 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     a.remove()
   }
 
-  // Export CSV página (base64 vía handler)
+  // Export Excel página (base64 vía handler)
   const exportCsvPage = useCallback(async () => {
     try {
-      const query = { hospital, periodo, page: state.page, perPage: state.perPage, export: 'csv' }
+      const query = { hospital, periodo, page: state.page, perPage: state.perPage, export: 'xlsx' }
       if (state.sortBy) query.sortBy = state.sortBy
       if (state.sortDir) query.sortDir = state.sortDir
       
@@ -349,17 +349,17 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
       Object.assign(query, activeFilters)
       
       const data = await callPage('OrganizacionTabla', query)
-      if (!data.csvBase64) throw new Error('Exportación no disponible en handler')
+      if (!data.xlsxBase64) throw new Error('Exportación no disponible en handler')
       
-      const filename = data.filename || `${procesosConcursales ? 'bajas_concursos' : 'dotacion'}_${Date.now()}.csv`
-      downloadFile('data:text/csv;base64,' + data.csvBase64, filename)
+      const filename = data.filename || `${procesosConcursales ? 'bajas_concursos' : 'dotacion'}_${Date.now()}.xlsx`
+      downloadFile('data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,' + data.xlsxBase64, filename)
       clearError()
     } catch(e){ 
       handleError(e, 'exportCsvPage')
     }
   }, [state.page, state.perPage, state.sortBy, state.sortDir, procesosConcursales, hospital, periodo])
 
-  // Export CSV completo streaming
+  // Export Excel completo streaming
   const exportCsvFull = useCallback(() => {
     try {
       const params = new URLSearchParams({ periodo })
@@ -370,8 +370,8 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
       Object.entries(activeFilters).forEach(([k, v]) => params.append(k, v))
       
       const tipo = procesosConcursales ? 'bajas-concursos' : 'dotacion-total'
-      const url = `/admin/${hospital.toLowerCase()}/export/${tipo}.csv?${params.toString()}`
-      const filename = `${procesosConcursales ? 'bajas_concursos' : 'dotacion_total'}_${hospital}_${periodo}.csv`
+      const url = `/admin/${hospital.toLowerCase()}/export/${tipo}.xlsx?${params.toString()}`
+      const filename = `${procesosConcursales ? 'bajas_concursos' : 'dotacion_total'}_${hospital}_${periodo}.xlsx`
       downloadFile(url, filename)
       clearError()
     } catch(e){ 
@@ -996,11 +996,11 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
                 <Box style={{ display: 'flex', gap: 8 }}>
                   <Button size="sm" onClick={exportCsvPage}>
                     <Icon icon="Download" style={{ marginRight: 4 }} />
-                    Exportar Página (CSV)
+                    Exportar Página (Excel)
                   </Button>
                   <Button size="sm" onClick={exportCsvFull}>
                     <Icon icon="Download" style={{ marginRight: 4 }} />
-                    Exportar Todo (CSV)
+                    Exportar Todo (Excel)
                   </Button>
                 </Box>
                 <Text style={{ fontSize: 14, color: '#666' }}>
