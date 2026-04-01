@@ -132,10 +132,10 @@ const POUDetalle = () => {
         }}
       >
         <H3 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' }}>
-          {hospital} — Planta de Ocupación de Unidades
+          {hospitalName}
         </H3>
         <Text style={{ color: '#94a3b8', fontSize: 13, margin: '3px 0 0' }}>
-          {hospitalName}
+          Planta de Ocupación de Unidades (POU)
         </Text>
       </Box>
 

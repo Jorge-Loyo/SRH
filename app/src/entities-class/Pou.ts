@@ -41,12 +41,6 @@ export class Pou extends BaseEntity {
   @Column({ type: 'int', nullable: true })
   vacantes?: number | null
 
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', nullable: true })
-  created_at?: Date | null
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP', nullable: true })
-  updated_at?: Date | null
-
   @ManyToOne(() => Sigla, { nullable: true })
   @JoinColumn({ name: 'sigla', referencedColumnName: 'sigla' })
   siglaRelacion?: Sigla
