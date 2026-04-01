@@ -4,11 +4,10 @@ stages:
 
 chequeo_sintaxis:
   stage: validate
-  image: node:20-alpine
   script:
     - echo "Buscando errores de sintaxis..."
-    # Busca todos los archivos .js (ignorando node_modules) y verifica que compilen
-    - find . -type f -name "*.js" -not -path "*/node_modules/*" -exec node --check {} +
+    # Montamos la carpeta actual adentro de un contenedor efímero de Node y corremos el chequeo
+    - docker run --rm -v $(pwd):/app -w /app node:20-alpine find . -type f -name "*.js" -not -path "*/node_modules/*" -exec node --check {} +
   allow_failure: false
 
 deploy_dev:
