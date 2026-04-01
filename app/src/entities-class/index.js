@@ -13,8 +13,9 @@ const { Permission } = require('./Permission')
 const { Recorrida } = require('./Recorrida')
 const { Concurso } = require('./Concurso')
 const { Minuta } = require('./Minuta')
+const { Pou } = require('./Pou')
 
-const entities = [Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta]
+const entities = [Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta, Pou]
 
-module.exports = { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta, entities }
+module.exports = { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta, Pou, entities }
 

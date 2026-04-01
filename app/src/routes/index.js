@@ -14,6 +14,7 @@ const periodos = require('./periodosRoutes');
 const organigrama = require('./organigramaRoutes');
 const recorridas = require('./recorridasRoutes');
 const minutas = require('./minutasRoutes');
+const pou = require('./pouRoutes');
 const pages = require('./pagesRoutes');
 const admin = require('./adminRoutes');
 
@@ -33,6 +34,7 @@ router.use('/periodos', periodos);
 router.use('/organigrama', organigrama);
 router.use('/recorridas', recorridas);
 router.use('/minutas', minutas);
+router.use('/pou', pou);
 router.use('/pages', pages);
 router.use('/admin', admin);
 

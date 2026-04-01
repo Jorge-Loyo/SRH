@@ -119,6 +119,20 @@ function buildAdminOptions({ AdminJS, adminResources, dashboardConf }) {
         // ✅ Todos pueden ver detalle de Organigrama
         isAccessible: canViewOrganigramaPages,
       },
+      POUDetalle: {
+        label: 'POU - Planta de Ocupación de Unidades',
+        component: AdminJS.bundle('../components/vista_hospitales/POUDetalle.jsx'),
+        handler: async (req) => {
+          try {
+            const { handlePOUDetalle } = require('../hospitals/pou-handler');
+            const result = await handlePOUDetalle({ AppDataSource, req });
+            return result || { rows: [], columns: [], total: 0 };
+          } catch (e) {
+            return { rows: [], columns: [], total: 0 };
+          }
+        },
+        isAccessible: canViewOrganigramaPages,
+      },
       OrganizacionTabla: {
         label: 'Tabla de Organización',
         component: AdminJS.bundle('../components/vista_hospitales/organizacion-tabla.jsx'),
