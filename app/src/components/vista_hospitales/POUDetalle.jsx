@@ -118,106 +118,57 @@ const POUDetalle = () => {
   }
 
   return (
-    <Box padding="xl" style={{ maxWidth: 1400, margin: '0 auto' }}>
-      {/* Header */}
-      <Box mb="lg">
-        <BackButton label="Volver" />
-        <UserInfo />
-      </Box>
+    <Box style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 16, paddingBottom: 32, maxWidth: 1400, margin: '0 auto' }}>
+      <BackButton />
+      <UserInfo />
 
-      {/* Título + PeriodoSelector */}
+      {/* ── Banda de título (oscura, solo texto) ─────────────────────────── */}
       <Box
-        mb="xl"
         style={{
           background: '#1a2e44',
-          borderRadius: 10,
-          padding: '18px 28px',
+          borderRadius: '10px 10px 0 0',
+          padding: '18px 28px 14px',
+          marginTop: 12,
+        }}
+      >
+        <H3 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' }}>
+          {hospital} — Planta de Ocupación de Unidades
+        </H3>
+        <Text style={{ color: '#94a3b8', fontSize: 13, margin: '3px 0 0' }}>
+          {hospitalName}
+        </Text>
+      </Box>
+
+      {/* ── Barra de controles (clara, sob la banda oscura) ───────────────── */}
+      <Box
+        mb="lg"
+        style={{
+          background: '#f1f5f9',
+          border: '1px solid #e2e8f0',
+          borderTop: 'none',
+          borderRadius: '0 0 10px 10px',
+          padding: '14px 28px',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: 12,
         }}
       >
-        <Box>
-          <H3 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 700 }}>
-            {hospital} — Planta de Ocupación de Unidades (POU)
-          </H3>
-          <Text style={{ color: '#94a3b8', fontSize: 13, margin: '4px 0 0' }}>
-            {hospitalName}
-          </Text>
-        </Box>
+        {/* PeriodoSelector sobre fondo claro → label visible */}
         <Box style={{ minWidth: 220 }}>
           <PeriodoSelector
             hospital={hospital}
             periodo={periodo}
             onPeriodoChange={handlePeriodoChange}
+            fetchUrl={`/api/pou/periodos?sigla=${encodeURIComponent(hospital)}`}
           />
         </Box>
-      </Box>
 
-      {/* Errores */}
-      {error && (
-        <ErrorFallback
-          error={error}
-          onRetry={() => {
-            clearError()
-            setPeriodo(p => p)
-          }}
-          componentName="POUDetalle"
-        />
-      )}
-
-      {/* Sin periodo */}
-      {!periodo && !error && (
-        <Box mt="xl" style={{ textAlign: 'center' }}>
-          <Text style={{ color: '#64748b', fontSize: 15 }}>
-            Seleccioná un período para ver los datos POU del hospital.
-          </Text>
-        </Box>
-      )}
-
-      {/* Cargando */}
-      {periodo && state.loading && (
-        <Box mt="xl" style={{ textAlign: 'center' }}>
-          <Text style={{ color: '#64748b' }}>Cargando datos POU...</Text>
-        </Box>
-      )}
-
-      {/* Sin datos */}
-      {periodo && !state.loading && !error && state.rows.length === 0 && (
-        <Box
-          mt="xl"
-          p="xl"
-          style={{
-            textAlign: 'center',
-            background: '#f8fafc',
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-          }}
-        >
-          <Icon icon="Info" style={{ fontSize: 32, color: '#94a3b8', marginBottom: 12 }} />
-          <Text style={{ color: '#64748b', fontSize: 15 }}>
-            No hay datos POU para {hospital} — período {periodo}.
-          </Text>
-        </Box>
-      )}
-
-      {/* Tabla de datos */}
-      {periodo && !state.loading && !error && state.rows.length > 0 && (
-        <>
-          {/* Barra superior: total + exportar */}
-          <Box
-            mb="md"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: 8,
-            }}
-          >
-            <Text style={{ color: '#475569', fontSize: 14 }}>
+        {/* Exportar — solo visible si hay datos */}
+        {periodo && !state.loading && !error && state.rows.length > 0 && (
+          <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Text style={{ color: '#64748b', fontSize: 13 }}>
               {state.rows.length} registro{state.rows.length !== 1 ? 's' : ''}
             </Text>
             <Button
@@ -228,68 +179,125 @@ const POUDetalle = () => {
                 color: '#fff',
                 border: 'none',
                 borderRadius: 6,
-                padding: '6px 16px',
+                padding: '7px 18px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
                 fontSize: 13,
+                fontWeight: 600,
               }}
             >
               <Icon icon="Download" style={{ fontSize: 14 }} />
               Exportar Excel
             </Button>
           </Box>
+        )}
+      </Box>
 
-          {/* Tabla */}
-          <Box style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-            <Table>
-              <TableHead>
-                <TableRow>
+      {/* ── Error ────────────────────────────────────────────────────────── */}
+      {error && (
+        <ErrorFallback
+          error={error}
+          onRetry={() => { clearError(); setPeriodo(p => p) }}
+          componentName="POUDetalle"
+        />
+      )}
+
+      {/* ── Sin período ───────────────────────────────────────────────────── */}
+      {!periodo && !error && (
+        <Box
+          p="xxl"
+          style={{
+            textAlign: 'center',
+            background: '#f8fafc',
+            borderRadius: 8,
+            border: '2px dashed #cbd5e1',
+          }}
+        >
+          <Icon icon="Calendar" style={{ fontSize: 36, color: '#94a3b8', marginBottom: 10 }} />
+          <Text style={{ color: '#64748b', fontSize: 15, marginTop: 8 }}>
+            Seleccioná un período para ver los datos POU del hospital.
+          </Text>
+        </Box>
+      )}
+
+      {/* ── Cargando ──────────────────────────────────────────────────────── */}
+      {periodo && state.loading && !error && (
+        <Box p="xxl" style={{ textAlign: 'center' }}>
+          <Text style={{ color: '#64748b', fontSize: 14 }}>Cargando datos POU…</Text>
+        </Box>
+      )}
+
+      {/* ── Sin datos ─────────────────────────────────────────────────────── */}
+      {periodo && !state.loading && !error && state.rows.length === 0 && (
+        <Box
+          p="xxl"
+          style={{
+            textAlign: 'center',
+            background: '#f8fafc',
+            borderRadius: 8,
+            border: '1px solid #e2e8f0',
+          }}
+        >
+          <Icon icon="Search" style={{ fontSize: 36, color: '#94a3b8', marginBottom: 10 }} />
+          <Text style={{ color: '#64748b', fontSize: 15, marginTop: 8 }}>
+            No hay datos POU para <strong>{hospital}</strong> en el período <strong>{periodo}</strong>.
+          </Text>
+        </Box>
+      )}
+
+      {/* ── Tabla ─────────────────────────────────────────────────────────── */}
+      {periodo && !state.loading && !error && state.rows.length > 0 && (
+        <Box style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {VISIBLE_COLUMNS.map(col => (
+                  <TableCell
+                    key={col}
+                    style={{
+                      background: '#F3F4F6',
+                      color: '#1F2937',
+                      fontWeight: 700,
+                      fontSize: 13,
+                      padding: '11px 16px',
+                      whiteSpace: 'nowrap',
+                      borderBottom: '2px solid #D1D5DB',
+                      position: 'sticky',
+                      top: 0,
+                    }}
+                  >
+                    {COLUMN_LABELS[col] || col}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {state.rows.map((row, idx) => (
+                <TableRow
+                  key={`${row.id}-${row.periodo}-${idx}`}
+                  style={{ background: idx % 2 === 0 ? '#ffffff' : '#FAFBFC', transition: 'background 0.12s' }}
+                >
                   {VISIBLE_COLUMNS.map(col => (
                     <TableCell
                       key={col}
                       style={{
-                        background: '#1a2e44',
-                        color: '#fff',
-                        fontWeight: 600,
                         fontSize: 13,
-                        padding: '10px 14px',
-                        whiteSpace: 'nowrap',
-                        borderBottom: '2px solid #334155',
+                        padding: '10px 16px',
+                        color: '#374151',
+                        borderBottom: '1px solid #E5E7EB',
+                        whiteSpace: col === 'descripcion_sigla' || col === 'especialidad' ? 'normal' : 'nowrap',
                       }}
                     >
-                      {COLUMN_LABELS[col] || col}
+                      {row[col] != null ? String(row[col]) : <span style={{ color: '#9CA3AF' }}>—</span>}
                     </TableCell>
                   ))}
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {state.rows.map((row, idx) => (
-                  <TableRow
-                    key={`${row.id}-${row.periodo}-${idx}`}
-                    style={{ background: idx % 2 === 0 ? '#fff' : '#f8fafc' }}
-                  >
-                    {VISIBLE_COLUMNS.map(col => (
-                      <TableCell
-                        key={col}
-                        style={{
-                          fontSize: 13,
-                          padding: '8px 14px',
-                          color: '#334155',
-                          borderBottom: '1px solid #e2e8f0',
-                          whiteSpace: col === 'descripcion_sigla' || col === 'especialidad' ? 'normal' : 'nowrap',
-                        }}
-                      >
-                        {row[col] != null ? String(row[col]) : '-'}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-        </>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       )}
     </Box>
   )

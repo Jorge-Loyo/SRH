@@ -4,6 +4,7 @@ const { authenticateJWT } = require('../middlewares/auth');
 
 const router = express.Router();
 
+router.get('/periodos', authenticateJWT, controller.periodos);
 router.get('/', authenticateJWT, controller.list);
 router.get('/export', authenticateJWT, controller.exportXlsx);
 router.get('/:id/:periodo', authenticateJWT, controller.getById);

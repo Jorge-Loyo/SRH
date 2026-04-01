@@ -31,15 +31,15 @@ function updateUrlParams(params) {
 }
 
 // === FETCH PERIODOS ===
-async function fetchPeriodos(hospital) {
-  const url = '/api/periodos' + (hospital ? '?hospital=' + encodeURIComponent(hospital) : '')
+async function fetchPeriodos(hospital, fetchUrl) {
+  const url = fetchUrl || ('/api/periodos' + (hospital ? '?hospital=' + encodeURIComponent(hospital) : ''))
   const res = await fetch(url)
   if (!res.ok) throw new Error('Error cargando periodos')
   return res.json()
 }
 
 // === COMPONENTE ===
-const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange }) => {
+const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange, fetchUrl }) => {
   const [data, setData] = useState({ 
     loading: true, 
     items: [], 
@@ -56,7 +56,7 @@ const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange }) =>
     let mounted = true
     setData(d => ({ ...d, loading: true, error: null }))
     
-    fetchPeriodos(hospital)
+    fetchPeriodos(hospital, fetchUrl)
       .then(json => {
         if (!mounted) return
         
@@ -97,7 +97,7 @@ const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange }) =>
       })
     
     return () => { mounted = false }
-  }, [hospital])
+  }, [hospital, fetchUrl])
 
   // Auto-aplicar recommended SOLO en primera carga si NO hay periodoProp
   useEffect(() => {
