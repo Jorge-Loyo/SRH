@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Box, H3, Text, Button, Table, TableHead, TableRow, TableCell, TableBody, Icon } from '@adminjs/design-system'
-import { ApiClient, useCurrentAdmin } from 'adminjs'
+import { useCurrentAdmin } from 'adminjs'
 import BackButton from '../reutilizables/BackButton'
 import UserInfo from '../reutilizables/UserInfo'
 import ErrorFallback from '../reutilizables/ErrorFallback'
@@ -47,8 +47,6 @@ const POUDetalle = () => {
   const [state, setState] = useState({ loading: true, rows: [], total: 0 })
   const { error, handleError, clearError } = useErrorHandler()
 
-  const api = useMemo(() => new ApiClient(), [])
-
   const hospitalName = useMemo(() => {
     const entry = Object.values(hospitalsMap).flat().find(h => h.id === hospital)
     return entry?.name || hospital
@@ -65,17 +63,17 @@ const POUDetalle = () => {
     setState(s => ({ ...s, loading: true }))
     clearError()
 
-    const params = { hospital, periodo }
-
-    const call = typeof api.getPage === 'function'
-      ? api.getPage({ pageName: 'POUDetalle', params })
-      : api.request({ method: 'GET', url: 'pages/POUDetalle', params })
-
-    call
+    fetch(`/api/pou?sigla=${encodeURIComponent(hospital)}&periodo=${encodeURIComponent(periodo)}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
       .then(res => {
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        return res.json()
+      })
+      .then(data => {
         if (cancelled) return
-        const data = res?.data || res || {}
-        setState({ loading: false, rows: data.rows || [], total: data.total || 0 })
+        setState({ loading: false, rows: data.data || [], total: data.meta?.count || 0 })
       })
       .catch(err => {
         if (cancelled) return
@@ -90,46 +88,33 @@ const POUDetalle = () => {
     setPeriodo(p)
   }
 
-  // Exportar a Excel
-  const handleExport = async () => {
+  // Exportar a Excel — llama al backend, sin dynamic import
+  const handleExport = () => {
     if (state.rows.length === 0) {
       alert('No hay datos para exportar')
       return
     }
-    try {
-      const { toExcelBase64 } = await import('../../utils/excel').catch(() => null) || {}
-      if (!toExcelBase64) {
-        // Fallback: CSV simple
-        const cols = VISIBLE_COLUMNS
-        const lines = [
-          cols.map(c => COLUMN_LABELS[c] || c).join(','),
-          ...state.rows.map(r => cols.map(c => JSON.stringify(r[c] ?? '')).join(','))
-        ]
-        const blob = new Blob([lines.join('\n')], { type: 'text/csv' })
+    fetch(`/api/pou/export?sigla=${encodeURIComponent(hospital)}&periodo=${encodeURIComponent(periodo)}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+      .then(res => {
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        return res.json()
+      })
+      .then(({ base64 }) => {
+        const binary = atob(base64)
+        const bytes = new Uint8Array(binary.length)
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `pou_${hospital}_${periodo}.csv`
+        a.download = `pou_${hospital}_${periodo}.xlsx`
         a.click()
         URL.revokeObjectURL(url)
-        return
-      }
-      const b64 = await toExcelBase64(state.rows, VISIBLE_COLUMNS, {
-        filters: { 'Hospital': hospital, 'Período': periodo }
       })
-      const binary = atob(b64)
-      const bytes = new Uint8Array(binary.length)
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-      const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `pou_${hospital}_${periodo}.xlsx`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      alert('Error al exportar: ' + (e?.message || e))
-    }
+      .catch(e => alert('Error al exportar: ' + (e?.message || e)))
   }
 
   return (
