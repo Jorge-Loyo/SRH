@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Box, H3, Text, Button, Table, TableHead, TableRow, TableCell, TableBody } from '@adminjs/design-system'
+import { Box, H3, Text, Button, Table, TableHead, TableRow, TableCell, TableBody, Icon } from '@adminjs/design-system'
 import { useCurrentAdmin } from 'adminjs'
 import BackButton from '../reutilizables/BackButton'
 import UserInfo from '../reutilizables/UserInfo'
@@ -98,10 +98,14 @@ const POUDetalle = () => {
     return vals.sort()
   }, [state.rows])
 
+  // Encadenado: si hay perfil seleccionado, solo muestra especialidades de ese perfil
   const especialidades = useMemo(() => {
-    const vals = [...new Set(state.rows.map(r => r.especialidad).filter(Boolean))]
+    const source = filtroPerfil
+      ? state.rows.filter(r => r.perfil === filtroPerfil)
+      : state.rows
+    const vals = [...new Set(source.map(r => r.especialidad).filter(Boolean))]
     return vals.sort()
-  }, [state.rows])
+  }, [state.rows, filtroPerfil])
 
   // Filas filtradas
   const rowsFiltradas = useMemo(() => {
@@ -312,26 +316,8 @@ const POUDetalle = () => {
         </Box>
       )}
 
-      {/* ── Sin datos ─────────────────────────────────────────────────────── */}
-      {periodo && !state.loading && !error && state.rows.length === 0 && (
-        <Box
-          p="xxl"
-          style={{
-            textAlign: 'center',
-            background: '#f8fafc',
-            borderRadius: 8,
-            border: '1px solid #e2e8f0',
-          }}
-        >
-          <Icon icon="Search" style={{ fontSize: 36, color: '#94a3b8', marginBottom: 10 }} />
-          <Text style={{ color: '#64748b', fontSize: 15, marginTop: 8 }}>
-            No hay datos POU para <strong>{hospital}</strong> en el período <strong>{periodo}</strong>.
-          </Text>
-        </Box>
-      )}
-
-      {/* ── Tabla ─────────────────────────────────────────────────────────── */}
-      {periodo && !state.loading && !error && state.rows.length > 0 && (
+      {/* ── Tabla (siempre visible cuando hay período y no hay error) ──────── */}
+      {periodo && !state.loading && !error && (
         <Box style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
           <Table>
             <TableHead>
@@ -357,9 +343,16 @@ const POUDetalle = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {rowsFiltradas.length === 0 ? (
+              {state.rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={VISIBLE_COLUMNS.length} style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF', fontSize: 14 }}>
+                  <TableCell colSpan={VISIBLE_COLUMNS.length} style={{ textAlign: 'center', padding: '48px 24px', color: '#9CA3AF', fontSize: 14 }}>
+                    <Icon icon="Search" style={{ fontSize: 28, color: '#cbd5e1', display: 'block', margin: '0 auto 8px' }} />
+                    No hay datos POU para <strong style={{ color: '#6b7280' }}>{hospital}</strong> en el período <strong style={{ color: '#6b7280' }}>{periodo}</strong>.
+                  </TableCell>
+                </TableRow>
+              ) : rowsFiltradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={VISIBLE_COLUMNS.length} style={{ textAlign: 'center', padding: '48px 24px', color: '#9CA3AF', fontSize: 14 }}>
                     No hay registros que coincidan con los filtros aplicados.
                   </TableCell>
                 </TableRow>
