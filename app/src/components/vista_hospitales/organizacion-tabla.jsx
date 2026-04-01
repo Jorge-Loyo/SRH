@@ -757,24 +757,25 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <H2 style={{ margin: 0, color: '#fff', fontSize: 20 }}>
+          <Box style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <H2 style={{ margin: 0, color: '#fff', fontSize: 20, lineHeight: 1.2 }}>
               {hospital} - {procesosConcursales ? 'Bajas y Concursos' : 'Dotación de Personal'}
             </H2>
             {procesosConcursales && (
               <Box style={{ 
                 background: '#ffc107', 
                 color: '#000', 
-                padding: '4px 12px', 
+                padding: '2px 10px', 
                 borderRadius: 4, 
-                fontSize: 12,
-                fontWeight: 600
+                fontSize: 11,
+                fontWeight: 600,
+                alignSelf: 'flex-start'
               }}>
                 📋 Procesos Concursales Activo
               </Box>
             )}
           </Box>
-          <Box style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Box style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {/* Botones visibles solo para roles distintos de director */}
             {canSeeRecorridas && (
               <a href={`/admin/pages/RecorridasDetalle?hospital=${hospital}`} style={{ textDecoration: 'none' }}>
