@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Box, H3, Text, Button, Table, TableHead, TableRow, TableCell, TableBody, Icon } from '@adminjs/design-system'
+import { Box, H3, Text, Button, Table, TableHead, TableRow, TableCell, TableBody } from '@adminjs/design-system'
 import { useCurrentAdmin } from 'adminjs'
 import BackButton from '../reutilizables/BackButton'
 import UserInfo from '../reutilizables/UserInfo'
@@ -45,6 +45,8 @@ const POUDetalle = () => {
   const [currentAdmin] = useCurrentAdmin()
   const [periodo, setPeriodo] = useState(periodoInicial)
   const [state, setState] = useState({ loading: true, rows: [], total: 0 })
+  const [filtroPerfil, setFiltroPerfil] = useState('')
+  const [filtroEspecialidad, setFiltroEspecialidad] = useState('')
   const { error, handleError, clearError } = useErrorHandler()
 
   const hospitalName = useMemo(() => {
@@ -86,7 +88,29 @@ const POUDetalle = () => {
 
   const handlePeriodoChange = (p) => {
     setPeriodo(p)
+    setFiltroPerfil('')
+    setFiltroEspecialidad('')
   }
+
+  // Opciones únicas para los filtros
+  const perfiles = useMemo(() => {
+    const vals = [...new Set(state.rows.map(r => r.perfil).filter(Boolean))]
+    return vals.sort()
+  }, [state.rows])
+
+  const especialidades = useMemo(() => {
+    const vals = [...new Set(state.rows.map(r => r.especialidad).filter(Boolean))]
+    return vals.sort()
+  }, [state.rows])
+
+  // Filas filtradas
+  const rowsFiltradas = useMemo(() => {
+    return state.rows.filter(r => {
+      if (filtroPerfil && r.perfil !== filtroPerfil) return false
+      if (filtroEspecialidad && r.especialidad !== filtroEspecialidad) return false
+      return true
+    })
+  }, [state.rows, filtroPerfil, filtroEspecialidad])
 
   // Exportar a Excel — llama al backend, sin dynamic import
   const handleExport = () => {
@@ -122,78 +146,137 @@ const POUDetalle = () => {
       <BackButton />
       <UserInfo />
 
-      {/* ── Banda de título (oscura, solo texto) ─────────────────────────── */}
+      {/* ── Header unificado ──────────────────────────────────────────────── */}
       <Box
         style={{
           background: '#1a2e44',
-          borderRadius: '10px 10px 0 0',
-          padding: '18px 28px 14px',
+          borderRadius: 10,
+          padding: '18px 28px',
           marginTop: 12,
-        }}
-      >
-        <H3 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' }}>
-          {hospitalName}
-        </H3>
-        <Text style={{ color: '#94a3b8', fontSize: 13, margin: '3px 0 0' }}>
-          Planta de Ocupación de Unidades (POU)
-        </Text>
-      </Box>
-
-      {/* ── Barra de controles (clara, sob la banda oscura) ───────────────── */}
-      <Box
-        mb="lg"
-        style={{
-          background: '#f1f5f9',
-          border: '1px solid #e2e8f0',
-          borderTop: 'none',
-          borderRadius: '0 0 10px 10px',
-          padding: '14px 28px',
+          marginBottom: 16,
           display: 'flex',
-          alignItems: 'flex-end',
+          alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: 12,
+          gap: 16,
         }}
       >
-        {/* PeriodoSelector sobre fondo claro → label visible */}
-        <Box style={{ minWidth: 220 }}>
-          <PeriodoSelector
-            hospital={hospital}
-            periodo={periodo}
-            onPeriodoChange={handlePeriodoChange}
-            fetchUrl={`/api/pou/periodos?sigla=${encodeURIComponent(hospital)}`}
-          />
+        {/* Título */}
+        <Box>
+          <H3 style={{ color: '#fff', margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.3px' }}>
+            {hospitalName}
+          </H3>
+          <Text style={{ color: '#94a3b8', fontSize: 13, margin: '3px 0 0' }}>
+            Planta de Ocupación de Unidades (POU)
+          </Text>
         </Box>
 
-        {/* Exportar — solo visible si hay datos */}
-        {periodo && !state.loading && !error && state.rows.length > 0 && (
-          <Box style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Text style={{ color: '#64748b', fontSize: 13 }}>
-              {state.rows.length} registro{state.rows.length !== 1 ? 's' : ''}
+        {/* Período + contador + exportar */}
+        <Box style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+          <Box style={{ minWidth: 210 }}>
+            <Text style={{ color: '#94a3b8', fontSize: 11, fontWeight: 600, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Período
             </Text>
-            <Button
-              onClick={handleExport}
-              size="sm"
+            <PeriodoSelector
+              hospital={hospital}
+              periodo={periodo}
+              onPeriodoChange={handlePeriodoChange}
+              fetchUrl={`/api/pou/periodos?sigla=${encodeURIComponent(hospital)}`}
+              hideLabel
+            />
+          </Box>
+
+          {periodo && !state.loading && !error && state.rows.length > 0 && (
+            <>
+              <Text style={{ color: '#94a3b8', fontSize: 13, paddingBottom: 6 }}>
+                {rowsFiltradas.length} registro{rowsFiltradas.length !== 1 ? 's' : ''}
+                {rowsFiltradas.length !== state.rows.length ? ` (de ${state.rows.length})` : ''}
+              </Text>
+              <Button
+                onClick={handleExport}
+                size="sm"
+                style={{
+                  background: '#16a34a',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '7px 18px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 2,
+                }}
+              >
+                Exportar Excel
+              </Button>
+            </>
+          )}
+        </Box>
+      </Box>
+
+      {/* ── Filtros ───────────────────────────────────────────────────────── */}
+      {periodo && !state.loading && !error && state.rows.length > 0 && (
+        <Box
+          mb="lg"
+          style={{
+            background: '#f1f5f9',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            padding: '12px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: 600, color: '#374151', margin: 0 }}>Filtros:</Text>
+
+          {/* Perfil */}
+          <Box style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Text style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Perfil</Text>
+            <select
+              value={filtroPerfil}
+              onChange={e => setFiltroPerfil(e.target.value)}
               style={{
-                background: '#16a34a',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '7px 18px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 600,
+                fontSize: 13, padding: '5px 10px', borderRadius: 6,
+                border: '1px solid #d1d5db', background: '#fff',
+                color: '#374151', cursor: 'pointer', minWidth: 180,
               }}
             >
-              <Icon icon="Download" style={{ fontSize: 14 }} />
-              Exportar Excel
-            </Button>
+              <option value="">Todos</option>
+              {perfiles.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </Box>
-        )}
-      </Box>
+
+          {/* Especialidad */}
+          <Box style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Text style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>Especialidad</Text>
+            <select
+              value={filtroEspecialidad}
+              onChange={e => setFiltroEspecialidad(e.target.value)}
+              style={{
+                fontSize: 13, padding: '5px 10px', borderRadius: 6,
+                border: '1px solid #d1d5db', background: '#fff',
+                color: '#374151', cursor: 'pointer', minWidth: 200,
+              }}
+            >
+              <option value="">Todas</option>
+              {especialidades.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </Box>
+
+          {/* Limpiar filtros */}
+          {(filtroPerfil || filtroEspecialidad) && (
+            <Button
+              variant="text"
+              onClick={() => { setFiltroPerfil(''); setFiltroEspecialidad('') }}
+              style={{ fontSize: 12, color: '#dc2626', padding: '4px 8px', marginTop: 14 }}
+            >
+              Limpiar filtros
+            </Button>
+          )}
+        </Box>
+      )}
 
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {error && (
@@ -274,7 +357,13 @@ const POUDetalle = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {state.rows.map((row, idx) => (
+              {rowsFiltradas.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={VISIBLE_COLUMNS.length} style={{ textAlign: 'center', padding: '24px', color: '#9CA3AF', fontSize: 14 }}>
+                    No hay registros que coincidan con los filtros aplicados.
+                  </TableCell>
+                </TableRow>
+              ) : rowsFiltradas.map((row, idx) => (
                 <TableRow
                   key={`${row.id}-${row.periodo}-${idx}`}
                   style={{ background: idx % 2 === 0 ? '#ffffff' : '#FAFBFC', transition: 'background 0.12s' }}

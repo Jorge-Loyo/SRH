@@ -39,7 +39,7 @@ async function fetchPeriodos(hospital, fetchUrl) {
 }
 
 // === COMPONENTE ===
-const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange, fetchUrl }) => {
+const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange, fetchUrl, hideLabel = false }) => {
   const [data, setData] = useState({ 
     loading: true, 
     items: [], 
@@ -127,9 +127,11 @@ const PeriodoSelector = ({ hospital, periodo: periodoProp, onPeriodoChange, fetc
   // === RENDER ===
   return (
     <Box>
-      <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>
-        Período
-      </Label>
+      {!hideLabel && (
+        <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>
+          Período
+        </Label>
+      )}
       
       {data.loading ? (
         <Text color="subtle" style={{ fontSize: 13 }}>Cargando periodos…</Text>
