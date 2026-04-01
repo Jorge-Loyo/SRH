@@ -122,15 +122,7 @@ function buildAdminOptions({ AdminJS, adminResources, dashboardConf }) {
       POUDetalle: {
         label: 'POU - Planta de Ocupación de Unidades',
         component: AdminJS.bundle('../components/vista_hospitales/POUDetalle.jsx'),
-        handler: async (req) => {
-          try {
-            const { handlePOUDetalle } = require('../hospitals/pou-handler');
-            const result = await handlePOUDetalle({ AppDataSource, req });
-            return result || { rows: [], columns: [], total: 0 };
-          } catch (e) {
-            return { rows: [], columns: [], total: 0 };
-          }
-        },
+        // ✅ El componente trae datos via API (/api/pou), sin handler backend
         isAccessible: canViewOrganigramaPages,
       },
       OrganizacionTabla: {
