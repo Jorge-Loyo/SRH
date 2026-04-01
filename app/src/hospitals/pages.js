@@ -30,7 +30,7 @@ const HOSPITAL_FILTER_LABELS = {
   antiguedad_min:           'Antigüedad mínima',
   antiguedad_max:           'Antigüedad máxima',
 }
- * @param {Object} AppDataSource - TypeORM data source
+/* @param {Object} AppDataSource - TypeORM data source
  * @param {string} hospital - Código del hospital
  * @returns {Promise<string|null>} Período más reciente o null
  */
