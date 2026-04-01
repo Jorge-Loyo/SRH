@@ -33,6 +33,17 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 20s
       retries: 10
+  
+  adminer:
+    image: adminer:latest
+    container_name: dotacion_adminer
+    restart: unless-stopped
+    ports:
+      - "8095:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
 
 volumes:
   mysql_data:
