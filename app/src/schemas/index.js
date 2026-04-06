@@ -237,7 +237,7 @@ const RecorridaEditableFieldsSchema = z.object({
     .max(20, 'Código de hospital muy largo'),
   titulo: z.string()
     .min(1, 'Título es obligatorio')
-    .max(200, 'Título muy largo'),
+    .max(500, 'Título muy largo'),
   contenido_html: z.string()
     .min(1, 'Contenido es obligatorio')
     .max(100000, 'Contenido excede límite de 100KB') // Límite de seguridad
@@ -257,7 +257,7 @@ const MinutaColumnSchema = z.object({
     .min(1, 'ID de columna es obligatorio'),
   name: z.string()
     .min(1, 'Nombre de columna es obligatorio')
-    .max(100, 'Nombre de columna muy largo'),
+    .max(500, 'Nombre de columna muy largo'),
   type: z.enum(['text', 'number', 'date', 'select'], {
     errorMap: () => ({ message: 'Tipo de columna inválido' })
   }),

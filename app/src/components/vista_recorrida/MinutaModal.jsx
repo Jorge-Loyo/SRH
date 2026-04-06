@@ -30,6 +30,7 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
   const [error, setError] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState({ show: false, type: null, id: null })
   const [hasDraft, setHasDraft] = useState(false)
+  const [expandedCell, setExpandedCell] = useState(null) // { rowIndex, colId, value, colName }
 
   const isEditing = !!editData
   const draftKey = `minuta_draft_${hospitalCode}`
@@ -312,7 +313,7 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
           <Input
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
-            placeholder="Ej: Reunión de Directores - Enero 2026"
+            placeholder="Ej: Reunión de Directores"
             style={{ width: '100%', marginTop: 4 }}
             disabled={loading}
           />
@@ -336,7 +337,7 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
           </Box>
 
           {/* Tabla */}
-          <Box style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: 4, maxHeight: '400px', overflowY: 'auto' }}>
+          <Box style={{ overflowX: 'auto', border: '1px solid #ddd', borderRadius: 4, maxHeight: '55vh', overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
               <thead>
                 <tr style={{ backgroundColor: '#f5f5f5' }}>
@@ -344,22 +345,22 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
                   {columns.map((col, idx) => (
                     <th key={col.id} style={{ padding: 8, textAlign: 'left', borderRight: '1px solid #ddd' }}>
                       <Box style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <Input
+                        <textarea
                           value={col.name}
                           onChange={(e) => handleColumnNameChange(col.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              e.preventDefault()
+                              const pos = e.target.selectionStart
+                              const val = col.name
+                              handleColumnNameChange(col.id, val.slice(0, pos) + '\n' + val.slice(pos))
+                            }
+                          }}
                           placeholder="Nombre columna"
-                          style={{ fontSize: 13, padding: '4px 8px' }}
+                          rows={Math.max(1, (col.name.match(/\n/g) || []).length + 1)}
+                          style={{ fontSize: 13, padding: '4px 8px', width: '100%', border: '1px solid #d1d5db', borderRadius: 4, fontFamily: 'inherit', resize: 'none', lineHeight: '1.4', boxSizing: 'border-box' }}
                         />
                         <Box style={{ display: 'flex', gap: 4 }}>
-                          <select
-                            value={col.type}
-                            onChange={(e) => handleColumnTypeChange(col.id, e.target.value)}
-                            style={{ fontSize: 12, padding: '2px 4px', flex: 1 }}
-                          >
-                            <option value="text">Texto</option>
-                            <option value="number">Número</option>
-                            <option value="date">Fecha</option>
-                          </select>
                           <Button 
                             size="sm" 
                             variant="text" 
@@ -391,13 +392,56 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
                       </Box>
                     </td>
                     {columns.map((col) => (
-                      <td key={col.id} style={{ padding: 4, borderRight: '1px solid #ddd' }}>
-                        <Input
-                          value={row[col.id] || ''}
-                          onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}
-                          type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
-                          style={{ fontSize: 13, padding: '4px 8px', width: '100%', border: 'none' }}
-                        />
+                      <td key={col.id} style={{ padding: 4, borderRight: '1px solid #ddd', position: 'relative' }}>
+                        <div style={{ position: 'relative' }}>
+                          <textarea
+                            value={row[col.id] || ''}
+                            onChange={(e) => handleCellChange(rowIndex, col.id, e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.ctrlKey) {
+                                e.preventDefault()
+                                const pos = e.target.selectionStart
+                                const val = row[col.id] || ''
+                                handleCellChange(rowIndex, col.id, val.slice(0, pos) + '\n' + val.slice(pos))
+                              }
+                            }}
+                            rows={Math.max(2, ((row[col.id] || '').match(/\n/g) || []).length + 1)}
+                            style={{
+                              fontSize: 13,
+                              padding: '4px 28px 4px 8px',
+                              width: '100%',
+                              border: 'none',
+                              outline: 'none',
+                              resize: 'none',
+                              fontFamily: 'inherit',
+                              lineHeight: '1.4',
+                              minHeight: 36,
+                              maxHeight: 120,
+                              overflowY: 'auto',
+                              boxSizing: 'border-box',
+                              backgroundColor: 'transparent'
+                            }}
+                          />
+                          <button
+                            onClick={() => setExpandedCell({ rowIndex, colId: col.id, value: row[col.id] || '', colName: col.name })}
+                            title="Expandir celda (⤢)"
+                            style={{
+                              position: 'absolute',
+                              top: 3,
+                              right: 3,
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: '#9ca3af',
+                              padding: '1px 3px',
+                              lineHeight: 1,
+                              borderRadius: 3
+                            }}
+                          >
+                            ⤢
+                          </button>
+                        </div>
                       </td>
                     ))}
                   </tr>
@@ -407,6 +451,64 @@ const MinutaModal = ({ isOpen, onClose, hospitalCode, onSuccess = () => {}, edit
           </Box>
         </Box>
       </Modal>
+
+      {/* Overlay de celda expandida */}
+      {expandedCell && (
+        <Box style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.55)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001
+        }}>
+          <Box style={{
+            background: '#fff',
+            borderRadius: 10,
+            padding: 24,
+            width: 660,
+            maxWidth: '92vw',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.35)'
+          }}>
+            <Text style={{ fontWeight: 700, fontSize: 14, marginBottom: 4, color: '#374151' }}>
+              ✏️ Editar celda
+            </Text>
+            <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+              Columna: <strong>{expandedCell.colName}</strong> — Fila {expandedCell.rowIndex + 1}
+            </Text>
+            <textarea
+              value={expandedCell.value}
+              onChange={(e) => setExpandedCell(s => ({ ...s, value: e.target.value }))}
+              autoFocus
+              rows={14}
+              placeholder="Escribí el contenido de la celda..."
+              style={{
+                width: '100%',
+                fontSize: 14,
+                padding: '10px 14px',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                fontFamily: 'inherit',
+                lineHeight: '1.6',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+                outline: 'none'
+              }}
+            />
+            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 6, marginBottom: 14 }}>
+              Enter para nueva línea · Ctrl+Enter también funciona
+            </Text>
+            <Box style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <Button variant="light" onClick={() => setExpandedCell(null)}>Cancelar</Button>
+              <Button variant="primary" onClick={() => {
+                handleCellChange(expandedCell.rowIndex, expandedCell.colId, expandedCell.value)
+                setExpandedCell(null)
+              }}>Aplicar</Button>
+            </Box>
+          </Box>
+        </Box>
+      )}
 
       {/* Diálogo de confirmación para eliminación */}
       <ConfirmationDialog

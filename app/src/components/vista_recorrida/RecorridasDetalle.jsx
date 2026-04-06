@@ -151,6 +151,7 @@ const RecorridasDetalle = () => {
   const [deleteMinutaConfirm, setDeleteMinutaConfirm] = useState({ open: false, id: null })
   const [editingMinuta, setEditingMinuta] = useState(null)
   const [minutasCurrentPage, setMinutasCurrentPage] = useState(1)
+  const [fullscreenMinuta, setFullscreenMinuta] = useState(null) // minuta completa para overlay fullscreen
   
   // Estados para totales desde servidor
   const [recorridasTotal, setRecorridasTotal] = useState(0)
@@ -702,6 +703,16 @@ const RecorridasDetalle = () => {
                               <Icon icon={isExpanded ? 'ChevronUp' : 'ChevronDown'} />
                               {isExpanded ? 'Ocultar' : 'Ver más'}
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="text"
+                              onClick={() => setFullscreenMinuta(minuta)}
+                              style={{ color: '#6b7280' }}
+                              title="Ver en pantalla completa"
+                            >
+                              <Icon icon="Maximize" />
+                              Expandir
+                            </Button>
                             {canEdit && (
                               <Button
                                 size="sm"
@@ -734,14 +745,16 @@ const RecorridasDetalle = () => {
                               marginTop: 16,
                               paddingTop: 16,
                               borderTop: '1px solid #e5e7eb',
-                              overflowX: 'auto'
+                              overflowX: 'auto',
+                              overflowY: 'auto',
+                              maxHeight: 400
                             }}
                           >
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 'max-content' }}>
                               <thead>
                                 <tr style={{ backgroundColor: '#f5f5f5' }}>
                                   {minuta.datos_tabla.columns?.map((col) => (
-                                    <th key={col.id} style={{ padding: 8, textAlign: 'left', borderBottom: '2px solid #ddd' }}>
+                                    <th key={col.id} style={{ padding: 8, textAlign: 'left', borderBottom: '2px solid #ddd', whiteSpace: 'pre-wrap', minWidth: 160, verticalAlign: 'top' }}>
                                       {col.name}
                                     </th>
                                   ))}
@@ -751,7 +764,7 @@ const RecorridasDetalle = () => {
                                 {minuta.datos_tabla.rows?.map((row, idx) => (
                                   <tr key={idx} style={{ borderBottom: '1px solid #ddd' }}>
                                     {minuta.datos_tabla.columns?.map((col) => (
-                                      <td key={col.id} style={{ padding: 8 }}>
+                                      <td key={col.id} style={{ padding: 8, whiteSpace: 'pre-wrap', verticalAlign: 'top', minWidth: 160 }}>
                                         {row[col.id] || '-'}
                                       </td>
                                     ))}
@@ -779,6 +792,82 @@ const RecorridasDetalle = () => {
             />
           )}
         </>
+      )}
+
+      {/* Overlay fullscreen de minuta */}
+      {fullscreenMinuta && (
+        <Box style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 10000,
+          padding: '40px 48px'
+        }}>
+          <Box style={{
+            display: 'flex', flexDirection: 'column',
+            width: '100%', height: '100%',
+            borderRadius: 12,
+            overflow: 'hidden',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.4)'
+          }}>
+          {/* Header */}
+          <Box style={{
+            background: '#1a2e44', color: '#fff',
+            padding: '14px 24px',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            flexShrink: 0
+          }}>
+            <Box>
+              <Text style={{ fontWeight: 700, fontSize: 16, color: '#fff', margin: 0 }}>{fullscreenMinuta.titulo}</Text>
+              <Text style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+                {fullscreenMinuta.datos_tabla?.rows?.length || 0} filas × {fullscreenMinuta.datos_tabla?.columns?.length || 0} columnas
+              </Text>
+            </Box>
+            <Button
+              variant="text"
+              onClick={() => setFullscreenMinuta(null)}
+              style={{ color: '#fff', fontSize: 20, padding: '4px 10px', lineHeight: 1 }}
+            >
+              ✕
+            </Button>
+          </Box>
+          {/* Tabla scrolleable */}
+          <Box style={{ flex: 1, overflow: 'auto', background: '#fff', padding: 16 }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 14, minWidth: 'max-content', width: '100%' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f1f5f9', position: 'sticky', top: 0, zIndex: 1 }}>
+                  {fullscreenMinuta.datos_tabla?.columns?.map((col) => (
+                    <th key={col.id} style={{
+                      padding: '10px 14px', textAlign: 'left',
+                      borderBottom: '2px solid #cbd5e1', borderRight: '1px solid #e2e8f0',
+                      whiteSpace: 'pre-wrap', minWidth: 200, maxWidth: 400,
+                      verticalAlign: 'top', fontWeight: 600, color: '#1e3a5f'
+                    }}>
+                      {col.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {fullscreenMinuta.datos_tabla?.rows?.map((row, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 ? '#f8fafc' : '#fff' }}>
+                    {fullscreenMinuta.datos_tabla.columns?.map((col) => (
+                      <td key={col.id} style={{
+                        padding: '10px 14px', verticalAlign: 'top',
+                        borderRight: '1px solid #e2e8f0',
+                        whiteSpace: 'pre-wrap', minWidth: 200, maxWidth: 400,
+                        lineHeight: '1.5'
+                      }}>
+                        {row[col.id] || <span style={{ color: '#9ca3af' }}>-</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Box>
+          </Box>
+        </Box>
       )}
 
       {/* Modal para crear/editar recorrida */}
