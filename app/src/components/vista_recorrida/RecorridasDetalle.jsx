@@ -159,10 +159,10 @@ const RecorridasDetalle = () => {
   
   // Paginación: 5 por página
   const ITEMS_PER_PAGE = 5
-  const recorridasTotalPages = Math.ceil(recorridasTotal / ITEMS_PER_PAGE)
-  const minutasTotalPages = Math.ceil(minutasTotal / ITEMS_PER_PAGE)
-  const paginatedRecorridas = recorridas
-  const paginatedMinutas = minutas
+  const recorridasTotalPages = Math.ceil(recorridas.length / ITEMS_PER_PAGE)
+  const minutasTotalPages = Math.ceil(minutas.length / ITEMS_PER_PAGE)
+  const paginatedRecorridas = recorridas.slice((recorridasCurrentPage - 1) * ITEMS_PER_PAGE, recorridasCurrentPage * ITEMS_PER_PAGE)
+  const paginatedMinutas = minutas.slice((minutasCurrentPage - 1) * ITEMS_PER_PAGE, minutasCurrentPage * ITEMS_PER_PAGE)
 
   // Fetch recorridas
   const fetchRecorridas = async () => {
@@ -170,7 +170,7 @@ const RecorridasDetalle = () => {
     setRecorridasError(null)
     try {
       const response = await fetch(
-        `/api/recorridas?hospital_code=${hospitalCode}&page=${recorridasCurrentPage}&limit=${ITEMS_PER_PAGE}`,
+        `/api/recorridas?hospital_code=${hospitalCode}&limit=500`,
         {
           method: 'GET',
           credentials: 'include',
@@ -185,7 +185,15 @@ const RecorridasDetalle = () => {
       }
 
       const data = await response.json()
-      setRecorridas(data.rows || [])
+      const rows = data.rows || []
+      const savedOrderR = (() => { try { const s = localStorage.getItem(`recorridas_order_${hospitalCode}`); return s ? JSON.parse(s) : null } catch { return null } })()
+      if (savedOrderR) {
+        const ordered = savedOrderR.map(id => rows.find(r => r.id === id)).filter(Boolean)
+        const rest = rows.filter(r => !savedOrderR.includes(r.id))
+        setRecorridas([...ordered, ...rest])
+      } else {
+        setRecorridas(rows)
+      }
       setRecorridasTotal(data.total || 0)
     } catch (err) {
       setRecorridasError(err.message)
@@ -200,7 +208,7 @@ const RecorridasDetalle = () => {
     setMinutasError(null)
     try {
       const response = await fetch(
-        `/api/minutas?hospital_code=${hospitalCode}&page=${minutasCurrentPage}&limit=${ITEMS_PER_PAGE}`,
+        `/api/minutas?hospital_code=${hospitalCode}&limit=500`,
         {
           method: 'GET',
           credentials: 'include',
@@ -215,7 +223,15 @@ const RecorridasDetalle = () => {
       }
 
       const data = await response.json()
-      setMinutas(data.rows || [])
+      const rows = data.rows || []
+      const savedOrderM = (() => { try { const s = localStorage.getItem(`minutas_order_${hospitalCode}`); return s ? JSON.parse(s) : null } catch { return null } })()
+      if (savedOrderM) {
+        const ordered = savedOrderM.map(id => rows.find(r => r.id === id)).filter(Boolean)
+        const rest = rows.filter(r => !savedOrderM.includes(r.id))
+        setMinutas([...ordered, ...rest])
+      } else {
+        setMinutas(rows)
+      }
       setMinutasTotal(data.total || 0)
     } catch (err) {
       setMinutasError(err.message)
@@ -226,11 +242,35 @@ const RecorridasDetalle = () => {
 
   useEffect(() => {
     fetchRecorridas()
-  }, [hospitalCode, recorridasCurrentPage])
+  }, [hospitalCode])
 
   useEffect(() => {
     fetchMinutas()
-  }, [hospitalCode, minutasCurrentPage])
+  }, [hospitalCode])
+
+  // Mover recorrida arriba/abajo (orden local persistido en localStorage)
+  const moveRecorrida = (globalIdx, dir) => {
+    setRecorridas(prev => {
+      const arr = [...prev]
+      const target = globalIdx + dir
+      if (target < 0 || target >= arr.length) return prev
+      ;[arr[globalIdx], arr[target]] = [arr[target], arr[globalIdx]]
+      try { localStorage.setItem(`recorridas_order_${hospitalCode}`, JSON.stringify(arr.map(r => r.id))) } catch {}
+      return arr
+    })
+  }
+
+  // Mover minuta arriba/abajo (orden local persistido en localStorage)
+  const moveMinuta = (globalIdx, dir) => {
+    setMinutas(prev => {
+      const arr = [...prev]
+      const target = globalIdx + dir
+      if (target < 0 || target >= arr.length) return prev
+      ;[arr[globalIdx], arr[target]] = [arr[target], arr[globalIdx]]
+      try { localStorage.setItem(`minutas_order_${hospitalCode}`, JSON.stringify(arr.map(m => m.id))) } catch {}
+      return arr
+    })
+  }
 
   // Handlers para Recorridas
   const openEditRecorridaModal = (recorrida) => {
@@ -487,7 +527,8 @@ const RecorridasDetalle = () => {
               </Box>
             ) : (
               <Box ref={recorridasContainerRef} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {paginatedRecorridas.map((recorrida) => {
+              {paginatedRecorridas.map((recorrida, idx) => {
+                const globalIdx = (recorridasCurrentPage - 1) * ITEMS_PER_PAGE + idx
                 const isExpanded = expandedRecorridaIds.has(recorrida.id)
                 const createdAt = new Date(recorrida.created_at).toLocaleString('es-AR')
                 const updatedAt = new Date(recorrida.updated_at).toLocaleString('es-AR')
@@ -535,7 +576,22 @@ const RecorridasDetalle = () => {
                       </Box>
 
                       {/* Botones de acción */}
-                      <Box style={{ display: 'flex', gap: 8 }}>
+                      <Box style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {/* Botones de orden */}
+                        <Box style={{ display: 'flex', flexDirection: 'column', gap: 0, marginRight: 4 }}>
+                          <button
+                            onClick={() => moveRecorrida(globalIdx, -1)}
+                            disabled={globalIdx === 0}
+                            title="Mover arriba"
+                            style={{ background: 'none', border: 'none', cursor: globalIdx === 0 ? 'default' : 'pointer', fontSize: 11, color: globalIdx === 0 ? '#d1d5db' : '#6b7280', padding: '1px 4px', lineHeight: 1 }}
+                          >&#9650;</button>
+                          <button
+                            onClick={() => moveRecorrida(globalIdx, 1)}
+                            disabled={globalIdx === recorridas.length - 1}
+                            title="Mover abajo"
+                            style={{ background: 'none', border: 'none', cursor: globalIdx === recorridas.length - 1 ? 'default' : 'pointer', fontSize: 11, color: globalIdx === recorridas.length - 1 ? '#d1d5db' : '#6b7280', padding: '1px 4px', lineHeight: 1 }}
+                          >&#9660;</button>
+                        </Box>
                         <Button
                           size="sm"
                           variant="text"
@@ -649,7 +705,8 @@ const RecorridasDetalle = () => {
               ) : (
                 <ScrollTrap style={{ maxHeight: '600px', overflow: 'auto', borderRadius: 10 }}>
                   <Box ref={minutasContainerRef} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {paginatedMinutas.map((minuta) => {
+                  {paginatedMinutas.map((minuta, idx) => {
+                    const globalIdx = (minutasCurrentPage - 1) * ITEMS_PER_PAGE + idx
                     const isExpanded = expandedMinutaIds.has(minuta.id)
                     const createdAt = new Date(minuta.created_at).toLocaleString('es-AR')
 
@@ -694,7 +751,22 @@ const RecorridasDetalle = () => {
                           </Box>
 
                           {/* Botones de acción */}
-                          <Box style={{ display: 'flex', gap: 8 }}>
+                          <Box style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            {/* Botones de orden */}
+                            <Box style={{ display: 'flex', flexDirection: 'column', gap: 0, marginRight: 4 }}>
+                              <button
+                                onClick={() => moveMinuta(globalIdx, -1)}
+                                disabled={globalIdx === 0}
+                                title="Mover arriba"
+                                style={{ background: 'none', border: 'none', cursor: globalIdx === 0 ? 'default' : 'pointer', fontSize: 11, color: globalIdx === 0 ? '#d1d5db' : '#6b7280', padding: '1px 4px', lineHeight: 1 }}
+                              >&#9650;</button>
+                              <button
+                                onClick={() => moveMinuta(globalIdx, 1)}
+                                disabled={globalIdx === minutas.length - 1}
+                                title="Mover abajo"
+                                style={{ background: 'none', border: 'none', cursor: globalIdx === minutas.length - 1 ? 'default' : 'pointer', fontSize: 11, color: globalIdx === minutas.length - 1 ? '#d1d5db' : '#6b7280', padding: '1px 4px', lineHeight: 1 }}
+                              >&#9660;</button>
+                            </Box>
                             <Button
                               size="sm"
                               variant="text"
