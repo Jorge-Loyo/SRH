@@ -33,6 +33,9 @@ const PAGE_PERMISSIONS = {
     'HospitalesConcursos',
     'TablonConcursos',
     
+    // POU
+    'POUDetalle',
+    
     // Seguridad (solo admin)
     'Auditoria',
     'Tokens',
@@ -58,6 +61,7 @@ const PAGE_PERMISSIONS = {
     'ConcursosDetailModal',
     'HospitalesConcursos',
     'TablonConcursos',
+    'POUDetalle',
   ],
   
   // VIEWER: Puede ver estructura, organigrama, recorridas (solo lectura)
@@ -73,6 +77,7 @@ const PAGE_PERMISSIONS = {
     'ConcursosDetailModal',
     'HospitalesConcursos',
     'TablonConcursos',
+    'POUDetalle',
   ],
   
   // DIRECTOR: Solo su página personalizada y organigrama
