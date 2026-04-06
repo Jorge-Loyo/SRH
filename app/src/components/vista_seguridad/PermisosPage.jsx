@@ -102,9 +102,15 @@ const PermisosPage = () => {
         name: 'Director',
         color: { bg: '#fce7f3', text: '#9f1239', border: 'rgba(236, 72, 153, 0.4)' },
         description: 'Vista limitada a su hospital'
+      },
+      'gerencia': {
+        icon: '📋',
+        name: 'Gerencia',
+        color: { bg: '#fff7ed', text: '#9a3412', border: 'rgba(234, 88, 12, 0.4)' },
+        description: 'Lectura general + CRUD en Recorridas y Minutas'
       }
     }
-    return info[role] || info.viewer
+    return info[role] || { icon: '👤', name: role, color: { bg: '#f3f4f6', text: '#374151', border: 'rgba(107, 114, 128, 0.4)' }, description: '' }
   }
 
   const CheckIcon = ({ checked }) => (

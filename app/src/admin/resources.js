@@ -209,7 +209,13 @@ module.exports.buildAdminResources = function buildAdminResources({ AppDataSourc
           id: { isDisabled: true }, password_hash: { isVisible: { list: false, filter: false, show: false, edit: false } },
           password: { type: 'password', isVisible: { list: false, filter: false, show: false, edit: true } },
           email: { isVisible: { list: true, filter: true, show: true, edit: true } }, username: { isVisible: { list: true, filter: true, show: true, edit: true } },
-          role: { type: 'string', isVisible: { list: true, filter: true, show: true, edit: true } }, is_active: { type: 'string', isVisible: { list: true, filter: true, show: true, edit: true } }
+          role: { type: 'string', availableValues: [
+            { value: 'admin', label: 'Admin' },
+            { value: 'editor', label: 'Editor' },
+            { value: 'viewer', label: 'Viewer' },
+            { value: 'director', label: 'Director' },
+            { value: 'gerencia', label: 'Gerencia' },
+          ], isVisible: { list: true, filter: true, show: true, edit: true } }, is_active: { type: 'string', isVisible: { list: true, filter: true, show: true, edit: true } }
         },
         listProperties: getEntityColumns(User, { exclude: ['password_hash'] }),
         filterProperties: ['username', 'email', 'role', 'is_active'],

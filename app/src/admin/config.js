@@ -39,7 +39,7 @@ function buildAdminOptions({ AdminJS, adminResources, dashboardConf }) {
               .then(r => r.json())
               .then(data => {
                 const role = data?.currentAdmin?.role;
-                if (role && ['admin', 'editor', 'director', 'viewer'].includes(role)) {
+                if (role && ['admin', 'editor', 'director', 'viewer', 'gerencia'].includes(role)) {
                   sessionStorage.setItem('admin_user_role', role + '-role');
                 }
               })

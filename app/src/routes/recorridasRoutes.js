@@ -10,10 +10,10 @@ const { RecorridaCreateSchema, RecorridaUpdateSchema } = require('../schemas');
  * Rutas de Recorridas/Seguimientos
  * 
  * PERMISOS CRÍTICOS:
- * - Acceso: admin, editor, viewer
+ * - Acceso: admin, editor, viewer, gerencia
  * - EXCLUIDO: director (NO incluido en authorizeRoles)
  * 
- * Eliminación restringida solo a admin y editor.
+ * Eliminación restringida solo a admin, editor y gerencia.
  * 
  * AUTENTICACIÓN: JWT-only (desde header Authorization o cookie accessToken)
  */
@@ -21,7 +21,7 @@ const { RecorridaCreateSchema, RecorridaUpdateSchema } = require('../schemas');
 // GET /api/recorridas - Listar recorridas (con filtros opcionales)
 router.get('/', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'),
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'),
   validatePagination, // ✅ MEDIO FIX: Validar page/limit
   controller.list
 );
@@ -29,14 +29,14 @@ router.get('/',
 // GET /api/recorridas/:id - Obtener una recorrida específica
 router.get('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   controller.getOne
 );
 
 // POST /api/recorridas - Crear nueva recorrida (admin, editor, viewer)
 router.post('/', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   validateBody(RecorridaCreateSchema), 
   controller.create
 );
@@ -44,7 +44,7 @@ router.post('/',
 // PUT /api/recorridas/:id - Actualizar recorrida (admin, editor, viewer)
 router.put('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   validateBody(RecorridaUpdateSchema), 
   controller.update
 );
@@ -52,7 +52,7 @@ router.put('/:id',
 // DELETE /api/recorridas/:id - Eliminar recorrida (solo admin y editor)
 router.delete('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor'), // ⚠️ viewer NO puede eliminar
+  authorizeRoles('admin', 'editor', 'gerencia'), // viewer NO puede eliminar
   controller.remove
 );
 

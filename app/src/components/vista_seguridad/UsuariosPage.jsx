@@ -165,7 +165,8 @@ const UsuariosPage = () => {
       'admin': { bg: '#dbeafe', text: '#1e40af' },
       'editor': { bg: '#e0e7ff', text: '#4338ca' },
       'viewer': { bg: '#f3f4f6', text: '#374151' },
-      'director': { bg: '#fef3c7', text: '#92400e' }
+      'director': { bg: '#fef3c7', text: '#92400e' },
+      'gerencia': { bg: '#fff7ed', text: '#9a3412' }
     }
     return colors[role] || colors.viewer
   }
@@ -463,6 +464,7 @@ const UsuariosPage = () => {
                   <option value="editor">Editor</option>
                   <option value="viewer">Viewer</option>
                   <option value="director">Director</option>
+                  <option value="gerencia">Gerencia</option>
                 </select>
               </Box>
               

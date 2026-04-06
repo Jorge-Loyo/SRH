@@ -225,7 +225,7 @@ const Home = () => {
             )}
 
             {/* ✅ ESTRUCTURAS Y PERSONAL - ADMIN, EDITOR, VIEWER */}
-            {(state.userRole === 'admin' || state.userRole === 'editor' || state.userRole === 'viewer') && (
+            {(state.userRole === 'admin' || state.userRole === 'editor' || state.userRole === 'viewer' || state.userRole === 'gerencia') && (
               <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <H3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 700, textAlign: 'left', color: '#374151' }}>🏥 Estructuras - Personal - Seguimiento</H3>
                 <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, width: '100%' }}>

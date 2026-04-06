@@ -18,7 +18,7 @@ if (typeof document !== 'undefined' && !document.getElementById('role-sidebar-hi
   style.id = 'role-sidebar-hide-style'
   style.textContent = `
     /* CRÍTICO: Ocultar TODO el sidebar por defecto hasta que la clase de rol esté aplicada */
-    body:not(.admin-role):not(.editor-role):not(.director-role):not(.viewer-role) [class*="Sidebar"] {
+    body:not(.admin-role):not(.editor-role):not(.director-role):not(.viewer-role):not(.gerencia-role) [class*="Sidebar"] {
       visibility: hidden !important;
       opacity: 0 !important;
     }
@@ -27,7 +27,8 @@ if (typeof document !== 'undefined' && !document.getElementById('role-sidebar-hi
     body.admin-role [class*="Sidebar"],
     body.editor-role [class*="Sidebar"],
     body.director-role [class*="Sidebar"],
-    body.viewer-role [class*="Sidebar"] {
+    body.viewer-role [class*="Sidebar"],
+    body.gerencia-role [class*="Sidebar"] {
       visibility: visible !important;
       opacity: 1 !important;
       transition: opacity 150ms ease-in;
@@ -57,7 +58,13 @@ if (typeof document !== 'undefined' && !document.getElementById('role-sidebar-hi
     body.viewer-role [class*="Sidebar"] section,
     body.viewer-role [class*="Sidebar"] ul,
     body.viewer-role [class*="Navigation"],
-    body.viewer-role [class*="Section"] {
+    body.viewer-role [class*="Section"],
+    body.gerencia-role [class*="Sidebar"] > *:not(:first-child):not(#user-info-injected):not(#metrics-panel-injected),
+    body.gerencia-role [class*="Sidebar"] nav,
+    body.gerencia-role [class*="Sidebar"] section,
+    body.gerencia-role [class*="Sidebar"] ul,
+    body.gerencia-role [class*="Navigation"],
+    body.gerencia-role [class*="Section"] {
       display: none !important;
     }
     body.director-role [class*="Sidebar"] > *:first-child {
@@ -100,7 +107,7 @@ if (typeof document !== 'undefined' && !document.getElementById('role-sidebar-hi
   // Esto evita el flash del sidebar (FOWC) durante los primeros milisegundos
   // La clase se guardó en login (ver auth.js) y persiste durante la sesión
   const savedRole = sessionStorage.getItem('admin_user_role');
-  if (savedRole && ['admin-role', 'editor-role', 'director-role', 'viewer-role'].includes(savedRole)) {
+  if (savedRole && ['admin-role', 'editor-role', 'director-role', 'viewer-role', 'gerencia-role'].includes(savedRole)) {
     // ✅ Verificar que document.body existe antes de acceder
     if (document.body) {
       document.body.classList.add(savedRole);
@@ -121,18 +128,18 @@ const UserInfo = () => {
     if (!currentAdmin?.role) return
 
     // Remover todas las clases de rol primero
-    document.body.classList.remove('admin-role', 'editor-role', 'director-role', 'viewer-role')
+    document.body.classList.remove('admin-role', 'editor-role', 'director-role', 'viewer-role', 'gerencia-role')
     
     // Agregar la clase correspondiente al rol actual
     const roleClass = `${currentAdmin.role}-role`;
-    if (['admin-role', 'editor-role', 'director-role', 'viewer-role'].includes(roleClass)) {
+    if (['admin-role', 'editor-role', 'director-role', 'viewer-role', 'gerencia-role'].includes(roleClass)) {
       document.body.classList.add(roleClass)
     }
 
     // ✅ Cleanup: remover clases al desmontar
     return () => {
       if (document.body) {
-        document.body.classList.remove('admin-role', 'editor-role', 'director-role', 'viewer-role')
+        document.body.classList.remove('admin-role', 'editor-role', 'director-role', 'viewer-role', 'gerencia-role')
       }
     }
   }, [currentAdmin])
@@ -146,6 +153,7 @@ const UserInfo = () => {
       editor: 'Editor',
       viewer: 'Visualizador',
       director: 'Director',
+      gerencia: 'Gerencia',
     }
 
     const roleDisplay = roleLabels[currentAdmin.role] || currentAdmin.role

@@ -88,6 +88,22 @@ const PAGE_PERMISSIONS = {
     'OrganizacionTabla',
     'TablaAmpliada',
   ],
+
+  // GERENCIA: Igual que viewer + CRUD completo en recorridas y minutas
+  gerencia: [
+    'Hospitales',
+    'OrganizacionTabla',
+    'TablaAmpliada',
+    'OrganigramaHome',
+    'OrganigramaDetalle',
+    'Panel',
+    'RecorridasHospitales',
+    'RecorridasDetalle',
+    'ConcursosDetailModal',
+    'HospitalesConcursos',
+    'TablonConcursos',
+    'POUDetalle',
+  ],
 };
 
 /**

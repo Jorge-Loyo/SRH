@@ -105,12 +105,13 @@ const RecorridasDetalle = () => {
   const userRole = currentAdmin?.role
   const permissions = currentAdmin?.permissions
   
-  // Permisos basados en BD, con excepción para viewer
-  // viewer: EXCEPCIÓN - puede crear y editar, pero NO eliminar (hardcodeado)
-  // Otros roles (admin, editor): usan permisos de BD (can_create, can_update, can_delete)
-  const canCreate = userRole === 'viewer' ? true : (permissions?.can_create ?? false)
-  const canEdit = userRole === 'viewer' ? true : (permissions?.can_update ?? false)
-  const canDelete = userRole === 'viewer' ? false : (permissions?.can_delete ?? false)
+  // Permisos basados en BD para todos los roles
+  // viewer: solo lectura (can_create=0, can_update=0, can_delete=0 en BD)
+  // gerencia: CRUD completo en recorridas/minutas (can_create=1, can_update=1, can_delete=1 en BD)
+  // Otros roles (admin, editor): usan permisos de BD
+  const canCreate = permissions?.can_create ?? false
+  const canEdit = permissions?.can_update ?? false
+  const canDelete = permissions?.can_delete ?? false
 
   // Obtener hospital_code de la URL
   const getParam = (name) => {

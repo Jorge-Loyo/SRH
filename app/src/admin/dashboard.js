@@ -22,7 +22,7 @@ function buildDashboard({ AdminJS }) {
       isAccessible: ({ currentAdmin }) => {
         try {
           const role = currentAdmin?.role;
-          const result = role === 'admin' || role === 'editor' || role === 'viewer';
+          const result = role === 'admin' || role === 'editor' || role === 'viewer' || role === 'gerencia';
           return result === true;
         } catch (e) {
           return false;

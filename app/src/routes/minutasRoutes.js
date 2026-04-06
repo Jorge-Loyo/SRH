@@ -10,10 +10,10 @@ const { MinutaCreateSchema, MinutaUpdateSchema } = require('../schemas');
  * Rutas de Minutas (hojas de cálculo dinámicas)
  * 
  * PERMISOS CRÍTICOS:
- * - Acceso: admin, editor, viewer
+ * - Acceso: admin, editor, viewer, gerencia
  * - EXCLUIDO: director (NO incluido en authorizeRoles)
  * 
- * Eliminación restringida solo a admin y editor.
+ * Eliminación restringida solo a admin, editor y gerencia.
  * 
  * AUTENTICACIÓN: JWT-only (desde header Authorization o cookie accessToken)
  */
@@ -21,7 +21,7 @@ const { MinutaCreateSchema, MinutaUpdateSchema } = require('../schemas');
 // GET /api/minutas - Listar minutas (con filtros opcionales)
 router.get('/', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'),
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'),
   validatePagination,
   controller.list
 );
@@ -29,14 +29,14 @@ router.get('/',
 // GET /api/minutas/:id - Obtener una minuta específica
 router.get('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   controller.getOne
 );
 
 // POST /api/minutas - Crear nueva minuta (admin, editor, viewer)
 router.post('/', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   validateBody(MinutaCreateSchema), 
   controller.create
 );
@@ -44,7 +44,7 @@ router.post('/',
 // PUT /api/minutas/:id - Actualizar minuta (admin, editor, viewer)
 router.put('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer'), 
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
   validateBody(MinutaUpdateSchema), 
   controller.update
 );
@@ -52,7 +52,7 @@ router.put('/:id',
 // DELETE /api/minutas/:id - Eliminar minuta (solo admin y editor)
 router.delete('/:id', 
   authenticateJWT, 
-  authorizeRoles('admin', 'editor'), // ⚠️ viewer NO puede eliminar
+  authorizeRoles('admin', 'editor', 'gerencia'), // viewer NO puede eliminar
   controller.remove
 );
 
