@@ -776,20 +776,22 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
             )}
           </Box>
           <Box style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {/* Botón POU - siempre visible */}
-            <a href={`/admin/pages/POUDetalle?hospital=${encodeURIComponent(hospital)}${periodo ? `&periodo=${encodeURIComponent(periodo)}` : ''}`} style={{ textDecoration: 'none' }}>
-              <Button
-                size="sm"
-                style={{
-                  background: '#16a34a',
-                  border: '1px solid #15803d',
-                  color: '#fff',
-                  fontSize: 12
-                }}
-              >
-                POU
-              </Button>
-            </a>
+            {/* Botón POU - oculto para director */}
+            {canSeeRecorridas && (
+              <a href={`/admin/pages/POUDetalle?hospital=${encodeURIComponent(hospital)}${periodo ? `&periodo=${encodeURIComponent(periodo)}` : ''}`} style={{ textDecoration: 'none' }}>
+                <Button
+                  size="sm"
+                  style={{
+                    background: '#16a34a',
+                    border: '1px solid #15803d',
+                    color: '#fff',
+                    fontSize: 12
+                  }}
+                >
+                  POU
+                </Button>
+              </a>
+            )}
             {/* Botones visibles solo para roles distintos de director */}
             {canSeeRecorridas && (
               <a href={`/admin/pages/RecorridasDetalle?hospital=${hospital}`} style={{ textDecoration: 'none' }}>
