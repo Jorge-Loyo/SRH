@@ -19,6 +19,8 @@ const UsuariosPage = () => {
     lastRefresh: null
   })
 
+  const [filters, setFilters] = useState({ search: '', role: '', active: '' })
+
   // Modal de confirmación para toggle de usuario
   const [toggleModal, setToggleModal] = useState({
     open: false,
@@ -171,6 +173,17 @@ const UsuariosPage = () => {
     return colors[role] || colors.viewer
   }
 
+  const filteredUsers = useMemo(() => {
+    return state.users.filter(u => {
+      const matchSearch = !filters.search ||
+        u.username.toLowerCase().includes(filters.search.toLowerCase()) ||
+        (u.email || '').toLowerCase().includes(filters.search.toLowerCase())
+      const matchRole = !filters.role || u.role === filters.role
+      const matchActive = filters.active === '' || String(u.is_active) === filters.active
+      return matchSearch && matchRole && matchActive
+    })
+  }, [state.users, filters])
+
   if (error) {
     return <ErrorFallback error={error} onRetry={() => loadUsers()} componentName="UsuariosPage" />
   }
@@ -196,6 +209,64 @@ const UsuariosPage = () => {
             Nuevo Usuario
           </Button>
         </Box>
+
+        {/* Filtros */}
+        {!state.loading && (
+          <Box style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16, alignItems: 'flex-end' }}>
+            <Box style={{ flex: 2, minWidth: 200 }}>
+              <Label style={{ fontSize: 12, marginBottom: 4 }}>Buscar</Label>
+              <Input
+                placeholder="Nombre o email..."
+                value={filters.search}
+                onChange={e => { setFilters(f => ({ ...f, search: e.target.value })); setState(s => ({ ...s, currentPage: 1 })) }}
+                style={{ width: '100%' }}
+              />
+            </Box>
+            <Box style={{ flex: 1, minWidth: 140 }}>
+              <Label style={{ fontSize: 12, marginBottom: 4 }}>Rol</Label>
+              <select
+                value={filters.role}
+                onChange={e => { setFilters(f => ({ ...f, role: e.target.value })); setState(s => ({ ...s, currentPage: 1 })) }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db', fontSize: 14 }}
+              >
+                <option value="">Todos</option>
+                <option value="admin">Admin</option>
+                <option value="editor">Editor</option>
+                <option value="viewer">Viewer</option>
+                <option value="director">Director</option>
+                <option value="gerencia">Gerencia</option>
+              </select>
+            </Box>
+            <Box style={{ flex: 1, minWidth: 130 }}>
+              <Label style={{ fontSize: 12, marginBottom: 4 }}>Estado</Label>
+              <select
+                value={filters.active}
+                onChange={e => { setFilters(f => ({ ...f, active: e.target.value })); setState(s => ({ ...s, currentPage: 1 })) }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 4, border: '1px solid #d1d5db', fontSize: 14 }}
+              >
+                <option value="">Todos</option>
+                <option value="true">Activos</option>
+                <option value="false">Inactivos</option>
+              </select>
+            </Box>
+            {(filters.search || filters.role || filters.active !== '') && (
+              <Box style={{ display: 'flex', alignItems: 'flex-end' }}>
+                <Button
+                  size="sm"
+                  variant="light"
+                  onClick={() => { setFilters({ search: '', role: '', active: '' }); setState(s => ({ ...s, currentPage: 1 })) }}
+                >
+                  Limpiar
+                </Button>
+              </Box>
+            )}
+            <Box style={{ display: 'flex', alignItems: 'flex-end', marginLeft: 'auto' }}>
+              <Text style={{ fontSize: 13, color: '#6b7280' }}>
+                {filteredUsers.length} de {state.users.length} usuario{state.users.length !== 1 ? 's' : ''}
+              </Text>
+            </Box>
+          </Box>
+        )}
 
         {state.loading ? (
           <Box style={{ textAlign: 'center', padding: 40 }}>
@@ -229,17 +300,17 @@ const UsuariosPage = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {state.users.slice((state.currentPage - 1) * ITEMS_PER_PAGE, state.currentPage * ITEMS_PER_PAGE).length === 0 ? (
+                    {filteredUsers.slice((state.currentPage - 1) * ITEMS_PER_PAGE, state.currentPage * ITEMS_PER_PAGE).length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                           <Box>
                             <Text style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>👤 Sin usuarios</Text>
-                            <Text style={{ fontSize: 13 }}>No hay usuarios registrados en el sistema</Text>
+                            <Text style={{ fontSize: 13 }}>No hay usuarios que coincidan con los filtros</Text>
                           </Box>
                         </TableCell>
                       </TableRow>
                     ) : (
-                      state.users.slice((state.currentPage - 1) * ITEMS_PER_PAGE, state.currentPage * ITEMS_PER_PAGE).map((user, idx) => (
+                      filteredUsers.slice((state.currentPage - 1) * ITEMS_PER_PAGE, state.currentPage * ITEMS_PER_PAGE).map((user, idx) => (
                         <TableRow key={user.id} style={{ background: idx % 2 ? '#F7F7F7' : '#FFFFFF' }}>
                           <TableCell style={{ fontFamily: 'monospace', fontSize: 13, color: '#6b7280' }}>
                             #{user.id}
@@ -295,7 +366,7 @@ const UsuariosPage = () => {
             </Box>
 
             {/* Paginación - solo mostrar si hay más de ITEMS_PER_PAGE usuarios */}
-            {state.users.length > ITEMS_PER_PAGE && (
+            {filteredUsers.length > ITEMS_PER_PAGE && (
               <Box style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between', 
@@ -307,7 +378,7 @@ const UsuariosPage = () => {
                 boxShadow: '0 6px 18px rgba(0,0,0,0.08)'
               }}>
             <Text style={{ fontSize: 14, color: '#6b7280' }}>
-              Mostrando {((state.currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(state.currentPage * ITEMS_PER_PAGE, state.users.length)} de {state.users.length} usuarios
+              Mostrando {((state.currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(state.currentPage * ITEMS_PER_PAGE, filteredUsers.length)} de {filteredUsers.length} usuarios
               {state.lastRefresh && <span style={{ fontSize: 12, marginLeft: 16, color: '#9ca3af' }}>🔄 Actualizado: {state.lastRefresh}</span>}
             </Text>
                 
@@ -322,9 +393,9 @@ const UsuariosPage = () => {
                   
                   {/* Números de página */}
                   <Box style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {Array.from({ length: Math.ceil(state.users.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
+                    {Array.from({ length: Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) }, (_, i) => i + 1)
                       .filter(page => {
-                        const totalPages = Math.ceil(state.users.length / ITEMS_PER_PAGE)
+                        const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
                         if (page === state.currentPage || 
                             page === state.currentPage - 1 || 
                             page === state.currentPage + 1 || 
@@ -366,10 +437,10 @@ const UsuariosPage = () => {
                   
                   <Button
                     onClick={() => {
-                      const totalPages = Math.ceil(state.users.length / ITEMS_PER_PAGE)
+                      const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
                       setState(s => ({ ...s, currentPage: Math.min(totalPages, s.currentPage + 1) }))
                     }}
-                    disabled={state.currentPage >= Math.ceil(state.users.length / ITEMS_PER_PAGE)}
+                    disabled={state.currentPage >= Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)}
                     size="sm"
                   >
                     Siguiente ▶
