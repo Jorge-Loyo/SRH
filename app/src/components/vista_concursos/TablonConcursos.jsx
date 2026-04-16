@@ -41,6 +41,7 @@ const TablonConcursos = () => {
   const [searchEscalafon, setSearchEscalafon] = useState('')
   const [searchRecorridas, setSearchRecorridas] = useState('')
   const [cuilBusqueda, setCuilBusqueda] = useState('')
+  const [nombreBusqueda, setNombreBusqueda] = useState('')
 
   // ✅ Debounce para búsqueda CUIL sin dependencia externa
   const debounceTimerRef = useRef(null)
@@ -50,6 +51,17 @@ const TablonConcursos = () => {
     }
     debounceTimerRef.current = setTimeout(() => {
       setCuilBusqueda(value)
+    }, 300)
+  }, [])
+
+  // ✅ Debounce para búsqueda Nombre y Apellido sin dependencia externa
+  const debounceNombreRef = useRef(null)
+  const debouncedSetNombre = useCallback((value) => {
+    if (debounceNombreRef.current) {
+      clearTimeout(debounceNombreRef.current)
+    }
+    debounceNombreRef.current = setTimeout(() => {
+      setNombreBusqueda(value)
     }, 300)
   }, [])
 
@@ -142,6 +154,7 @@ const TablonConcursos = () => {
 
   // Memoizar CUIL búsqueda normalizado para evitar cálculos repetidos
   const cuilBusquedaNormalizado = useMemo(() => cuilBusqueda.trim().toLowerCase(), [cuilBusqueda])
+  const nombreBusquedaNormalizado = useMemo(() => nombreBusqueda.trim().toLowerCase(), [nombreBusqueda])
 
   // Agrupar por sub_estado para estadísticas - MEMOIZADO
   const estadisticas = useMemo(() => {
@@ -191,9 +204,17 @@ const TablonConcursos = () => {
           }
         }
       }
+      if (excluirFiltro !== 'nombre') {
+        if (nombreBusquedaNormalizado) {
+          if (!(c.nombre_baja && c.nombre_baja.toLowerCase().includes(nombreBusquedaNormalizado)) &&
+              !(c.nombre_designacion && c.nombre_designacion.toLowerCase().includes(nombreBusquedaNormalizado))) {
+            return false
+          }
+        }
+      }
       return true
     })
-  }, [concursos, estadosSeleccionados, sub_estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, modoFiltro, cuilBusquedaNormalizado])
+  }, [concursos, estadosSeleccionados, sub_estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, modoFiltro, cuilBusquedaNormalizado, nombreBusquedaNormalizado])
 
   // Obtener valores únicos considerando otros filtros aplicados - MEMOIZADO
   const estadosUnicos = useMemo(() => 
@@ -261,10 +282,15 @@ const TablonConcursos = () => {
       const matchCuil = !cuilBusquedaNormalizado || 
         (c.cuil_baja && c.cuil_baja.toLowerCase().includes(cuilBusquedaNormalizado)) ||
         (c.cuil_designacion && c.cuil_designacion.toLowerCase().includes(cuilBusquedaNormalizado))
+
+      // Búsqueda de Nombre y Apellido en ambas columnas
+      const matchNombre = !nombreBusquedaNormalizado ||
+        (c.nombre_baja && c.nombre_baja.toLowerCase().includes(nombreBusquedaNormalizado)) ||
+        (c.nombre_designacion && c.nombre_designacion.toLowerCase().includes(nombreBusquedaNormalizado))
       
-      return matchSubEstado && matchEstado && matchPuesto && matchEspecialidad && matchEscalafon && matchRecorridas && matchCuil
+      return matchSubEstado && matchEstado && matchPuesto && matchEspecialidad && matchEscalafon && matchRecorridas && matchCuil && matchNombre
     })
-  }, [concursos, sub_estadosSeleccionados, estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, recorridasSeleccionadas, modoFiltro, cuilBusquedaNormalizado])
+  }, [concursos, sub_estadosSeleccionados, estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, recorridasSeleccionadas, modoFiltro, cuilBusquedaNormalizado, nombreBusquedaNormalizado])
 
   // Handlers para checkboxes - memoizados para evitar recreación en cada render
   const toggleSubEstado = useCallback((estado) => {
@@ -381,7 +407,8 @@ const TablonConcursos = () => {
         puestosSeleccionados.size > 0 || 
         especialidadesSeleccionadas.size > 0 || 
         escalafonesSeleccionados.size > 0 ||
-        cuilBusqueda.trim()) {
+        cuilBusqueda.trim() ||
+        nombreBusqueda.trim()) {
       logger.info('[TablonConcursos] Filtros aplicados', {
         total: concursos.length,
         filtered: concursosFiltrados.length,
@@ -391,10 +418,11 @@ const TablonConcursos = () => {
         especialidades: Array.from(especialidadesSeleccionadas),
         escalafones: Array.from(escalafonesSeleccionados),
         cuilBusqueda: cuilBusqueda.trim() ? '***' : 'none', // Ocultar CUIL por privacidad
+        nombreBusqueda: nombreBusqueda.trim() ? '***' : 'none', // Ocultar nombre por privacidad
         modoFiltro
       })
     }
-  }, [concursosFiltrados, concursos, estadosSeleccionados, sub_estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, cuilBusqueda, modoFiltro])
+  }, [concursosFiltrados, concursos, estadosSeleccionados, sub_estadosSeleccionados, puestosSeleccionados, especialidadesSeleccionadas, escalafonesSeleccionados, cuilBusqueda, nombreBusqueda, modoFiltro])
 
   if (loading) {
     return (
@@ -1081,6 +1109,25 @@ const TablonConcursos = () => {
                   placeholder="Buscar por CUIL..."
                   defaultValue=""
                   onChange={(e) => debouncedSetCuil(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #ddd',
+                    borderRadius: 6,
+                    background: '#fff',
+                    fontSize: 13,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {/* INPUT DE BÚSQUEDA NOMBRE Y APELLIDO */}
+              <div className="dropdown-container" style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar por Nombre y Apellido..."
+                  defaultValue=""
+                  onChange={(e) => debouncedSetNombre(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
