@@ -269,7 +269,6 @@ const OrganigramaDetalle = () => {
   const treeContainerRef = useRef(null)
   const normalContainerRef = useRef(null)
   const fullscreenContainerRef = useRef(null)
-  const treeInstanceRef = useRef(null) // Ref para la instancia única del Tree
 
   const { error: errorFromHook, handleError, clearError } = useErrorHandler()
 
@@ -544,17 +543,6 @@ const OrganigramaDetalle = () => {
     }
   }, [treeData, fullScreenMode])
   
-  useEffect(() => {
-    if (!treeData || !treeInstanceRef.current) return
-    
-    const targetContainer = fullScreenMode ? fullscreenContainerRef.current : normalContainerRef.current
-    if (!targetContainer) return
-    
-    if (treeInstanceRef.current.parentNode !== targetContainer) {
-      targetContainer.appendChild(treeInstanceRef.current)
-    }
-  }, [fullScreenMode, treeData])
-  
   // Configuración dinámica del Tree según la vista
   const treeConfig = {
     data: treeData,
@@ -651,9 +639,9 @@ const OrganigramaDetalle = () => {
               bottom: 0,
               width: '100%',
               height: '100%',
-              display: fullScreenMode ? 'none' : 'block', // Ocultar cuando está en fullscreen
+              display: fullScreenMode ? 'none' : 'block',
             }}>
-              {/* Tree renderizado aquí */}
+              {!fullScreenMode && treeData && <Tree key="org-tree-normal" {...treeConfig} />}
             </div>
             
             {/* Mensaje cuando no hay datos - Vista Normal */}
@@ -746,9 +734,9 @@ const OrganigramaDetalle = () => {
             bottom: 0,
             width: '100%',
             height: '100%',
-            display: !fullScreenMode ? 'none' : 'block', // Ocultar cuando NO está en fullscreen
+            display: !fullScreenMode ? 'none' : 'block',
           }}>
-            {/* Tree renderizado aquí */}
+            {fullScreenMode && treeData && <Tree key="org-tree-fullscreen" {...treeConfig} />}
           </div>
           
           {/* Mensaje cuando no hay datos - Vista Fullscreen */}
@@ -772,18 +760,6 @@ const OrganigramaDetalle = () => {
           )}
         </Box>
       </Box>
-      
-      {/* Tree único - SIEMPRE renderizado (incluso sin datos) para mantener consistencia */}
-      <div 
-        ref={treeInstanceRef}
-        style={{ 
-          width: '100%', 
-          height: '100%',
-          display: hasData ? 'block' : 'none' // Solo ocultar visualmente
-        }}
-      >
-        {treeData && <Tree key="org-tree" {...treeConfig} />}
-      </div>
     </>
   )
 }
