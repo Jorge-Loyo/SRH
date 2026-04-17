@@ -157,7 +157,7 @@ const Home = () => {
           justifyContent: 'center',
           gap: 0,
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          minHeight: 100,
+          minHeight: 70,
           maxWidth: 320,
           transition: 'all 0.25s ease',
           cursor: 'pointer'
@@ -194,7 +194,7 @@ const Home = () => {
               <>
                 <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 32 }}>
                   <H3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 700, textAlign: 'left', color: '#374151' }}>📊 Tablas (BD)</H3>
-                  <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, width: '100%' }}>
+                  <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, width: '100%' }}>
                     <QuickLink href="/admin/pages/PersonasFull" icon="User" label="Personas" />
                     <QuickLink href="/admin/pages/CargosFull" icon="Inbox" label="Cargos" />
                     <QuickLink href="/admin/pages/RolesFull" icon="Copy" label="Roles" />
@@ -228,11 +228,12 @@ const Home = () => {
             {(state.userRole === 'admin' || state.userRole === 'editor' || state.userRole === 'viewer' || state.userRole === 'gerencia') && (
               <Box style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <H3 style={{ marginTop: 0, marginBottom: 16, fontSize: 16, fontWeight: 700, textAlign: 'left', color: '#374151' }}>🏥 Estructuras - Personal - Seguimiento</H3>
-                <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, width: '100%' }}>
+                <Box style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 14, width: '100%' }}>
                   <QuickLink href="/admin/pages/Hospitales" icon="Home" label="Hospitales" />
                   <QuickLink href="/admin/pages/OrganigramaHome" icon="Menu" label="Organigrama" />
                   <QuickLink href="/admin/pages/RecorridasHospitales" icon="Folder" label="Recorridas" />
                   <QuickLink href="/admin/pages/HospitalesConcursos" icon="Award" label="Concursos" />
+                  <QuickLink href="/admin/pages/DotacionTotal" icon="List" label="Dotación" />
                 </Box>
               </Box>
             )}

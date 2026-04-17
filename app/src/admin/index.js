@@ -111,9 +111,11 @@ async function setupAdmin(app) {
       
       const handlers = getAdminPageHandlers({ AppDataSource, toCsvBase64: require('../utils/csv').toCsvBase64 });
       const { handleOrganizacionTabla: handleOrganizacionTablaRaw } = require('../hospitals/pages');
+      const { handleDotacionTotalPage } = require('../hospitals/dotacion-pages');
       
       // Wrapper para handleOrganizacionTabla que adapta la signature
       const handleOrganizacionTabla = (req) => handleOrganizacionTablaRaw({ AppDataSource, req });
+      const handleDotacionTotal = (req) => handleDotacionTotalPage({ AppDataSource, req });
       
       // Mapeo de page names a handlers
       const pageToHandler = {
@@ -123,6 +125,7 @@ async function setupAdmin(app) {
         'SiglasFull': handlers.siglasFullGeneric,
         'BajasFull': handlers.bajasFullGeneric,
         'OrganizacionTabla': handleOrganizacionTabla,
+        'DotacionTotal': handleDotacionTotal,
       };
       
       const handler = pageToHandler[pageName];

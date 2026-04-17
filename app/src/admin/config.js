@@ -258,6 +258,25 @@ function buildAdminOptions({ AdminJS, adminResources, dashboardConf }) {
         component: AdminJS.bundle('../components/vista_concursos/TablonConcursos.jsx'),
         isAccessible: canViewStructurePages, // Admin, Editor, Viewer (NO Director)
       },
+
+      // ============ DOTACIÓN TOTAL (ADMIN, EDITOR, VIEWER, GERENCIA - NO DIRECTOR) ============
+      DotacionTotal: {
+        label: 'Dotación Total',
+        component: AdminJS.bundle('../components/vista_dotacion/dotacion-total.jsx'),
+        handler: async (req) => {
+          try {
+            const { handleDotacionTotalPage } = require('../hospitals/dotacion-pages');
+            const result = await handleDotacionTotalPage({ AppDataSource, req });
+            if (result && typeof result === 'object' && !Array.isArray(result)) {
+              return result;
+            }
+            return { columns: [], rows: [], total: 0 };
+          } catch (e) {
+            return { columns: [], rows: [], total: 0 };
+          }
+        },
+        isAccessible: canViewStructurePages, // Admin, Editor, Viewer (NO Director)
+      },
     };
   }
 

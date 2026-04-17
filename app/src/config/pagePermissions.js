@@ -33,6 +33,9 @@ const PAGE_PERMISSIONS = {
     'HospitalesConcursos',
     'TablonConcursos',
     
+    // Dotación Total
+    'DotacionTotal',
+    
     // POU
     'POUDetalle',
     
@@ -61,6 +64,7 @@ const PAGE_PERMISSIONS = {
     'ConcursosDetailModal',
     'HospitalesConcursos',
     'TablonConcursos',
+    'DotacionTotal',
     'POUDetalle',
   ],
   
@@ -77,6 +81,7 @@ const PAGE_PERMISSIONS = {
     'ConcursosDetailModal',
     'HospitalesConcursos',
     'TablonConcursos',
+    'DotacionTotal',
     'POUDetalle',
   ],
   
@@ -102,6 +107,7 @@ const PAGE_PERMISSIONS = {
     'ConcursosDetailModal',
     'HospitalesConcursos',
     'TablonConcursos',
+    'DotacionTotal',
     'POUDetalle',
   ],
 };
@@ -152,8 +158,8 @@ function canViewTablePages({ currentAdmin } = {}) {
 function canViewStructurePages({ currentAdmin } = {}) {
   if (!currentAdmin) return false;
   const role = currentAdmin.role;
-  // Admin, Editor, Viewer SÍ; Director NO
-  return role === 'admin' || role === 'editor' || role === 'viewer';
+  // Admin, Editor, Viewer, Gerencia SÍ; Director NO
+  return role === 'admin' || role === 'editor' || role === 'viewer' || role === 'gerencia';
 }
 
 module.exports = {
