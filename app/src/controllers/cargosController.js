@@ -4,6 +4,7 @@ const { Cargo } = require('../entities-class/Cargo');
 const { getPagination, getOrder, buildWhere } = require('../utils/query');
 const CargoService = require('../services/CargoService');
 const { ServiceFactory } = require('../utils/serviceFactory');
+const logger = require('../utils/logger');
 
 module.exports = {
   async list(req, res) {
@@ -17,7 +18,6 @@ module.exports = {
       
       res.json({ data: rows, meta: { count, limit, offset } });
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[CargosController.list]', { error: err.message });
       res.status(500).json({ error: 'Error al obtener registros' });
     }
@@ -31,7 +31,6 @@ module.exports = {
       if (!item) return res.status(404).json({ error: 'Cargo no encontrado' });
       res.json(item);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[CargosController.getById]', { error: err.message });
       res.status(500).json({ error: 'Error al obtener registro' });
     }
@@ -44,7 +43,6 @@ module.exports = {
       
       res.status(201).json(created);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[CargosController.create]', { error: err.message });
       res.status(400).json({ error: 'Error al crear registro' });
     }
@@ -59,7 +57,6 @@ module.exports = {
       if (!updated) return res.status(404).json({ error: 'Cargo no encontrado' });
       res.json(updated);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[CargosController.update]', { error: err.message });
       res.status(400).json({ error: 'Error al actualizar registro' });
     }
@@ -73,7 +70,6 @@ module.exports = {
       if (!deleted) return res.status(404).json({ error: 'Cargo no encontrado' });
       res.status(204).send();
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[CargosController.remove]', { error: err.message });
       res.status(500).json({ error: 'Error al eliminar registro' });
     }

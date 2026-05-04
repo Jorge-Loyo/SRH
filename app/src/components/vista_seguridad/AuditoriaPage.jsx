@@ -3,9 +3,192 @@ import { Box, H3, Text, Table, TableHead, TableRow, TableCell, TableBody, Button
 import BackButton from '../reutilizables/BackButton'
 import UserInfo from '../reutilizables/UserInfo'
 import ErrorFallback from '../reutilizables/ErrorFallback'
+import Modal from '../reutilizables/Modal'
 import { useErrorHandler } from '../hooks/useErrorHandler'
 
+const SENSITIVE_KEYS = new Set(['password', 'password_hash', 'token', 'refreshToken', 'authorization'])
+
+const RESOURCE_MAP = {
+  'recorridas': 'Recorridas',
+  'minutas': 'Minutas',
+  'personas': 'Personas',
+  'cargos': 'Cargos',
+  'concursos': 'Concursos',
+  'users': 'Usuarios',
+  'user': 'Usuarios',
+  'roles': 'Roles',
+  'periodos': 'Períodos',
+  'siglas': 'Siglas',
+  'pou': 'POU',
+  'bajas': 'Bajas de concurso',
+  'auth': 'Autenticación',
+  'login': 'Autenticación',
+}
+
+const resolveResource = (r) => {
+  if (!r) return null
+  const segments = r.replace(/^\/+/, '').split('/')
+  const meaningful = segments.find(s => s && !/^\d+$/.test(s) && !['api', 'admin'].includes(s.toLowerCase()))
+  const key = (meaningful || r).toLowerCase()
+  return RESOURCE_MAP[key] || (key.charAt(0).toUpperCase() + key.slice(1))
+}
+
+const extractIdFromPath = (path) => {
+  if (!path) return null
+  const match = path.match(/\/(\d+)([?#].*)?$/)
+  return match ? match[1] : null
+}
+
+const buildSentence = (log) => {
+  const recordId = log.record_id || extractIdFromPath(log.path)
+  const resource = resolveResource(log.resource)
+  const idSuffix = recordId ? ` #${recordId}` : ''
+  switch (log.action) {
+    case 'create':      return resource ? `Creó un nuevo registro en ${resource}` : 'Creó un nuevo registro'
+    case 'update':      return resource ? `Modificó el registro${idSuffix} en ${resource}` : `Modificó el registro${idSuffix}`
+    case 'delete':      return resource ? `Eliminó el registro${idSuffix} de ${resource}` : `Eliminó el registro${idSuffix}`
+    case 'login_success': return 'Inicio de sesión exitoso'
+    case 'login_fail':    return 'Intento de inicio de sesión fallido'
+    case 'export':      return resource ? `Exportó datos de ${resource}` : 'Exportó datos del sistema'
+    default:            return resource ? `${log.action} sobre ${resource}${idSuffix}` : (log.action || '-')
+  }
+}
+
+const parseChanges = (raw) => {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw)
+    if (typeof parsed !== 'object' || Array.isArray(parsed)) return null
+    return Object.fromEntries(
+      Object.entries(parsed).filter(([k]) => !SENSITIVE_KEYS.has(k))
+    )
+  } catch {
+    return null
+  }
+}
+
+const renderValue = (val, depth = 0) => {
+  if (val === null || val === undefined) return <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>vacío</span>
+  if (typeof val === 'boolean') return <span style={{ color: val ? '#166534' : '#991b1b', fontWeight: 600 }}>{val ? 'Sí' : 'No'}</span>
+  if (typeof val === 'number') return <span style={{ color: '#7c3aed', fontWeight: 600 }}>{val}</span>
+  if (typeof val === 'string' && val.trim() === '') return <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>vacío</span>
+  if (typeof val === 'string') return <span style={{ color: '#111827' }}>{val}</span>
+  if (typeof val === 'object' && depth < 2) {
+    const entries = Object.entries(val)
+    if (entries.length === 0) return <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>sin datos</span>
+    return (
+      <Box style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid #e5e7eb' }}>
+        {entries.map(([k, v]) => (
+          <Box key={k} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ color: '#6b7280', fontSize: 11, minWidth: 80 }}>{k}:</span>
+            {renderValue(v, depth + 1)}
+          </Box>
+        ))}
+      </Box>
+    )
+  }
+  return <span style={{ color: '#374151', fontSize: 11, fontFamily: 'monospace' }}>{JSON.stringify(val)}</span>
+}
+
+const AuditDetailModal = ({ log, onClose }) => {
+  const changes = log ? parseChanges(log.changes) : null
+  const actionInfo = log ? ({
+    'login_success': { emoji: '✔️', label: 'Login OK', bg: '#dcfce7', color: '#166534' },
+    'login_fail':    { emoji: '✗️', label: 'Login Error', bg: '#fee2e2', color: '#991b1b' },
+    'create':        { emoji: '✅', label: 'Crear', bg: '#dcfce7', color: '#166534' },
+    'update':        { emoji: '📝', label: 'Actualizar', bg: '#dbeafe', color: '#1e40af' },
+    'delete':        { emoji: '❌', label: 'Eliminar', bg: '#fee2e2', color: '#991b1b' },
+    'export':        { emoji: '📤', label: 'Exportar', bg: '#f3e8ff', color: '#6b21a8' },
+  }[log.action] || { emoji: '•', label: log.action || '-', bg: '#f3f4f6', color: '#374151' }) : null
+
+  const Row = ({ label, children }) => (
+    <Box style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '1px solid #f3f4f6', alignItems: 'flex-start' }}>
+      <span style={{ minWidth: 110, fontSize: 12, color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', paddingTop: 2 }}>{label}</span>
+      <Box style={{ flex: 1, fontSize: 13 }}>{children}</Box>
+    </Box>
+  )
+
+  return (
+    <Modal
+      isOpen={!!log}
+      onClose={onClose}
+      title="Detalle del evento"
+      subtitle={log ? new Date(log.created_at).toLocaleString('es-AR') : ''}
+      maxWidth="580px"
+      disableClickOutside={false}
+      footer={<Button onClick={onClose} variant="text">Cerrar</Button>}
+    >
+      {log && (
+        <Box>
+
+          <Row label="Resumen">
+            <span style={{ fontWeight: 500, color: '#111827' }}>{buildSentence(log)}</span>
+          </Row>
+
+          <Row label="Usuario">
+            <Box style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontWeight: 600 }}>{log.user_username || '-'}</span>
+              {log.user_role && (
+                <span style={{ padding: '1px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#dbeafe', color: '#1e40af', textTransform: 'capitalize' }}>
+                  {log.user_role}
+                </span>
+              )}
+            </Box>
+          </Row>
+
+          <Row label="Acción">
+            <span style={{ padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600, background: actionInfo.bg, color: actionInfo.color }}>
+              {actionInfo.emoji} {actionInfo.label}
+            </span>
+          </Row>
+
+          <Row label="Recurso">
+            <Box style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontWeight: 600 }}>{resolveResource(log.resource) || '-'}</span>
+              {log.path && <span style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>{log.path}</span>}
+            </Box>
+          </Row>
+
+          {(log.record_id || extractIdFromPath(log.path)) && (
+            <Row label="ID registro">
+              <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#7c3aed' }}>#{log.record_id || extractIdFromPath(log.path)}</span>
+            </Row>
+          )}
+
+          <Row label="Estado HTTP">
+            {log.status
+              ? <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700, background: log.status < 300 ? '#dcfce7' : '#fee2e2', color: log.status < 300 ? '#166534' : '#991b1b' }}>{log.status}</span>
+              : <span style={{ color: '#9ca3af' }}>-</span>
+            }
+          </Row>
+
+          {changes && Object.keys(changes).length > 0 && (
+            <Box style={{ marginTop: 16 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Datos enviados</span>
+              <Box style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {Object.entries(changes).map(([k, v]) => (
+                  <Box key={k} style={{ display: 'flex', gap: 12, padding: '8px 10px', borderRadius: 6, background: '#f9fafb', marginBottom: 6, alignItems: 'flex-start' }}>
+                    <span style={{ minWidth: 130, fontSize: 12, fontWeight: 700, color: '#374151', paddingTop: 1 }}>{k}</span>
+                    <Box style={{ flex: 1 }}>{renderValue(v)}</Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {!changes && log.action !== 'login_success' && log.action !== 'login_fail' && (
+            <Box style={{ marginTop: 16, padding: 12, background: '#f9fafb', borderRadius: 6, textAlign: 'center' }}>
+              <span style={{ fontSize: 12, color: '#9ca3af' }}>Sin datos adicionales registrados para este evento</span>
+            </Box>
+          )}
+        </Box>
+      )}
+    </Modal>
+  )
+}
+
 const AuditoriaPage = () => {
+  const [selectedLog, setSelectedLog] = useState(null)
   const [state, setState] = useState({
     loading: true,
     logs: [],
@@ -125,6 +308,8 @@ const AuditoriaPage = () => {
   }
 
   return (
+    <>
+    <AuditDetailModal log={selectedLog} onClose={() => setSelectedLog(null)} />
     <Box style={{ padding: 16 }}>
       <BackButton />
       <UserInfo />
@@ -248,15 +433,14 @@ const AuditoriaPage = () => {
                       <TableCell style={{ borderBottom: '2px solid #111' }}>Rol</TableCell>
                       <TableCell style={{ borderBottom: '2px solid #111' }}>Acción</TableCell>
                       <TableCell style={{ borderBottom: '2px solid #111' }}>Recurso</TableCell>
-                      <TableCell style={{ borderBottom: '2px solid #111' }}>ID</TableCell>
-                      <TableCell style={{ borderBottom: '2px solid #111' }}>IP</TableCell>
+                      <TableCell style={{ borderBottom: '2px solid #111' }}>Detalle</TableCell>
                       <TableCell style={{ borderBottom: '2px solid #111' }}>Estado</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {state.logs.slice((state.page - 1) * state.perPage, state.page * state.perPage).length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                        <TableCell colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
                           <Box>
                             <Text style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>📊 Sin registros</Text>
                             <Text style={{ fontSize: 13 }}>No hay registros de auditoría que coincidan con los filtros</Text>
@@ -301,14 +485,31 @@ const AuditoriaPage = () => {
                                 {actionInfo.emoji} {actionInfo.label}
                               </span>
                             </TableCell>
-                            <TableCell style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 500 }}>
-                              {log.resource || '-'}
+                            <TableCell style={{ fontSize: 13, fontWeight: 500 }}>
+                              {resolveResource(log.resource) || '-'}
                             </TableCell>
-                            <TableCell style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>
-                              {log.record_id || '-'}
-                            </TableCell>
-                            <TableCell style={{ fontSize: 12, color: '#6b7280' }}>
-                              {log.ip || '-'}
+                            <TableCell>
+                              <Box style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <span style={{ fontSize: 13, color: '#374151' }}>{buildSentence(log)}</span>
+                                {parseChanges(log.changes) && (
+                                  <button
+                                    onClick={() => setSelectedLog(log)}
+                                    style={{
+                                      alignSelf: 'flex-start',
+                                      padding: '2px 10px',
+                                      borderRadius: 12,
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      background: '#eff6ff',
+                                      color: '#1d4ed8',
+                                      border: '1px solid #bfdbfe',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Ver datos →
+                                  </button>
+                                )}
+                              </Box>
                             </TableCell>
                             <TableCell>
                               <span style={{
@@ -413,6 +614,7 @@ const AuditoriaPage = () => {
         )}
       </Box>
     </Box>
+    </>
   )
 }
 

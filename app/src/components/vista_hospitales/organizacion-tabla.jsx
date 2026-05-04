@@ -78,8 +78,8 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
   // Rango de edad
   const [rangoEdad, setRangoEdad] = useState({ min: '', max: '' })
 
-  // Rango de antigüedad (en años)
-  const [rangoAntiguedad, setRangoAntiguedad] = useState({ min: '', max: '' })
+  // Antigüedad en años (campo único)
+  const [antiguedad, setAntiguedad] = useState('')
 
   // Checkbox de procesos concursales
   const [procesosConcursales, setProcesosConcursales] = useState(false)
@@ -143,10 +143,10 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     rangoEdadRef.current = rangoEdad
   }, [rangoEdad])
   
-  const rangoAntiguedadRef = useRef(rangoAntiguedad)
+  const rangoAntiguedadRef = useRef(antiguedad)
   useEffect(() => {
-    rangoAntiguedadRef.current = rangoAntiguedad
-  }, [rangoAntiguedad])
+    rangoAntiguedadRef.current = antiguedad
+  }, [antiguedad])
   
   const procesosConcursalesRef = useRef(procesosConcursales)
   useEffect(() => {
@@ -204,9 +204,8 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     if (rangoEdadRef.current.min) active.edad_min = rangoEdadRef.current.min
     if (rangoEdadRef.current.max) active.edad_max = rangoEdadRef.current.max
     
-    // Rango de antigüedad
-    if (rangoAntiguedadRef.current.min) active.antiguedad_min = rangoAntiguedadRef.current.min
-    if (rangoAntiguedadRef.current.max) active.antiguedad_max = rangoAntiguedadRef.current.max
+    // Antigüedad en años
+    if (rangoAntiguedadRef.current) active.antiguedad = rangoAntiguedadRef.current
     
     // Procesos concursales
     if (procesosConcursalesRef.current) active.procesos_concursales = 'true'
@@ -229,7 +228,7 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     const sortBy = paramsOverride.sortBy ?? currentState.sortBy
     const sortDir = paramsOverride.sortDir ?? currentState.sortDir
     
-    // Solo mostrar loading para operaciones costosas (no para cambios de página)
+    const skipDistinct = paramsOverride.skipDistinct === true
     const isPageChange = paramsOverride.page !== undefined && Object.keys(paramsOverride).length === 1
     const shouldShowLoading = !isPageChange
     
@@ -241,6 +240,7 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
       const query = { hospital, periodo: periodoRef.current, page, perPage }
       if (sortBy) query.sortBy = sortBy
       if (sortDir) query.sortDir = sortDir
+      if (skipDistinct) query.skipDistinct = 'true'
       
       // Construir filtros usando la función auxiliar
       const active = buildActiveFiltersFromRefs()
@@ -288,13 +288,13 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     }, 300)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData es estable, usa refs
-  }, [filters, quickSearch, rangoEdad, rangoAntiguedad, procesosConcursales, estadoFilter])
+  }, [filters, quickSearch, rangoEdad, antiguedad, procesosConcursales, estadoFilter])
 
   // Toggle sort - MEMOIZADO para evitar re-renders innecesarios
   const toggleSort = useCallback((col) => {
     const currentState = stateRef.current
     const nextDir = currentState.sortBy === col && currentState.sortDir === 'ASC' ? 'DESC' : 'ASC'
-    fetchData({ page: 1, sortBy: col, sortDir: nextDir })
+    fetchData({ page: 1, sortBy: col, sortDir: nextDir, skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData es estable
   }, [])
 
@@ -311,20 +311,20 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
     })
     setQuickSearch({ codigo_cargo: '', nombre_apellido: '', cuil: '', codigo_rol: '', ex_baja: '', ex_concurso: '' })
     setRangoEdad({ min: '', max: '' })
-    setRangoAntiguedad({ min: '', max: '' })
+    setAntiguedad('')
     setProcesosConcursales(false)
     setEstadoFilter('')
   }, [])
 
   // Callback de paginación - MEMOIZADO para evitar re-renders de Pagination
   const handlePageChange = useCallback((newPage) => {
-    fetchData({ page: newPage })
+    fetchData({ page: newPage, skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData es estable
   }, [])
 
   // Callback para cambiar registros por página - MEMOIZADO
   const handlePerPageChange = useCallback((e) => {
-    fetchData({ page: 1, perPage: Number(e.target.value) })
+    fetchData({ page: 1, perPage: Number(e.target.value), skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchData es estable
   }, [])
 
@@ -692,29 +692,18 @@ const OrganizacionTabla = ({ titleOverride, periodo: periodoProp } = {}) => {
           </Box>
         )}
 
-        {/* Rango de Antigüedad - Solo para dotación normal */}
+        {/* Antigüedad en años - Solo para dotación normal */}
         {isNormalMode && (
           <Box style={{ marginBottom: 20 }}>
-            <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>Antiguedad</Label>
-            <Box style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Input 
-                type="number" 
-                placeholder="Min"
-                value={rangoAntiguedad.min}
-                onChange={(e) => setRangoAntiguedad({...rangoAntiguedad, min: e.target.value})}
-                style={{ width: '100%' }}
-                className="no-spinner"
-              />
-              <Text>-</Text>
-              <Input 
-                type="number" 
-                placeholder="Max"
-                value={rangoAntiguedad.max}
-                onChange={(e) => setRangoAntiguedad({...rangoAntiguedad, max: e.target.value})}
-                style={{ width: '100%' }}
-                className="no-spinner"
-              />
-            </Box>
+            <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>Antigüedad (años)</Label>
+            <Input 
+              type="number" 
+              placeholder="Ej: 5"
+              value={antiguedad}
+              onChange={(e) => setAntiguedad(e.target.value)}
+              style={{ width: '100%' }}
+              className="no-spinner"
+            />
           </Box>
         )}
 

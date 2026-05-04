@@ -4,6 +4,7 @@ const { Persona } = require('../entities-class/Persona');
 const { getPagination, getOrder, buildWhere } = require('../utils/query');
 const PersonaService = require('../services/PersonaService');
 const { ServiceFactory } = require('../utils/serviceFactory');
+const logger = require('../utils/logger');
 
 module.exports = {
   async list(req, res) {
@@ -22,7 +23,6 @@ module.exports = {
       
       res.json({ data: rows, meta: { count, limit, offset } });
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[PersonasController.list]', { error: err.message, stack: err.stack });
       res.status(500).json({ error: 'Error al obtener personas' });
     }
@@ -36,7 +36,6 @@ module.exports = {
       if (!item) return res.status(404).json({ error: 'Persona no encontrada' });
       res.json(item);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[PersonasController.getById]', { error: err.message });
       res.status(500).json({ error: 'Error al obtener persona' });
     }
@@ -49,7 +48,6 @@ module.exports = {
       
       res.status(201).json(created);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[PersonasController.create]', { error: err.message, stack: err.stack });
       res.status(400).json({ error: 'No se pudo crear el registro' });
     }
@@ -64,7 +62,6 @@ module.exports = {
       if (!updated) return res.status(404).json({ error: 'Persona no encontrada' });
       res.json(updated);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[PersonasController.update]', { error: err.message });
       res.status(400).json({ error: 'No se pudo actualizar el registro' });
     }
@@ -78,7 +75,6 @@ module.exports = {
       if (!deleted) return res.status(404).json({ error: 'Persona no encontrada' });
       res.status(204).send();
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[PersonasController.remove]', { error: err.message });
       res.status(500).json({ error: 'No se pudo eliminar el registro' });
     }

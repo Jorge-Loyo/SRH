@@ -42,7 +42,7 @@ async function handleHttpResponse(response, context = '') {
   throw new Error(message);
 }
 
-export {
+module.exports = {
   getErrorMessage,
   handleHttpResponse,
 };

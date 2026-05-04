@@ -24,6 +24,7 @@ const ALLOWED_SORT_COLUMNS = {
   'Carrera':                    'r.literal_codigo_registro',
   'Agrupamiento':               'r.agrupador',
   'Especialidad':               'p.especialidad',
+  'Día':                        'r.dia',
   'Cargo Desde':                'r.cargo_desde',
   'Jefatura':                   'r.jefaturas',
   'Documentación Jefatura':     'r.doc_respaldatoria_j_categoria',
@@ -48,6 +49,14 @@ const MULTI_FILTERS = [
   { key: 'reparticion',              column: 'r.descripcion_reparticion' },
 ]
 
+// Filtros provenientes de la tabla Siglas (segmentación por tipo de hospital)
+const SIGLAS_FILTERS = [
+  { key: 'sigla',                 column: 's.sigla' },
+  { key: 'universo_totalizador',  column: 's.universo_totalizador' },
+  { key: 'tipo_hospital_sigla',   column: 's.tipo_hospital_sigla' },
+  { key: 'monovalencia',          column: 's.monovalencia' },
+]
+
 // Helper: construye WHERE clauses reutilizables
 // excludeField: omite ese multiFilter (para filtros encadenados de distinctValues)
 function buildWhere(query, periodo, excludeField = null) {
@@ -58,6 +67,14 @@ function buildWhere(query, periodo, excludeField = null) {
     const vals = query.hospital_filter.split(',').map(v => v.trim()).filter(Boolean)
     if (vals.length) { clauses.push(`s.sigla IN (?)`); params.push(vals) }
   }
+
+  SIGLAS_FILTERS.forEach(({ key, column }) => {
+    if (key === excludeField) return
+    if (query[key]) {
+      const vals = query[key].split(',').map(v => v.trim()).filter(Boolean)
+      if (vals.length) { clauses.push(`${column} IN (?)`); params.push(vals) }
+    }
+  })
 
   MULTI_FILTERS.forEach(({ key, column }) => {
     if (key === excludeField) return
@@ -76,8 +93,14 @@ function buildWhere(query, periodo, excludeField = null) {
 
   if (query.edad_min)        { clauses.push(`p.edad >= ?`);        params.push(parseInt(query.edad_min)) }
   if (query.edad_max)        { clauses.push(`p.edad <= ?`);        params.push(parseInt(query.edad_max)) }
-  if (query.antiguedad_min)  { clauses.push(`p.antiguedad >= ?`);  params.push(parseInt(query.antiguedad_min)) }
-  if (query.antiguedad_max)  { clauses.push(`p.antiguedad <= ?`);  params.push(parseInt(query.antiguedad_max)) }
+  
+  // Antiguedad: búsqueda por año (año_actual - años_solicitados)
+  if (query.antiguedad) { 
+    const currentYear = new Date().getFullYear()
+    const targetYear = currentYear - parseInt(query.antiguedad)
+    clauses.push(`p.antiguedad = ?`);
+    params.push(targetYear) 
+  }
 
   if (query.estado) {
     const norm = normalizeSpanishText(query.estado)
@@ -160,6 +183,7 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
         r.literal_codigo_registro        AS 'Carrera',
         r.agrupador                      AS 'Agrupamiento',
         p.especialidad                   AS 'Especialidad',
+        r.dia                            AS 'Día',
         r.cargo_desde                    AS 'Cargo Desde',
         r.jefaturas                      AS 'Jefatura',
         r.doc_respaldatoria_j_categoria  AS 'Documentación Jefatura',
@@ -175,10 +199,24 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
       LIMIT ${perPage} OFFSET ${offset}
     `
 
-    // ── Queries 4-12: SELECT DISTINCT por campo (filtros encadenados) ──
-    // Cada una excluye su propio filtro para mostrar opciones contextuales.
-    // Se usan solo las columnas necesarias (no las 27 del SELECT principal).
-    const distinctPromises = MULTI_FILTERS.map(({ key, column }) => {
+    const skipDistinct = query.skipDistinct === 'true'
+
+    // ── Queries SELECT DISTINCT (saltear si solo cambió página/orden) ──
+    const distinctPromises = skipDistinct ? [] : MULTI_FILTERS.map(({ key, column }) => {
+      const { params, whereSQL: dWhereSQL } = buildWhere(query, periodo, key)
+      const sql = `
+        SELECT DISTINCT ${column} AS val
+        ${FROM_JOINS}
+        WHERE r.periodo = ? ${dWhereSQL} AND ${column} IS NOT NULL
+        ORDER BY val ASC
+      `
+      return AppDataSource.query(sql, params).then(rows => ({
+        key,
+        values: rows.map(r => r.val).filter(Boolean)
+      }))
+    })
+
+    const siglasDistinctPromises = skipDistinct ? [] : SIGLAS_FILTERS.map(({ key, column }) => {
       const { params, whereSQL: dWhereSQL } = buildWhere(query, periodo, key)
       const sql = `
         SELECT DISTINCT ${column} AS val
@@ -193,11 +231,12 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
     })
 
     // ── Ejecutar todo en paralelo ──────────────────────────────────────
-    const [countRows, kpiRows, dataRows, ...distinctResults] = await Promise.all([
+    const [countRows, kpiRows, dataRows, ...allDistinctResults] = await Promise.all([
       AppDataSource.query(countSQL, mainParams),
       AppDataSource.query(kpiSQL,   mainParams),
       AppDataSource.query(dataSQL,  mainParams),
-      ...distinctPromises
+      ...distinctPromises,
+      ...siglasDistinctPromises
     ])
 
     const total = parseInt(countRows[0]?.total || 0)
@@ -213,13 +252,20 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
       else if (n.includes('retencion'))              kpis.retencion += c
     })
 
-    // distinctValues desde los SELECT DISTINCT
+    // distinctValues desde los SELECT DISTINCT (MULTI_FILTERS + SIGLAS_FILTERS)
     const distinctValues = {}
-    distinctResults.forEach(({ key, values }) => { distinctValues[key] = values })
+    const siglasDistinctValues = {}
+    allDistinctResults.forEach(({ key, values }) => {
+      if (SIGLAS_FILTERS.some(f => f.key === key)) {
+        siglasDistinctValues[key] = values
+      } else {
+        distinctValues[key] = values
+      }
+    })
 
     const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
 
-    return { columns, rows: dataRows, total, kpis, distinctValues, page, perPage }
+    return { columns, rows: dataRows, total, kpis, distinctValues, siglasDistinctValues, page, perPage }
 
   } catch (error) {
     logger.error('[handleDotacionTotal] Error:', { error: error.message, stack: error.stack })
@@ -236,185 +282,139 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
  */
 async function handleBajasConcursosTotal({ AppDataSource, query, periodo, page, perPage, sortBy, sortDir }) {
   try {
-    let sqlBase = `
-      SELECT 
-        b.sigla AS 'Hospital',
-        b.codigo_cargo AS 'Código de Cargo',
-        b.nombre_apellido AS 'Nombre y Apellido',
-        b.puesto_baja AS 'Puesto de Baja',
-        b.especialidad_baja AS 'Especialidad de Baja',
-        b.unificador_puestos AS 'Unificador de Puestos',
-        b.ex_baja AS 'Expediente Baja',
-        b.ex_concurso AS 'Expediente Concurso',
-        b.fecha_baja AS 'Fecha de Baja',
-        b.motivo_baja AS 'Motivo de Baja'
+    const FROM_JOINS = `
       FROM bajas_concursos b
-      WHERE b.periodo = ?
+      LEFT JOIN siglas s ON b.sigla = s.sigla
     `
 
-    const paramsArr = [periodo]
-    const whereClauses = []
-
-    // Filtro opcional de hospital
-    if (query.hospital_filter) {
-      const values = query.hospital_filter.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.sigla IN (?)`)
-        paramsArr.push(values)
-      }
+    // Whitelist de columnas para ORDER BY en bajas
+    const BAJAS_SORT_COLUMNS = {
+      'Hospital':              'b.sigla',
+      'Código de Cargo':       'b.codigo_cargo',
+      'Nombre y Apellido':     'b.nombre_apellido',
+      'Puesto de Baja':        'b.puesto_baja',
+      'Especialidad de Baja':  'b.especialidad_baja',
+      'Unificador de Puestos': 'b.unificador_puestos',
+      'Expediente Baja':       'b.ex_baja',
+      'Expediente Concurso':   'b.ex_concurso',
+      'Fecha de Baja':         'b.fecha_baja',
+      'Motivo de Baja':        'b.motivo_baja',
     }
-
-    // Aplicar filtros de búsqueda rápida
-    if (query.codigo_cargo) {
-      whereClauses.push(`b.codigo_cargo LIKE ?`)
-      paramsArr.push(`%${query.codigo_cargo}%`)
-    }
-    if (query.nombre_apellido) {
-      whereClauses.push(`b.nombre_apellido LIKE ?`)
-      paramsArr.push(`%${query.nombre_apellido}%`)
-    }
-    if (query.ex_baja) {
-      whereClauses.push(`b.ex_baja LIKE ?`)
-      paramsArr.push(`%${query.ex_baja}%`)
-    }
-    if (query.ex_concurso) {
-      whereClauses.push(`b.ex_concurso LIKE ?`)
-      paramsArr.push(`%${query.ex_concurso}%`)
-    }
-
-    // Aplicar filtros multi-select
-    if (query.unificador_puesto) {
-      const values = query.unificador_puesto.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.unificador_puestos IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-    if (query.especialidad) {
-      const values = query.especialidad.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.especialidad_baja IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-    if (query.literal_puesto) {
-      const values = query.literal_puesto.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.puesto_baja IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-
-    const whereSQL = whereClauses.length > 0 ? ' AND ' + whereClauses.join(' AND ') : ''
-    const fullSQL = sqlBase + whereSQL
-
-    const allRows = await AppDataSource.query(fullSQL, paramsArr)
-    const total = allRows.length
-
-    const kpis = {
-      total: total,
-      activos: 0,
-      bloqueados: 0,
-      comision: 0,
-      retencion: 0
-    }
-
-    const sortColumn = sortBy || 'id_baja'
-    const sortDirection = (sortDir || 'ASC').toUpperCase()
-    
-    allRows.sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
-      if (aVal < bVal) return sortDirection === 'ASC' ? -1 : 1
-      if (aVal > bVal) return sortDirection === 'ASC' ? 1 : -1
-      return 0
-    })
-    
+    const sqlSortCol = BAJAS_SORT_COLUMNS[sortBy] || 'b.sigla'
+    const sqlSortDir = (sortDir || 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
     const offset = (page - 1) * perPage
-    const rows = allRows.slice(offset, offset + perPage)
-
-    const columns = rows.length > 0 ? Object.keys(rows[0]) : []
 
     const multiFiltersBajas = [
-      { key: 'unificador_puesto', column: 'b.unificador_puestos', displayColumn: 'Unificador de Puestos' },
-      { key: 'especialidad', column: 'b.especialidad_baja', displayColumn: 'Especialidad de Baja' },
-      { key: 'literal_puesto', column: 'b.puesto_baja', displayColumn: 'Puesto de Baja' },
-      { key: 'literal_codigo_registro', column: 'b.motivo_baja', displayColumn: 'Motivo de Baja' }
+      { key: 'unificador_puesto',       column: 'b.unificador_puestos' },
+      { key: 'especialidad',            column: 'b.especialidad_baja' },
+      { key: 'literal_puesto',          column: 'b.puesto_baja' },
+      { key: 'literal_codigo_registro', column: 'b.motivo_baja' },
     ]
 
-    const calculateDistinctValuesForFieldBajas = async (excludeField) => {
-      const chainedParamsArr = [periodo]
-      const chainedWhereClauses = []
+    // Helper local: construye WHERE para bajas (excludeField para filtros encadenados)
+    const buildBajasWhere = (excludeField = null) => {
+      const clauses = []
+      const params = [periodo]
 
-      if (query.hospital_filter) {
-        const values = query.hospital_filter.split(',').map(v => v.trim()).filter(Boolean)
-        if (values.length > 0) {
-          chainedWhereClauses.push(`b.sigla IN (?)`)
-          chainedParamsArr.push(values)
-        }
-      }
+      SIGLAS_FILTERS.forEach(({ key, column }) => {
+        if (key === excludeField) return
+        const vals = query[key] ? query[key].split(',').map(v => v.trim()).filter(Boolean) : []
+        if (!vals.length) return
+        const actualColumn = key === 'sigla' ? 'b.sigla' : column
+        clauses.push(`${actualColumn} IN (?)`)
+        params.push(vals)
+      })
 
-      if (query.codigo_cargo) {
-        chainedWhereClauses.push(`b.codigo_cargo LIKE ?`)
-        chainedParamsArr.push(`%${query.codigo_cargo}%`)
-      }
-      if (query.nombre_apellido) {
-        chainedWhereClauses.push(`b.nombre_apellido LIKE ?`)
-        chainedParamsArr.push(`%${query.nombre_apellido}%`)
-      }
-      if (query.ex_baja) {
-        chainedWhereClauses.push(`b.ex_baja LIKE ?`)
-        chainedParamsArr.push(`%${query.ex_baja}%`)
-      }
-      if (query.ex_concurso) {
-        chainedWhereClauses.push(`b.ex_concurso LIKE ?`)
-        chainedParamsArr.push(`%${query.ex_concurso}%`)
-      }
+      if (query.codigo_cargo)    { clauses.push(`b.codigo_cargo LIKE ?`);    params.push(`%${query.codigo_cargo}%`) }
+      if (query.nombre_apellido) { clauses.push(`b.nombre_apellido LIKE ?`); params.push(`%${query.nombre_apellido}%`) }
+      if (query.ex_baja)         { clauses.push(`b.ex_baja LIKE ?`);         params.push(`%${query.ex_baja}%`) }
+      if (query.ex_concurso)     { clauses.push(`b.ex_concurso LIKE ?`);     params.push(`%${query.ex_concurso}%`) }
 
       multiFiltersBajas.forEach(({ key, column }) => {
         if (key === excludeField) return
-        if (query[key]) {
-          const values = query[key].split(',').map(v => v.trim()).filter(Boolean)
-          if (values.length > 0) {
-            chainedWhereClauses.push(`${column} IN (?)`)
-            chainedParamsArr.push(values)
-          }
-        }
+        const vals = query[key] ? query[key].split(',').map(v => v.trim()).filter(Boolean) : []
+        if (vals.length) { clauses.push(`${column} IN (?)`); params.push(vals) }
       })
 
-      const chainedWhereSQL = chainedWhereClauses.length > 0 ? ' AND ' + chainedWhereClauses.join(' AND ') : ''
-      const chainedFullSQL = sqlBase + chainedWhereSQL
-
-      const chainedResults = await AppDataSource.query(chainedFullSQL, chainedParamsArr)
-      return chainedResults
+      return { whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params }
     }
 
-    const distinctValues = {
-      agrupador: [],
-      escalafon: [],
-      sexo: [],
-      situacion_revista: [],
-      reparticion: [],
-      antiguedad: []
-    }
-    
-    for (const filterConfig of multiFiltersBajas) {
-      const { key, displayColumn } = filterConfig
-      const chainedData = await calculateDistinctValuesForFieldBajas(key)
-      
-      distinctValues[key] = [...new Set(
-        chainedData
-          .map(r => r[displayColumn])
-          .filter(Boolean)
-      )].sort()
+    const { whereSQL, params: mainParams } = buildBajasWhere()
+
+    // Query de conteo
+    const countSQL = `SELECT COUNT(*) AS total ${FROM_JOINS} WHERE b.periodo = ? ${whereSQL}`
+
+    // Query de datos: paginación y orden en SQL (no en JS)
+    const dataSQL = `
+      SELECT
+        b.sigla               AS 'Hospital',
+        b.codigo_cargo        AS 'Código de Cargo',
+        b.nombre_apellido     AS 'Nombre y Apellido',
+        b.puesto_baja         AS 'Puesto de Baja',
+        b.especialidad_baja   AS 'Especialidad de Baja',
+        b.unificador_puestos  AS 'Unificador de Puestos',
+        b.ex_baja             AS 'Expediente Baja',
+        b.ex_concurso         AS 'Expediente Concurso',
+        b.fecha_baja          AS 'Fecha de Baja',
+        b.motivo_baja         AS 'Motivo de Baja'
+      ${FROM_JOINS}
+      WHERE b.periodo = ? ${whereSQL}
+      ORDER BY ${sqlSortCol} ${sqlSortDir}
+      LIMIT ${perPage} OFFSET ${offset}
+    `
+
+    const skipDistinct = query.skipDistinct === 'true'
+
+    // Queries de distinctValues para filtros de personal (en paralelo, saltear en paginación/orden)
+    const multiDistinctPromises = skipDistinct ? [] : multiFiltersBajas.map(({ key, column }) => {
+      const { whereSQL: dWhere, params: dParams } = buildBajasWhere(key)
+      return AppDataSource.query(
+        `SELECT DISTINCT ${column} AS val ${FROM_JOINS} WHERE b.periodo = ? ${dWhere} AND ${column} IS NOT NULL ORDER BY val ASC`,
+        dParams
+      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean) }))
+    })
+
+    // Queries de distinctValues para filtros de siglas (en paralelo, saltear en paginación/orden)
+    const siglaDistinctPromises = skipDistinct ? [] : SIGLAS_FILTERS.map(({ key, column }) => {
+      const { whereSQL: dWhere, params: dParams } = buildBajasWhere(key)
+      const actualColumn = key === 'sigla' ? 'b.sigla' : column
+      return AppDataSource.query(
+        `SELECT DISTINCT ${actualColumn} AS val ${FROM_JOINS} WHERE b.periodo = ? ${dWhere} AND ${actualColumn} IS NOT NULL ORDER BY val ASC`,
+        dParams
+      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean) }))
+    })
+
+    // Ejecutar todo en paralelo
+    const [countRows, dataRows, ...allDistinctResults] = await Promise.all([
+      AppDataSource.query(countSQL, mainParams),
+      AppDataSource.query(dataSQL, mainParams),
+      ...multiDistinctPromises,
+      ...siglaDistinctPromises
+    ])
+
+    const total = parseInt(countRows[0]?.total || 0)
+    const rows = dataRows
+    const columns = rows.length > 0 ? Object.keys(rows[0]) : []
+
+    const SIGLAS_KEYS = new Set(SIGLAS_FILTERS.map(f => f.key))
+    let distinctValues = null
+    let siglasDistinctValues = null
+    if (!skipDistinct) {
+      distinctValues = { unificador_puesto: [], especialidad: [], literal_puesto: [], literal_codigo_registro: [] }
+      siglasDistinctValues = { sigla: [], universo_totalizador: [], tipo_hospital_sigla: [], monovalencia: [] }
+      allDistinctResults.forEach(({ key, values }) => {
+        if (SIGLAS_KEYS.has(key)) siglasDistinctValues[key] = values
+        else distinctValues[key] = values
+      })
     }
 
     return {
       columns,
       rows,
       total,
-      kpis,
+      kpis: { total, activos: 0, bloqueados: 0, comision: 0, retencion: 0 },
       distinctValues,
+      siglasDistinctValues,
       page,
       perPage,
       info: 'Mostrando datos de Bajas y Concursos (todos los hospitales)'
@@ -423,11 +423,11 @@ async function handleBajasConcursosTotal({ AppDataSource, query, periodo, page, 
   } catch (error) {
     logger.error('[handleBajasConcursosTotal] Error:', { error: error.message, stack: error.stack })
     return {
-      columns: [],
-      rows: [],
-      total: 0,
+      columns: [], rows: [], total: 0,
       kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
       error: error.message
     }
   }
 }
+
+

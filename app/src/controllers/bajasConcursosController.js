@@ -3,6 +3,7 @@ const { BajaConcurso } = require('../entities-class/BajaConcurso');
 const { getPagination, getOrder, buildWhere } = require('../utils/query');
 const BajaConcursoService = require('../services/BajaConcursoService');
 const { ServiceFactory } = require('../utils/serviceFactory');
+const logger = require('../utils/logger');
 
 module.exports = {
   async list(req, res) {
@@ -27,7 +28,6 @@ module.exports = {
       
       res.json({ data: rows, meta: { count, limit, offset } });
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[BajasConcursosController.list]', { error: err.message });
       res.status(500).json({ error: 'Error al obtener registros' });
     }
@@ -41,7 +41,6 @@ module.exports = {
       if (!item) return res.status(404).json({ error: 'Baja no encontrada' });
       res.json(item);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[BajasConcursosController.getById]', { error: err.message });
       res.status(500).json({ error: 'Error al obtener registro' });
     }
@@ -54,7 +53,6 @@ module.exports = {
       
       res.status(201).json(created);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[BajasConcursosController.create]', { error: err.message });
       res.status(400).json({ error: 'Error al crear registro' });
     }
@@ -69,7 +67,6 @@ module.exports = {
       if (!updated) return res.status(404).json({ error: 'Baja no encontrada' });
       res.json(updated);
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[BajasConcursosController.update]', { error: err.message });
       res.status(400).json({ error: 'Error al actualizar registro' });
     }
@@ -83,7 +80,6 @@ module.exports = {
       if (!deleted) return res.status(404).json({ error: 'Baja no encontrada' });
       res.status(204).send();
     } catch (err) {
-      const logger = require('../utils/logger');
       logger.error('[BajasConcursosController.remove]', { error: err.message });
       res.status(500).json({ error: 'Error al eliminar registro' });
     }

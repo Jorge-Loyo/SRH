@@ -2,12 +2,20 @@ const { AppDataSource } = require('../config/data-source');
 const { User } = require('../entities-class/User');
 const UserService = require('../services/UserService');
 const { ServiceFactory } = require('../utils/serviceFactory');
+const logger = require('../utils/logger');
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 module.exports = {
   async list(_req, res) {
-    const service = ServiceFactory.getService(UserService, User);
-    const users = await service.list();
-    res.json({ data: users });
+    try {
+      const service = ServiceFactory.getService(UserService, User);
+      const users = await service.list();
+      res.json({ data: users });
+    } catch (e) {
+      logger.error('[UsersController.list]', { error: e.message });
+      res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
   },
 
   async getById(req, res) {
@@ -23,8 +31,7 @@ module.exports = {
       
       // ✅ FIX: Validar email si se proporciona
       if (email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
+        if (!EMAIL_REGEX.test(email)) {
           return res.status(400).json({ error: 'Email inválido' });
         }
       }
@@ -39,7 +46,6 @@ module.exports = {
       if (e.message === 'EMAIL_EXISTS') {
         return res.status(409).json({ error: 'Email ya existe' });
       }
-      const logger = require('../utils/logger');
       logger.error('[UsersController.create]', { error: e.message });
       res.status(400).json({ error: 'Error al crear usuario' });
     }
@@ -51,8 +57,7 @@ module.exports = {
     
     // ✅ FIX: Validar email si se proporciona
     if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!EMAIL_REGEX.test(email)) {
         return res.status(400).json({ error: 'Email inválido' });
       }
     }
@@ -68,16 +73,20 @@ module.exports = {
       if (e.message === 'EMAIL_EXISTS') {
         return res.status(409).json({ error: 'Email ya existe' });
       }
-      const logger = require('../utils/logger');
       logger.error('[UsersController.update]', { error: e.message });
       res.status(500).json({ error: 'Error al actualizar usuario' });
     }
   },
 
   async remove(req, res) {
-    const service = ServiceFactory.getService(UserService, User);
-    const deleted = await service.remove(req.params.id);
-    if (!deleted) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.status(204).send();
+    try {
+      const service = ServiceFactory.getService(UserService, User);
+      const deleted = await service.remove(req.params.id);
+      if (!deleted) return res.status(404).json({ error: 'Usuario no encontrado' });
+      res.status(204).send();
+    } catch (e) {
+      logger.error('[UsersController.remove]', { error: e.message });
+      res.status(500).json({ error: 'Error al eliminar usuario' });
+    }
   },
 };

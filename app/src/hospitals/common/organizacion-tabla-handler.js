@@ -1,324 +1,226 @@
-/**
+﻿/**
  * Generic Handler para OrganizacionTabla - Todos los hospitales
  * Consulta unificada con todos los filtros y KPIs
  * Aplica Row-Level Security (RLS) para directores
  */
 
-const { buildHospitalFilterSQL } = require('../../utils/rls');
 const { normalizeSpanishText } = require('../../utils/text');
 const logger = require('../../utils/logger');
 
-module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla({ 
-  AppDataSource, 
+// Whitelist de columnas permitidas para ORDER BY (previene inyección SQL)
+const ALLOWED_SORT_COLUMNS = {
+  'Código de Cargo':            'c.codigo_cargo',
+  'Código SIAL':                'r.codigo_rol',
+  'Situación de Revista':       'r.situacion_revista',
+  'CUIL':                       'p.cuil',
+  'Nombre y Apellido':          'p.nombre_apellido',
+  'Nacimiento':                 'p.fecha_nacimiento',
+  'Edad':                       'p.edad',
+  'Sexo':                       'p.sexo',
+  'Repartición':                'r.descripcion_reparticion',
+  'Escalafón':                  'r.escalafon',
+  'Puesto':                     'r.literal_puesto',
+  'Carrera':                    'r.literal_codigo_registro',
+  'Agrupamiento':               'r.agrupador',
+  'Especialidad':               'p.especialidad',
+  'Día':                        'r.dia',
+  'Cargo Desde':                'r.cargo_desde',
+  'Jefatura':                   'r.jefaturas',
+  'Documentación Jefatura':     'r.doc_respaldatoria_j_categoria',
+  'Teléfono':                   'p.telefono',
+  'Mail Personal':              'p.mail_personal',
+  'Mail Laboral':               'p.mail_laboral',
+  'Fecha de Bloqueo':           'r.fecha_bloqueo',
+  'Comentario de Bloqueo':      'r.bloqueo_comentario',
+  'Motivo de Bloqueo':          'r.bloqueo_motivo',
+  'id_cargo':                   'r.id_cargo',
+}
+
+const MULTI_FILTERS = [
+  { key: 'unificador_puesto',        column: 'r.unificador_puesto' },
+  { key: 'especialidad',             column: 'p.especialidad' },
+  { key: 'literal_puesto',           column: 'r.literal_puesto' },
+  { key: 'literal_codigo_registro',  column: 'r.literal_codigo_registro' },
+  { key: 'escalafon',                column: 'r.escalafon' },
+  { key: 'situacion_revista',        column: 'r.situacion_revista' },
+  { key: 'agrupador',                column: 'r.agrupador' },
+  { key: 'sexo',                     column: 'p.sexo' },
+  { key: 'reparticion',              column: 'r.descripcion_reparticion' },
+]
+
+const FROM_JOINS = `
+  FROM roles r
+  LEFT JOIN cargos c   ON r.id_cargo   = c.id_cargo   AND r.periodo = c.periodo
+  LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+  LEFT JOIN siglas s   ON r.id_sigla   = s.id_sigla
+`
+
+// Construye cláusulas WHERE. excludeField omite ese filtro (para distinctValues encadenados)
+function buildWhere(query, periodo, hospital, excludeField = null) {
+  const clauses = []
+  const params = [periodo, hospital]
+
+  MULTI_FILTERS.forEach(({ key, column }) => {
+    if (key === excludeField) return
+    if (query[key]) {
+      const vals = query[key].split(',').map(v => v.trim()).filter(Boolean)
+      if (vals.length) { clauses.push(`${column} IN (?)`); params.push(vals) }
+    }
+  })
+
+  if (query.codigo_cargo)    { clauses.push(`c.codigo_cargo LIKE ?`);    params.push(`%${query.codigo_cargo}%`) }
+  if (query.nombre_apellido) { clauses.push(`p.nombre_apellido LIKE ?`); params.push(`%${query.nombre_apellido}%`) }
+  if (query.cuil)            { clauses.push(`p.cuil LIKE ?`);            params.push(`%${query.cuil}%`) }
+  if (query.codigo_rol)      { clauses.push(`r.codigo_rol LIKE ?`);      params.push(`%${query.codigo_rol}%`) }
+  if (query.mail_laboral)    { clauses.push(`p.mail_laboral LIKE ?`);    params.push(`%${query.mail_laboral}%`) }
+  if (query.telefono)        { clauses.push(`p.telefono LIKE ?`);        params.push(`%${query.telefono}%`) }
+
+  if (query.edad_min) { clauses.push(`p.edad >= ?`); params.push(parseInt(query.edad_min)) }
+  if (query.edad_max) { clauses.push(`p.edad <= ?`); params.push(parseInt(query.edad_max)) }
+
+  // Antigüedad: búsqueda por año (año_actual - años_solicitados)
+  if (query.antiguedad) {
+    const currentYear = new Date().getFullYear()
+    const targetYear = currentYear - parseInt(query.antiguedad)
+    clauses.push(`p.antiguedad = ?`)
+    params.push(targetYear)
+  }
+
+  if (query.estado) {
+    const norm = normalizeSpanishText(query.estado)
+    clauses.push(`LOWER(REPLACE(REPLACE(r.estado, 'á', 'a'), 'ó', 'o')) LIKE ?`)
+    params.push(`%${norm}%`)
+  }
+
+  return { whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params }
+}
+
+module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla({
+  AppDataSource,
   req,
   defaultHospital = 'HGACA'
 }) {
   try {
     const query = req.query || {}
-    
-    // Parámetros básicos
+
     let hospital = query.hospital || defaultHospital
     const periodo = query.periodo || ''
-    const page = parseInt(query.page) || 1
-    const perPage = parseInt(query.perPage) || 50
+    const page = Math.max(1, parseInt(query.page) || 1)
+    const perPage = Math.min(500, Math.max(1, parseInt(query.perPage) || 50))
     const sortBy = query.sortBy || 'id_cargo'
-    const sortDir = query.sortDir || 'ASC'
+    const sortDir = (query.sortDir || 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
     const procesosConcursales = query.procesos_concursales === 'true'
-    
-    // Aplicar RLS: Si el usuario es director, forzar su hospital
+    const skipDistinct = query.skipDistinct === 'true'
+
+    // Aplicar RLS: si el usuario es director, forzar su hospital
     if (req.user?.permissions?.filter_by_hospital && req.user?.hospital_code) {
-      hospital = req.user.hospital_code;
+      hospital = req.user.hospital_code
     }
-    
-    // Validar periodo
+
     if (!periodo) {
       return {
-        columns: [],
-        rows: [],
-        total: 0,
+        columns: [], rows: [], total: 0,
         kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
         error: 'Período requerido'
       }
     }
 
-    // Si está activo el filtro de Procesos Concursales, usar tabla bajas_concursos
     if (procesosConcursales) {
-      return await handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir })
+      return await handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir, skipDistinct })
     }
-    
-    let sqlBase = `
-      SELECT 
-        c.codigo_cargo AS 'Código de Cargo',
-        r.codigo_rol AS 'Código SIAL',
-        r.situacion_revista AS 'Situación de Revista',
-        p.cuil AS 'CUIL',
-        p.nombre_apellido AS 'Nombre y Apellido',
-        p.fecha_nacimiento AS 'Nacimiento',
-        p.edad AS 'Edad',
-        p.sexo AS 'Sexo',
-        r.descripcion_reparticion AS 'Repartición',
-        r.escalafon AS 'Escalafón',
-        r.literal_puesto AS 'Puesto',
-        r.literal_codigo_registro AS 'Carrera',
-        r.agrupador AS 'Agrupamiento',
-        p.especialidad AS 'Especialidad',
-        r.cargo_desde AS 'Cargo Desde',
-        r.jefaturas AS 'Jefatura',
-        r.doc_respaldatoria_j_categoria AS 'Documentación Jefatura',
-        p.telefono AS 'Teléfono',
-        p.mail_personal AS 'Mail Personal',
-        p.mail_laboral AS 'Mail Laboral',
-        r.fecha_bloqueo AS 'Fecha de Bloqueo',
-        r.bloqueo_comentario AS 'Comentario de Bloqueo',
-        r.bloqueo_motivo AS 'Motivo de Bloqueo',
-        r.unificador_puesto,
-        p.antiguedad,
-        r.estado
-      FROM roles r
-      LEFT JOIN cargos c ON r.id_cargo = c.id_cargo AND r.periodo = c.periodo
-      LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
-      LEFT JOIN siglas s ON r.id_sigla = s.id_sigla
-      WHERE r.periodo = ?
-        AND s.sigla = ?
+
+    const sqlSortCol = ALLOWED_SORT_COLUMNS[sortBy] || 'r.id_cargo'
+    const offset = (page - 1) * perPage
+
+    const { whereSQL, params: mainParams } = buildWhere(query, periodo, hospital)
+
+    const countSQL = `SELECT COUNT(*) AS total ${FROM_JOINS} WHERE r.periodo = ? AND s.sigla = ? ${whereSQL}`
+
+    const kpiSQL = `
+      SELECT
+        LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+          r.estado,'á','a'),'é','e'),'í','i'),'ó','o'),'ú','u')) AS estado_norm,
+        COUNT(*) AS cnt
+      ${FROM_JOINS}
+      WHERE r.periodo = ? AND s.sigla = ? ${whereSQL}
+      GROUP BY estado_norm
     `
 
-    // Usaremos parámetros posicionales `?` compatibles con MySQL
-    const paramsArr = [periodo, hospital]
-    const whereClauses = []
+    const dataSQL = `
+      SELECT
+        c.codigo_cargo                   AS 'Código de Cargo',
+        r.codigo_rol                     AS 'Código SIAL',
+        r.situacion_revista              AS 'Situación de Revista',
+        p.cuil                           AS 'CUIL',
+        p.nombre_apellido                AS 'Nombre y Apellido',
+        p.fecha_nacimiento               AS 'Nacimiento',
+        p.edad                           AS 'Edad',
+        p.sexo                           AS 'Sexo',
+        r.descripcion_reparticion        AS 'Repartición',
+        r.escalafon                      AS 'Escalafón',
+        r.literal_puesto                 AS 'Puesto',
+        r.literal_codigo_registro        AS 'Carrera',
+        r.agrupador                      AS 'Agrupamiento',
+        p.especialidad                   AS 'Especialidad',
+        r.dia                            AS 'Día',
+        r.cargo_desde                    AS 'Cargo Desde',
+        r.jefaturas                      AS 'Jefatura',
+        r.doc_respaldatoria_j_categoria  AS 'Documentación Jefatura',
+        p.telefono                       AS 'Teléfono',
+        p.mail_personal                  AS 'Mail Personal',
+        p.mail_laboral                   AS 'Mail Laboral',
+        r.fecha_bloqueo                  AS 'Fecha de Bloqueo',
+        r.bloqueo_comentario             AS 'Comentario de Bloqueo',
+        r.bloqueo_motivo                 AS 'Motivo de Bloqueo'
+      ${FROM_JOINS}
+      WHERE r.periodo = ? AND s.sigla = ? ${whereSQL}
+      ORDER BY ${sqlSortCol} ${sortDir}
+      LIMIT ${perPage} OFFSET ${offset}
+    `
 
-    // Aplicar filtros multi-select
-    const multiFilters = [
-      { key: 'unificador_puesto', column: 'r.unificador_puesto' },
-      { key: 'especialidad', column: 'p.especialidad' },
-      { key: 'literal_puesto', column: 'r.literal_puesto' },
-      { key: 'literal_codigo_registro', column: 'r.literal_codigo_registro' },
-      { key: 'escalafon', column: 'r.escalafon' },
-      { key: 'situacion_revista', column: 'r.situacion_revista' },
-      { key: 'agrupador', column: 'r.agrupador' },
-      { key: 'sexo', column: 'p.sexo' },
-      { key: 'reparticion', column: 'r.descripcion_reparticion' }
-    ]
-
-    multiFilters.forEach(({ key, column }) => {
-      if (query[key]) {
-        const values = query[key].split(',').map(v => v.trim()).filter(Boolean)
-        if (values.length > 0) {
-          whereClauses.push(`${column} IN (?)`)
-          paramsArr.push(values)
-        }
-      }
+    // distinctValues: SELECT DISTINCT en paralelo, omitir si skipDistinct
+    const distinctPromises = skipDistinct ? [] : MULTI_FILTERS.map(({ key, column }) => {
+      const { params, whereSQL: dWhere } = buildWhere(query, periodo, hospital, key)
+      return AppDataSource.query(
+        `SELECT DISTINCT ${column} AS val ${FROM_JOINS} WHERE r.periodo = ? AND s.sigla = ? ${dWhere} AND ${column} IS NOT NULL ORDER BY val ASC`,
+        params
+      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean) }))
     })
 
-    // Aplicar búsquedas LIKE
-    if (query.codigo_cargo) {
-      whereClauses.push(`c.codigo_cargo LIKE ?`)
-      paramsArr.push(`%${query.codigo_cargo}%`)
-    }
-    if (query.nombre_apellido) {
-      whereClauses.push(`p.nombre_apellido LIKE ?`)
-      paramsArr.push(`%${query.nombre_apellido}%`)
-    }
-    if (query.cuil) {
-      whereClauses.push(`p.cuil LIKE ?`)
-      paramsArr.push(`%${query.cuil}%`)
-    }
-    if (query.codigo_rol) {
-      whereClauses.push(`r.codigo_rol LIKE ?`)
-      paramsArr.push(`%${query.codigo_rol}%`)
-    }
-    if (query.mail_laboral) {
-      whereClauses.push(`p.mail_laboral LIKE ?`)
-      paramsArr.push(`%${query.mail_laboral}%`)
-    }
-    if (query.telefono) {
-      whereClauses.push(`p.telefono LIKE ?`)
-      paramsArr.push(`%${query.telefono}%`)
-    }
+    // Todo en paralelo: count + kpi + datos + distinctValues
+    const [countRows, kpiRows, dataRows, ...distinctResults] = await Promise.all([
+      AppDataSource.query(countSQL, mainParams),
+      AppDataSource.query(kpiSQL,   mainParams),
+      AppDataSource.query(dataSQL,  mainParams),
+      ...distinctPromises
+    ])
 
-    // Aplicar rangos
-    if (query.edad_min) {
-      whereClauses.push(`p.edad >= ?`)
-      paramsArr.push(parseInt(query.edad_min))
-    }
-    if (query.edad_max) {
-      whereClauses.push(`p.edad <= ?`)
-      paramsArr.push(parseInt(query.edad_max))
-    }
-    if (query.antiguedad_min) {
-      whereClauses.push(`p.antiguedad >= ?`)
-      paramsArr.push(parseInt(query.antiguedad_min))
-    }
-    if (query.antiguedad_max) {
-      whereClauses.push(`p.antiguedad <= ?`)
-      paramsArr.push(parseInt(query.antiguedad_max))
-    }
+    const total = parseInt(countRows[0]?.total || 0)
 
-    // Filtro de estado (desde KPIs clickeables) - usar normalización
-    if (query.estado) {
-      const estadoNorm = normalizeSpanishText(query.estado);
-      
-      whereClauses.push(`LOWER(REPLACE(REPLACE(r.estado, 'á', 'a'), 'ó', 'o')) LIKE ?`)
-      paramsArr.push(`%${estadoNorm}%`)
-    }
-
-    // Agregar WHERE clauses adicionales
-    const whereSQL = whereClauses.length > 0 ? ' AND ' + whereClauses.join(' AND ') : ''
-    const fullSQL = sqlBase + whereSQL
-
-    // Ejecutar query completa para obtener todos los datos (sin paginación primero)
-    const allRows = await AppDataSource.query(fullSQL, paramsArr)
-    const total = allRows.length
-
-    // Calcular KPIs desde los datos obtenidos usando normalización de texto
-    const kpis = {
-      total: total,
-      activos: allRows.filter(r => {
-        const norm = normalizeSpanishText(r.estado);
-        return norm === 'activo' || norm === 'activos';
-      }).length,
-      bloqueados: allRows.filter(r => {
-        const norm = normalizeSpanishText(r.estado);
-        return norm === 'bloqueado' || norm === 'bloqueados';
-      }).length,
-      comision: allRows.filter(r => {
-        const norm = normalizeSpanishText(r.estado);
-        return norm === 'comision';
-      }).length,
-      retencion: allRows.filter(r => {
-        const norm = normalizeSpanishText(r.estado);
-        return norm.includes('retencion');
-      }).length
-    }
-
-    // Aplicar ordenamiento y paginación en memoria
-    const sortColumn = sortBy || 'id_cargo'
-    const sortDirection = (sortDir || 'ASC').toUpperCase()
-    
-    // Ordenar
-    allRows.sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
-      if (aVal < bVal) return sortDirection === 'ASC' ? -1 : 1
-      if (aVal > bVal) return sortDirection === 'ASC' ? 1 : -1
-      return 0
-    })
-    
-    // Paginar
-    const offset = (page - 1) * perPage
-    const rows = allRows.slice(offset, offset + perPage)
-
-    // Campos ocultos (se usan para filtros pero no se muestran en la tabla)
-    const hiddenFields = ['unificador_puesto', 'antiguedad', 'estado']
-
-    // Obtener nombres de columnas (excluyendo campos ocultos)
-    const columns = rows.length > 0 ? Object.keys(rows[0]).filter(col => !hiddenFields.includes(col)) : []
-
-    // Limpiar campos ocultos de las filas
-    const cleanedRows = rows.map(row => {
-      const cleanRow = { ...row }
-      hiddenFields.forEach(field => delete cleanRow[field])
-      return cleanRow
+    const kpis = { total, activos: 0, bloqueados: 0, comision: 0, retencion: 0 }
+    kpiRows.forEach(({ estado_norm, cnt }) => {
+      const n = (estado_norm || '').trim()
+      const c = parseInt(cnt || 0)
+      if (n === 'activo' || n === 'activos')            kpis.activos    += c
+      else if (n === 'bloqueado' || n === 'bloqueados') kpis.bloqueados += c
+      else if (n === 'comision')                         kpis.comision   += c
+      else if (n.includes('retencion'))                  kpis.retencion  += c
     })
 
-    // **FILTROS ENCADENADOS**: Calcular distinctValues aplicando TODOS los filtros EXCEPTO el que corresponda a cada dropdown
-    // Esto permite que cada dropdown solo muestre opciones válidas según los otros filtros seleccionados
-    const calculateDistinctValuesForField = async (excludeField) => {
-      // Construir WHERE clauses SIN el filtro que excluimos (para esa propiedad específica)
-      const chainedWhereClauses = []
-      const chainedParamsArr = [periodo, hospital]
-      
-      // Copiar todos los multifilters EXCEPTO el que excluimos
-      multiFilters.forEach(({ key, column }) => {
-        if (key === excludeField) return // Saltear el que estamos calculando
-        if (query[key]) {
-          const values = query[key].split(',').map(v => v.trim()).filter(Boolean)
-          if (values.length > 0) {
-            chainedWhereClauses.push(`${column} IN (?)`)
-            chainedParamsArr.push(values)
-          }
-        }
-      })
+    const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
 
-      // Aplicar búsquedas LIKE (igual que antes)
-      if (query.codigo_cargo) {
-        chainedWhereClauses.push(`c.codigo_cargo LIKE ?`)
-        chainedParamsArr.push(`%${query.codigo_cargo}%`)
-      }
-      if (query.nombre_apellido) {
-        chainedWhereClauses.push(`p.nombre_apellido LIKE ?`)
-        chainedParamsArr.push(`%${query.nombre_apellido}%`)
-      }
-      // ... (aplicar otros LIKE filters...)
-
-      // Aplicar rangos
-      if (query.edad_min) {
-        chainedWhereClauses.push(`p.edad >= ?`)
-        chainedParamsArr.push(parseInt(query.edad_min))
-      }
-      if (query.edad_max) {
-        chainedWhereClauses.push(`p.edad <= ?`)
-        chainedParamsArr.push(parseInt(query.edad_max))
-      }
-      if (query.antiguedad_min) {
-        chainedWhereClauses.push(`p.antiguedad >= ?`)
-        chainedParamsArr.push(parseInt(query.antiguedad_min))
-      }
-      if (query.antiguedad_max) {
-        chainedWhereClauses.push(`p.antiguedad <= ?`)
-        chainedParamsArr.push(parseInt(query.antiguedad_max))
-      }
-
-      const chainedWhereSQL = chainedWhereClauses.length > 0 ? ' AND ' + chainedWhereClauses.join(' AND ') : ''
-      const chainedFullSQL = sqlBase + chainedWhereSQL
-
-      const chainedResults = await AppDataSource.query(chainedFullSQL, chainedParamsArr)
-      return chainedResults
+    let distinctValues = null
+    if (!skipDistinct) {
+      distinctValues = {}
+      distinctResults.forEach(({ key, values }) => { distinctValues[key] = values })
     }
 
-    // Calcular distinctValues para CADA campo aplicando filtros encadenados
-    const distinctValues = {}
-    
-    for (const filterConfig of multiFilters) {
-      const { key, column } = filterConfig
-      const chainedData = await calculateDistinctValuesForField(key)
-      
-      // Extraer valores únicos del campo correspondiente
-      let fieldName = column.split('.').pop() // Obtener el nombre del campo sin alias de tabla
-      distinctValues[key] = [...new Set(
-        chainedData
-          .map(r => {
-            // Mapear el nombre de columna correcto según el contexto
-            if (key === 'unificador_puesto') return r.unificador_puesto
-            if (key === 'especialidad') return r['Especialidad']
-            if (key === 'literal_puesto') return r['Puesto']
-            if (key === 'literal_codigo_registro') return r['Carrera']
-            if (key === 'escalafon') return r['Escalafón']
-            if (key === 'situacion_revista') return r.situacion_revista
-            if (key === 'agrupador') return r['Agrupamiento']
-            if (key === 'sexo') return r['Sexo']
-            if (key === 'reparticion') return r['Repartición']
-            return null
-          })
-          .filter(Boolean)
-      )].sort()
-    }
-
-    return {
-      columns,
-      rows: cleanedRows,
-      total,
-      kpis,
-      distinctValues,
-      page,
-      perPage
-    }
+    return { columns, rows: dataRows, total, kpis, distinctValues, page, perPage }
 
   } catch (error) {
     logger.error('[handleOrganizacionTabla] Error:', { error: error.message, stack: error.stack })
     return {
-      columns: [],
-      rows: [],
-      total: 0,
+      columns: [], rows: [], total: 0,
       kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
       error: error.message
     }
@@ -326,195 +228,105 @@ module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla(
 }
 
 /**
- * Handler para Procesos Concursales - Consulta tabla bajas_concursos
+ * Handler para Procesos Concursales — consulta tabla bajas_concursos
  */
-async function handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir }) {
+async function handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir, skipDistinct }) {
   try {
-    // Construir query para bajas_concursos con todas las columnas disponibles
-    let sqlBase = `
-      SELECT 
-        b.codigo_cargo AS 'Código de Cargo',
-        b.nombre_apellido AS 'Nombre y Apellido',
-        b.puesto_baja AS 'Puesto de Baja',
-        b.especialidad_baja AS 'Especialidad de Baja',
-        b.unificador_puestos AS 'Unificador de Puestos',
-        b.ex_baja AS 'Expediente Baja',
-        b.ex_concurso AS 'Expediente Concurso',
-        b.fecha_baja AS 'Fecha de Baja',
-        b.motivo_baja AS 'Motivo de Baja'
-      FROM bajas_concursos b
-      WHERE b.periodo = ?
-        AND b.sigla = ?
-    `
-
-    const paramsArr = [periodo, hospital]
-    const whereClauses = []
-
-    // Aplicar filtros de búsqueda rápida
-    if (query.codigo_cargo) {
-      whereClauses.push(`b.codigo_cargo LIKE ?`)
-      paramsArr.push(`%${query.codigo_cargo}%`)
+    const BAJAS_SORT_COLUMNS = {
+      'Código de Cargo':       'b.codigo_cargo',
+      'Nombre y Apellido':     'b.nombre_apellido',
+      'Puesto de Baja':        'b.puesto_baja',
+      'Especialidad de Baja':  'b.especialidad_baja',
+      'Unificador de Puestos': 'b.unificador_puestos',
+      'Expediente Baja':       'b.ex_baja',
+      'Expediente Concurso':   'b.ex_concurso',
+      'Fecha de Baja':         'b.fecha_baja',
+      'Motivo de Baja':        'b.motivo_baja',
     }
-    if (query.nombre_apellido) {
-      whereClauses.push(`b.nombre_apellido LIKE ?`)
-      paramsArr.push(`%${query.nombre_apellido}%`)
-    }
-    if (query.ex_baja) {
-      whereClauses.push(`b.ex_baja LIKE ?`)
-      paramsArr.push(`%${query.ex_baja}%`)
-    }
-    if (query.ex_concurso) {
-      whereClauses.push(`b.ex_concurso LIKE ?`)
-      paramsArr.push(`%${query.ex_concurso}%`)
-    }
-
-    // Aplicar filtros multi-select (adaptados a columnas de bajas_concursos)
-    if (query.unificador_puesto) {
-      const values = query.unificador_puesto.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.unificador_puestos IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-    if (query.especialidad) {
-      const values = query.especialidad.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.especialidad_baja IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-    if (query.literal_puesto) {
-      const values = query.literal_puesto.split(',').map(v => v.trim()).filter(Boolean)
-      if (values.length > 0) {
-        whereClauses.push(`b.puesto_baja IN (?)`)
-        paramsArr.push(values)
-      }
-    }
-
-    // Agregar WHERE clauses adicionales
-    const whereSQL = whereClauses.length > 0 ? ' AND ' + whereClauses.join(' AND ') : ''
-    const fullSQL = sqlBase + whereSQL
-
-    // Ejecutar query completa
-    const allRows = await AppDataSource.query(fullSQL, paramsArr)
-    const total = allRows.length
-
-    // KPIs para bajas_concursos (solo total, ya que no hay estados activos/bloqueados)
-    const kpis = {
-      total: total,
-      activos: 0,
-      bloqueados: 0,
-      comision: 0,
-      retencion: 0
-    }
-
-    // Ordenar
-    const sortColumn = sortBy || 'id_baja'
-    const sortDirection = (sortDir || 'ASC').toUpperCase()
-    
-    allRows.sort((a, b) => {
-      const aVal = a[sortColumn]
-      const bVal = b[sortColumn]
-      if (aVal < bVal) return sortDirection === 'ASC' ? -1 : 1
-      if (aVal > bVal) return sortDirection === 'ASC' ? 1 : -1
-      return 0
-    })
-    
-    // Paginar
+    const sqlSortCol = BAJAS_SORT_COLUMNS[sortBy] || 'b.codigo_cargo'
+    const sqlSortDir = sortDir === 'DESC' ? 'DESC' : 'ASC'
     const offset = (page - 1) * perPage
-    const rows = allRows.slice(offset, offset + perPage)
 
-    // Obtener nombres de columnas
-    const columns = rows.length > 0 ? Object.keys(rows[0]) : []
-
-    // **FILTROS ENCADENADOS para Bajas Concursos**: Calcular distinctValues aplicando TODOS los filtros EXCEPTO el que corresponda a cada dropdown
-    const multiFiltersBajas = [
-      { key: 'unificador_puesto', column: 'b.unificador_puestos', displayColumn: 'Unificador de Puestos' },
-      { key: 'especialidad', column: 'b.especialidad_baja', displayColumn: 'Especialidad de Baja' },
-      { key: 'literal_puesto', column: 'b.puesto_baja', displayColumn: 'Puesto de Baja' },
-      { key: 'literal_codigo_registro', column: 'b.motivo_baja', displayColumn: 'Motivo de Baja' }
+    const BAJAS_FILTERS = [
+      { key: 'unificador_puesto',       column: 'b.unificador_puestos' },
+      { key: 'especialidad',            column: 'b.especialidad_baja' },
+      { key: 'literal_puesto',          column: 'b.puesto_baja' },
+      { key: 'literal_codigo_registro', column: 'b.motivo_baja' },
     ]
 
-    const calculateDistinctValuesForFieldBajas = async (excludeField) => {
-      let chainedSql = sqlBase
-      const chainedParamsArr = [periodo, hospital]
-      const chainedWhereClauses = []
+    const buildBajasWhere = (excludeField = null) => {
+      const clauses = []
+      const params = [periodo, hospital]
 
-      // Aplicar búsquedas LIKE (igual que antes)
-      if (query.codigo_cargo) {
-        chainedWhereClauses.push(`b.codigo_cargo LIKE ?`)
-        chainedParamsArr.push(`%${query.codigo_cargo}%`)
-      }
-      if (query.nombre_apellido) {
-        chainedWhereClauses.push(`b.nombre_apellido LIKE ?`)
-        chainedParamsArr.push(`%${query.nombre_apellido}%`)
-      }
-      if (query.ex_baja) {
-        chainedWhereClauses.push(`b.ex_baja LIKE ?`)
-        chainedParamsArr.push(`%${query.ex_baja}%`)
-      }
-      if (query.ex_concurso) {
-        chainedWhereClauses.push(`b.ex_concurso LIKE ?`)
-        chainedParamsArr.push(`%${query.ex_concurso}%`)
-      }
+      if (query.codigo_cargo)    { clauses.push(`b.codigo_cargo LIKE ?`);    params.push(`%${query.codigo_cargo}%`) }
+      if (query.nombre_apellido) { clauses.push(`b.nombre_apellido LIKE ?`); params.push(`%${query.nombre_apellido}%`) }
+      if (query.ex_baja)         { clauses.push(`b.ex_baja LIKE ?`);         params.push(`%${query.ex_baja}%`) }
+      if (query.ex_concurso)     { clauses.push(`b.ex_concurso LIKE ?`);     params.push(`%${query.ex_concurso}%`) }
 
-      // Aplicar filtros multi-select EXCEPTO el que excluimos
-      multiFiltersBajas.forEach(({ key, column }) => {
-        if (key === excludeField) return // Saltear el que estamos calculando
-        if (query[key]) {
-          const values = query[key].split(',').map(v => v.trim()).filter(Boolean)
-          if (values.length > 0) {
-            chainedWhereClauses.push(`${column} IN (?)`)
-            chainedParamsArr.push(values)
-          }
-        }
+      BAJAS_FILTERS.forEach(({ key, column }) => {
+        if (key === excludeField) return
+        const vals = query[key] ? query[key].split(',').map(v => v.trim()).filter(Boolean) : []
+        if (vals.length) { clauses.push(`${column} IN (?)`); params.push(vals) }
       })
 
-      const chainedWhereSQL = chainedWhereClauses.length > 0 ? ' AND ' + chainedWhereClauses.join(' AND ') : ''
-      const chainedFullSQL = sqlBase + chainedWhereSQL
-
-      const chainedResults = await AppDataSource.query(chainedFullSQL, chainedParamsArr)
-      return chainedResults
+      return { whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params }
     }
 
-    // Calcular distinctValues para CADA campo aplicando filtros encadenados
-    const distinctValues = {
-      agrupador: [],
-      escalafon: [],
-      sexo: [],
-      situacion_revista: [],
-      reparticion: [],
-      antiguedad: []
-    }
-    
-    for (const filterConfig of multiFiltersBajas) {
-      const { key, displayColumn } = filterConfig
-      const chainedData = await calculateDistinctValuesForFieldBajas(key)
-      
-      distinctValues[key] = [...new Set(
-        chainedData
-          .map(r => r[displayColumn])
-          .filter(Boolean)
-      )].sort()
+    const { whereSQL, params: mainParams } = buildBajasWhere()
+
+    const countSQL = `SELECT COUNT(*) AS total FROM bajas_concursos b WHERE b.periodo = ? AND b.sigla = ? ${whereSQL}`
+
+    const dataSQL = `
+      SELECT
+        b.codigo_cargo        AS 'Código de Cargo',
+        b.nombre_apellido     AS 'Nombre y Apellido',
+        b.puesto_baja         AS 'Puesto de Baja',
+        b.especialidad_baja   AS 'Especialidad de Baja',
+        b.unificador_puestos  AS 'Unificador de Puestos',
+        b.ex_baja             AS 'Expediente Baja',
+        b.ex_concurso         AS 'Expediente Concurso',
+        b.fecha_baja          AS 'Fecha de Baja',
+        b.motivo_baja         AS 'Motivo de Baja'
+      FROM bajas_concursos b
+      WHERE b.periodo = ? AND b.sigla = ? ${whereSQL}
+      ORDER BY ${sqlSortCol} ${sqlSortDir}
+      LIMIT ${perPage} OFFSET ${offset}
+    `
+
+    const distinctPromises = skipDistinct ? [] : BAJAS_FILTERS.map(({ key, column }) => {
+      const { whereSQL: dWhere, params: dParams } = buildBajasWhere(key)
+      return AppDataSource.query(
+        `SELECT DISTINCT ${column} AS val FROM bajas_concursos b WHERE b.periodo = ? AND b.sigla = ? ${dWhere} AND ${column} IS NOT NULL ORDER BY val ASC`,
+        dParams
+      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean) }))
+    })
+
+    const [countRows, dataRows, ...distinctResults] = await Promise.all([
+      AppDataSource.query(countSQL, mainParams),
+      AppDataSource.query(dataSQL,  mainParams),
+      ...distinctPromises
+    ])
+
+    const total = parseInt(countRows[0]?.total || 0)
+    const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
+
+    let distinctValues = null
+    if (!skipDistinct) {
+      distinctValues = {}
+      distinctResults.forEach(({ key, values }) => { distinctValues[key] = values })
     }
 
     return {
-      columns,
-      rows,
-      total,
-      kpis,
-      distinctValues,
-      page,
-      perPage,
+      columns, rows: dataRows, total,
+      kpis: { total, activos: 0, bloqueados: 0, comision: 0, retencion: 0 },
+      distinctValues, page, perPage,
       info: 'Mostrando datos de Bajas y Concursos'
     }
 
   } catch (error) {
     logger.error('[handleBajasConcursos] Error:', { error: error.message, stack: error.stack })
     return {
-      columns: [],
-      rows: [],
-      total: 0,
+      columns: [], rows: [], total: 0,
       kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
       error: error.message
     }

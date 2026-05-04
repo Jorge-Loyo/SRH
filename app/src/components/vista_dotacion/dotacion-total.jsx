@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+﻿import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import BackButton from '../reutilizables/BackButton'
 import ErrorFallback from '../reutilizables/ErrorFallback'
 import Pagination from '../reutilizables/Pagination'
@@ -75,8 +75,8 @@ const DotacionTotal = () => {
   // Rango de edad
   const [rangoEdad, setRangoEdad] = useState({ min: '', max: '' })
 
-  // Rango de antigüedad (en años)
-  const [rangoAntiguedad, setRangoAntiguedad] = useState({ min: '', max: '' })
+  // Antigüedad en años (campo único)
+  const [antiguedad, setAntiguedad] = useState('')
 
   // Checkbox de procesos concursales
   const [procesosConcursales, setProcesosConcursales] = useState(false)
@@ -96,6 +96,22 @@ const DotacionTotal = () => {
     literal_codigo_registro: [],
     escalafon: [],
     sexo: []
+  })
+
+  // Filtros de la tabla Siglas (segmentación por tipo de hospital)
+  const [siglasFilters, setSiglasFilters] = useState({
+    sigla: [],
+    universo_totalizador: [],
+    tipo_hospital_sigla: [],
+    monovalencia: []
+  })
+
+  // Valores DISTINCT para filtros de Siglas
+  const [siglasDistinctValues, setSiglasDistinctValues] = useState({
+    sigla: [],
+    universo_totalizador: [],
+    tipo_hospital_sigla: [],
+    monovalencia: []
   })
 
   // Estado para controlar modal de tabla ampliada
@@ -128,10 +144,10 @@ const DotacionTotal = () => {
     rangoEdadRef.current = rangoEdad
   }, [rangoEdad])
   
-  const rangoAntiguedadRef = useRef(rangoAntiguedad)
+  const rangoAntiguedadRef = useRef(antiguedad)
   useEffect(() => {
-    rangoAntiguedadRef.current = rangoAntiguedad
-  }, [rangoAntiguedad])
+    rangoAntiguedadRef.current = antiguedad
+  }, [antiguedad])
   
   const procesosConcursalesRef = useRef(procesosConcursales)
   useEffect(() => {
@@ -142,6 +158,11 @@ const DotacionTotal = () => {
   useEffect(() => {
     estadoFilterRef.current = estadoFilter
   }, [estadoFilter])
+
+  const siglasFiltersRef = useRef(siglasFilters)
+  useEffect(() => {
+    siglasFiltersRef.current = siglasFilters
+  }, [siglasFilters])
   
   const api = useMemo(() => new ApiClient(), [])
 
@@ -185,12 +206,17 @@ const DotacionTotal = () => {
     if (rangoEdadRef.current.min) active.edad_min = rangoEdadRef.current.min
     if (rangoEdadRef.current.max) active.edad_max = rangoEdadRef.current.max
     
-    if (rangoAntiguedadRef.current.min) active.antiguedad_min = rangoAntiguedadRef.current.min
-    if (rangoAntiguedadRef.current.max) active.antiguedad_max = rangoAntiguedadRef.current.max
+    if (rangoAntiguedadRef.current) active.antiguedad = rangoAntiguedadRef.current
     
     if (procesosConcursalesRef.current) active.procesos_concursales = 'true'
     
     if (estadoFilterRef.current) active.estado = estadoFilterRef.current
+
+    Object.entries(siglasFiltersRef.current).forEach(([key, values]) => {
+      if (Array.isArray(values) && values.length > 0) {
+        active[key] = values.join(',')
+      }
+    })
     
     return active
   }
@@ -206,6 +232,7 @@ const DotacionTotal = () => {
     const sortBy = paramsOverride.sortBy ?? currentState.sortBy
     const sortDir = paramsOverride.sortDir ?? currentState.sortDir
     
+    const skipDistinct = paramsOverride.skipDistinct === true
     const isPageChange = paramsOverride.page !== undefined && Object.keys(paramsOverride).length === 1
     const shouldShowLoading = !isPageChange
     
@@ -218,6 +245,7 @@ const DotacionTotal = () => {
       const query = { periodo: periodoRef.current, page, perPage }
       if (sortBy) query.sortBy = sortBy
       if (sortDir) query.sortDir = sortDir
+      if (skipDistinct) query.skipDistinct = 'true'
       
       const active = buildActiveFiltersFromRefs()
       Object.assign(query, active)
@@ -241,6 +269,9 @@ const DotacionTotal = () => {
       if (data.distinctValues) {
         setDistinctValues(data.distinctValues)
       }
+      if (data.siglasDistinctValues) {
+        setSiglasDistinctValues(data.siglasDistinctValues)
+      }
     } catch (e) {
       setState(s => ({ ...s, loading: false }))
       handleError(e, 'DotacionTotal.fetchData')
@@ -261,12 +292,12 @@ const DotacionTotal = () => {
     }, 300)
     return () => clearTimeout(timer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, quickSearch, rangoEdad, rangoAntiguedad, procesosConcursales, estadoFilter])
+  }, [filters, quickSearch, rangoEdad, antiguedad, procesosConcursales, estadoFilter, siglasFilters])
 
   const toggleSort = useCallback((col) => {
     const currentState = stateRef.current
     const nextDir = currentState.sortBy === col && currentState.sortDir === 'ASC' ? 'DESC' : 'ASC'
-    fetchData({ page: 1, sortBy: col, sortDir: nextDir })
+    fetchData({ page: 1, sortBy: col, sortDir: nextDir, skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -280,20 +311,26 @@ const DotacionTotal = () => {
       escalafon: [],
       sexo: []
     })
+    setSiglasFilters({
+      sigla: [],
+      universo_totalizador: [],
+      tipo_hospital_sigla: [],
+      monovalencia: []
+    })
     setQuickSearch({ codigo_cargo: '', nombre_apellido: '', cuil: '', codigo_rol: '', ex_baja: '', ex_concurso: '' })
     setRangoEdad({ min: '', max: '' })
-    setRangoAntiguedad({ min: '', max: '' })
+    setAntiguedad('')
     setProcesosConcursales(false)
     setEstadoFilter('')
   }, [])
 
   const handlePageChange = useCallback((newPage) => {
-    fetchData({ page: newPage })
+    fetchData({ page: newPage, skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handlePerPageChange = useCallback((e) => {
-    fetchData({ page: 1, perPage: Number(e.target.value) })
+    fetchData({ page: 1, perPage: Number(e.target.value), skipDistinct: true })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -492,7 +529,7 @@ const DotacionTotal = () => {
 
         <H3 style={{ fontSize: 18, marginBottom: 16, color: '#1a3a52' }}>Filtros</H3>
 
-        {/* Periodo - sin hospital (global) */}
+        {/* Periodo */}
         <Box style={{ marginBottom: 20 }}>
           <PeriodoSelector 
             periodo={periodo}
@@ -505,6 +542,69 @@ const DotacionTotal = () => {
           />
         </Box>
 
+        {/* ── Características del Hospital ── */}
+        <Text style={{ fontWeight: 700, fontSize: 11, color: '#4a6380', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>
+          Características del Hospital
+        </Text>
+
+        {/* Sigla (Hospital) */}
+        <Box style={{ marginBottom: 20 }}>
+          <div style={{ maxWidth: '240px' }}>
+            <MultiSelectDropdown
+              label="Hospital (Sigla)"
+              options={siglasDistinctValues.sigla}
+              value={siglasFilters.sigla}
+              onChange={(v) => setSiglasFilters({ ...siglasFilters, sigla: v })}
+              placeholder="Seleccionar hospital"
+            />
+          </div>
+        </Box>
+
+        {!procesosConcursales && (
+          <>
+            <Box style={{ marginBottom: 20 }}>
+              <div style={{ maxWidth: '240px' }}>
+                <MultiSelectDropdown
+                  label="Universo Totalizador"
+                  options={siglasDistinctValues.universo_totalizador}
+                  value={siglasFilters.universo_totalizador}
+                  onChange={(v) => setSiglasFilters({ ...siglasFilters, universo_totalizador: v })}
+                  placeholder="Universo Totalizador"
+                />
+              </div>
+            </Box>
+
+            <Box style={{ marginBottom: 20 }}>
+              <div style={{ maxWidth: '240px' }}>
+                <MultiSelectDropdown
+                  label="Tipo de Hospital"
+                  options={siglasDistinctValues.tipo_hospital_sigla}
+                  value={siglasFilters.tipo_hospital_sigla}
+                  onChange={(v) => setSiglasFilters({ ...siglasFilters, tipo_hospital_sigla: v })}
+                  placeholder="Tipo de Hospital"
+                />
+              </div>
+            </Box>
+
+            <Box style={{ marginBottom: 20 }}>
+              <div style={{ maxWidth: '240px' }}>
+                <MultiSelectDropdown
+                  label="Monovalencia"
+                  options={siglasDistinctValues.monovalencia}
+                  value={siglasFilters.monovalencia}
+                  onChange={(v) => setSiglasFilters({ ...siglasFilters, monovalencia: v })}
+                  placeholder="Monovalencia"
+                />
+              </div>
+            </Box>
+          </>
+        )}
+
+        {/* ── Filtros de Personal ── */}
+        <Text style={{ fontWeight: 700, fontSize: 11, color: '#5a5f6e', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 8, display: 'block' }}>
+          Filtros de Personal
+        </Text>
+
         {/* Unificador de Puesto */}
         <Box style={{ marginBottom: 20 }}>
           <div style={{ maxWidth: '240px' }}>
@@ -513,7 +613,7 @@ const DotacionTotal = () => {
               options={distinctValues.unificador_puesto}
               value={filters.unificador_puesto}
               onChange={(v) => setFilters({...filters, unificador_puesto: v})}
-              placeholder={procesosConcursales ? "Unificador de Puestos" : "Unificador de Puestos"}
+              placeholder="Unificador de Puestos"
             />
           </div>
         </Box>
@@ -572,7 +672,7 @@ const DotacionTotal = () => {
           </Box>
         )}
 
-        {/* Puesto / Puesto Baja */}
+        {/* Puesto */}
         <Box style={{ marginBottom: 20 }}>
           <div style={{ maxWidth: '240px' }}>
             <MultiSelectDropdown
@@ -585,7 +685,7 @@ const DotacionTotal = () => {
           </div>
         </Box>
 
-        {/* Literal Código de Registro / Motivo Baja */}
+        {/* Código de Registro / Motivo Baja */}
         <Box style={{ marginBottom: 20 }}>
           <div style={{ maxWidth: '240px' }}>
             <MultiSelectDropdown
@@ -628,29 +728,18 @@ const DotacionTotal = () => {
           </Box>
         )}
 
-        {/* Rango de Antigüedad - Solo para dotación normal */}
+        {/* Antigüedad en años - Solo para dotación normal */}
         {isNormalMode && (
           <Box style={{ marginBottom: 20 }}>
-            <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>Antiguedad</Label>
-            <Box style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <Input 
-                type="number" 
-                placeholder="Min"
-                value={rangoAntiguedad.min}
-                onChange={(e) => setRangoAntiguedad({...rangoAntiguedad, min: e.target.value})}
-                style={{ width: '100%' }}
-                className="no-spinner"
-              />
-              <Text>-</Text>
-              <Input 
-                type="number" 
-                placeholder="Max"
-                value={rangoAntiguedad.max}
-                onChange={(e) => setRangoAntiguedad({...rangoAntiguedad, max: e.target.value})}
-                style={{ width: '100%' }}
-                className="no-spinner"
-              />
-            </Box>
+            <Label style={{ fontWeight: 600, marginBottom: 8, display: 'block', fontSize: 13 }}>Antigüedad (años)</Label>
+            <Input 
+              type="number" 
+              placeholder="Ej: 5"
+              value={antiguedad}
+              onChange={(e) => setAntiguedad(e.target.value)}
+              style={{ width: '100%' }}
+              className="no-spinner"
+            />
           </Box>
         )}
 
@@ -660,7 +749,10 @@ const DotacionTotal = () => {
             <input 
               type="checkbox"
               checked={procesosConcursales}
-              onChange={(e) => setProcesosConcursales(e.target.checked)}
+              onChange={(e) => {
+                setProcesosConcursales(e.target.checked)
+                setSiglasFilters({ sigla: [], universo_totalizador: [], tipo_hospital_sigla: [], monovalencia: [] })
+              }}
               style={{ width: 16, height: 16, cursor: 'pointer' }}
             />
             <span style={{ fontWeight: 500 }}>Procesos Concursales</span>

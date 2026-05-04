@@ -1,4 +1,5 @@
 const { AppDataSource } = require('../config/data-source');
+const logger = require('../utils/logger');
 
 function parseDate(v) {
   const d = new Date(v);
@@ -29,7 +30,6 @@ async function list(req, res) {
     const [rows, total] = await qb.getManyAndCount();
     res.json({ page, pageSize, total, rows });
   } catch (e) {
-    const logger = require('../utils/logger');
     logger.error('[AuditController.list]', { error: e.message });
     res.status(500).json({ error: 'Error listando auditoría' });
   }
@@ -48,7 +48,6 @@ async function purge(req, res) {
       .execute();
     res.json({ deleted: result.affected || 0, before: before.toISOString() });
   } catch (e) {
-    const logger = require('../utils/logger');
     logger.error('[AuditController.purge]', { error: e.message });
     res.status(500).json({ error: 'Error purgando auditoría' });
   }
