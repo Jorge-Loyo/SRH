@@ -318,9 +318,10 @@ const POUDetalle = () => {
 
       {/* ── Tabla (siempre visible cuando hay período y no hay error) ──────── */}
       {periodo && !state.loading && !error && (
-        <Box style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+        <Box style={{ borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', overflow: 'hidden', maxHeight: 'calc(100vh - 320px)', display: 'flex', flexDirection: 'column' }}>
+          <Box style={{ overflowY: 'auto', overflowX: 'auto', flex: 1 }}>
           <Table>
-            <TableHead>
+            <TableHead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
               <TableRow>
                 {VISIBLE_COLUMNS.map(col => (
                   <TableCell
@@ -333,8 +334,6 @@ const POUDetalle = () => {
                       padding: '11px 16px',
                       whiteSpace: 'nowrap',
                       borderBottom: '2px solid #D1D5DB',
-                      position: 'sticky',
-                      top: 0,
                     }}
                   >
                     {COLUMN_LABELS[col] || col}
@@ -379,6 +378,7 @@ const POUDetalle = () => {
               ))}
             </TableBody>
           </Table>
+          </Box>
         </Box>
       )}
     </Box>
