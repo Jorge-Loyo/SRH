@@ -94,12 +94,12 @@ function buildWhere(query, periodo, excludeField = null) {
   if (query.edad_min)        { clauses.push(`p.edad >= ?`);        params.push(parseInt(query.edad_min)) }
   if (query.edad_max)        { clauses.push(`p.edad <= ?`);        params.push(parseInt(query.edad_max)) }
   
-  // Antiguedad: búsqueda por año (año_actual - años_solicitados)
+  // Antigüedad: búsqueda por año de ingreso (funciona con formato YYYY-MM-DD y D/M/YYYY)
   if (query.antiguedad) { 
     const currentYear = new Date().getFullYear()
     const targetYear = currentYear - parseInt(query.antiguedad)
-    clauses.push(`p.antiguedad = ?`);
-    params.push(targetYear) 
+    clauses.push(`p.antiguedad LIKE ?`);
+    params.push(`%${targetYear}%`) 
   }
 
   if (query.estado) {

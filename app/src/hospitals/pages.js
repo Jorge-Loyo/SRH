@@ -27,8 +27,7 @@ const HOSPITAL_FILTER_LABELS = {
   telefono:                 'Teléfono',
   edad_min:                 'Edad mínima',
   edad_max:                 'Edad máxima',
-  antiguedad_min:           'Antigüedad mínima',
-  antiguedad_max:           'Antigüedad máxima',
+  antiguedad:               'Antigüedad',
 }
 
 /**
