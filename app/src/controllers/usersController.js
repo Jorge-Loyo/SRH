@@ -27,17 +27,16 @@ module.exports = {
 
   async create(req, res) {
     try {
-      const { username, email = null, password, role = 'viewer', is_active = true, hospital_code = null } = req.validated?.body || req.body;
-      
-      // ✅ FIX: Validar email si se proporciona
+      const { username, email = null, password, role = 'viewer', is_active = true, hospital_code = null, role_alias = null } = req.validated?.body || req.body;
+
       if (email) {
         if (!EMAIL_REGEX.test(email)) {
           return res.status(400).json({ error: 'Email inválido' });
         }
       }
-      
+
       const service = ServiceFactory.getService(UserService, User);
-      const created = await service.create({ username, email, password, role, is_active, hospital_code });
+      const created = await service.create({ username, email, password, role, is_active, hospital_code, role_alias });
       res.status(201).json(created);
     } catch (e) {
       if (e.message === 'USERNAME_EXISTS') {
@@ -53,17 +52,16 @@ module.exports = {
 
   async update(req, res) {
     const service = ServiceFactory.getService(UserService, User);
-    const { username, email, password, role, is_active, hospital_code } = req.validated?.body || req.body;
-    
-    // ✅ FIX: Validar email si se proporciona
+    const { username, email, password, role, is_active, hospital_code, role_alias } = req.validated?.body || req.body;
+
     if (email) {
       if (!EMAIL_REGEX.test(email)) {
         return res.status(400).json({ error: 'Email inválido' });
       }
     }
-    
+
     try {
-      const updated = await service.update(req.params.id, { username, email, password, role, is_active, hospital_code });
+      const updated = await service.update(req.params.id, { username, email, password, role, is_active, hospital_code, role_alias });
       if (!updated) return res.status(404).json({ error: 'Usuario no encontrado' });
       res.json(updated);
     } catch (e) {

@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * OrganigramaHome.test.js - Tests de Datos
  */
 

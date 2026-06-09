@@ -202,8 +202,7 @@ const UserEditableFieldsSchema = z.object({
   username: z.string()
     .min(3, 'Username debe tener al menos 3 caracteres')
     .max(50, 'Username muy largo')
-    .trim()
-    .toLowerCase(),
+    .trim(),
   email: z.string()
     .email('Email inválido')
     .max(255)
@@ -214,11 +213,12 @@ const UserEditableFieldsSchema = z.object({
   password: z.string()
     .min(4, 'Password debe tener al menos 4 caracteres')
     .max(255),
-  role: z.enum(['admin', 'editor', 'viewer', 'director', 'gerencia'], {
+  role: z.enum(['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales'], {
     errorMap: () => ({ message: 'Role inválido' })
   }).optional(),
   is_active: z.boolean().optional(),
   hospital_code: z.string().max(20).nullable().optional(),
+  role_alias: z.string().max(50).nullable().optional(),
 });
 
 // Schema para CREATE: username, password obligatorios + strict (rechaza campos extra)

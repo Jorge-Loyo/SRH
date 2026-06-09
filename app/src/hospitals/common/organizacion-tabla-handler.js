@@ -78,12 +78,18 @@ function buildWhere(query, periodo, hospital, excludeField = null) {
   if (query.edad_min) { clauses.push(`p.edad >= ?`); params.push(parseInt(query.edad_min)) }
   if (query.edad_max) { clauses.push(`p.edad <= ?`); params.push(parseInt(query.edad_max)) }
 
-  // Antigüedad: búsqueda por año de ingreso (funciona con formato YYYY-MM-DD y D/M/YYYY)
-  if (query.antiguedad) {
+  if (query.antiguedad_min || query.antiguedad_max) {
     const currentYear = new Date().getFullYear()
-    const targetYear = currentYear - parseInt(query.antiguedad)
-    clauses.push(`p.antiguedad LIKE ?`)
-    params.push(`%${targetYear}%`)
+    if (query.antiguedad_min) {
+      const maxYear = currentYear - parseInt(query.antiguedad_min)
+      clauses.push(`YEAR(STR_TO_DATE(p.antiguedad, '%Y-%m-%d')) <= ?`)
+      params.push(maxYear)
+    }
+    if (query.antiguedad_max) {
+      const minYear = currentYear - parseInt(query.antiguedad_max)
+      clauses.push(`YEAR(STR_TO_DATE(p.antiguedad, '%Y-%m-%d')) >= ?`)
+      params.push(minYear)
+    }
   }
 
   if (query.estado) {

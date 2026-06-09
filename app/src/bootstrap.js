@@ -1,7 +1,6 @@
 const { config } = require('./config/env');
 const { AppDataSource } = require('./config/data-source');
 const { createApp } = require('./app');
-const { setupAdmin } = require('./admin');
 const logger = require('./utils/logger');
 const { startCleanupScheduler, stopCleanupScheduler } = require('./utils/tokenCleanupScheduler');
 const { startAuditCleanupScheduler, stopAuditCleanupScheduler } = require('./utils/auditCleanupScheduler');
@@ -29,16 +28,7 @@ async function bootstrap() {
   const { toCsvBase64 } = require('./utils/csv');
   const app = createApp({ AppDataSource, toCsvBase64 });
 
-  // Setup AdminJS if enabled
-  if (config.admin.enabled) {
-    try {
-      await setupAdmin(app);
-    } catch (err) {
-      logger.error('[AdminJS] Error al inicializar AdminJS:', { error: err.message, stack: err.stack });
-    }
-  } else {
-    logger.info('[AdminJS] Deshabilitado (ADMIN_ENABLED!=true)');
-  }
+  // Los routers de hospital se registran dentro de createApp() (antes del SPA catch-all)
 
   // Start token cleanup scheduler (every 4 hours)
   startCleanupScheduler(AppDataSource);
@@ -49,7 +39,7 @@ async function bootstrap() {
   // Start server
   const server = app.listen(PORT, () => {
     logger.info(`[Server] Listening on http://localhost:${PORT}`);
-    logger.info(`[Admin] Panel en http://localhost:${PORT}/admin`);
+    logger.info(`[SPA]    Frontend en http://localhost:${PORT}/`);
   });
 
   // Graceful shutdown handler

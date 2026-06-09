@@ -11,11 +11,16 @@ const { RefreshToken } = require('./RefreshToken')
 const { AuditLog } = require('./AuditLog')
 const { Permission } = require('./Permission')
 const { Recorrida } = require('./Recorrida')
-const { Concurso } = require('./Concurso')
 const { Minuta } = require('./Minuta')
 const { Pou } = require('./Pou')
 
-const entities = [Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta, Pou]
+// ─── Módulo 2 ──────────────────────────────────────────────────────────────────
+const { BajaConsolidada }    = require('../modules/bajas/BajaConsolidadaEntity')
+const { SeguimientoCph }     = require('../modules/seguimiento-cph/SeguimientoCphEntity')
+const { ConjuntosConfig }    = require('../modules/conjuntos-config/ConjuntosConfigEntity')
+const { SeguimientoCeetps }  = require('../modules/seguimiento-ceetps/SeguimientoCeetpsEntity')
 
-module.exports = { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Concurso, Minuta, Pou, entities }
+const entities = [Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps]
+
+module.exports = { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, entities }
 

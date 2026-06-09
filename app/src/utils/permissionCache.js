@@ -6,7 +6,7 @@ const logger = require('./logger');
  * Permission Cache Service
  * 
  * Cachea permisos por role en memoria para evitar N+1 queries
- * repetitivas en cada request de AdminJS.
+ * repetitivas en cada request de API.
  * 
  * PROBLEMA RESUELTO:
  * - Antes: 3-5 queries de permisos por cada navegación

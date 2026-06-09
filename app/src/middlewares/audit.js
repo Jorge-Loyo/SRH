@@ -56,6 +56,12 @@ function auditMiddleware(req, res, next) {
       const authAction = detectAuthAction(path);
       if (!isWrite && !authAction) return;
 
+      // Para eventos de login, distinguir éxito vs falla por status HTTP
+      let resolvedAction = authAction || (method === 'POST' ? 'create' : method === 'DELETE' ? 'delete' : 'update');
+      if (authAction === 'login') {
+        resolvedAction = status >= 400 ? 'login_fail' : 'login_success';
+      }
+
       // Lazy import to avoid circulars at startup
       const { AuditLog } = require('../entities-class/AuditLog');
       const repo = AppDataSource.getRepository(AuditLog);
@@ -64,7 +70,7 @@ function auditMiddleware(req, res, next) {
         user_username: user?.username || user?.email || null,
         user_role: user?.role || null,
         source: authAction ? 'auth' : 'api',
-        action: authAction || (method === 'POST' ? 'create' : method === 'DELETE' ? 'delete' : 'update'),
+        action: resolvedAction,
         resource: path.split('?')[0],
         record_id: null,
         method,

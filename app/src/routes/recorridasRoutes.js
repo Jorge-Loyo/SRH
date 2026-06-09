@@ -19,17 +19,17 @@ const { RecorridaCreateSchema, RecorridaUpdateSchema } = require('../schemas');
  */
 
 // GET /api/recorridas - Listar recorridas (con filtros opcionales)
-router.get('/', 
-  authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'),
-  validatePagination, // ✅ MEDIO FIX: Validar page/limit
+router.get('/',
+  authenticateJWT,
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'concursales'),
+  validatePagination,
   controller.list
 );
 
 // GET /api/recorridas/:id - Obtener una recorrida específica
-router.get('/:id', 
-  authenticateJWT, 
-  authorizeRoles('admin', 'editor', 'viewer', 'gerencia'), 
+router.get('/:id',
+  authenticateJWT,
+  authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'concursales'),
   controller.getOne
 );
 

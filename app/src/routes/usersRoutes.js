@@ -1,12 +1,12 @@
 const express = require('express');
 const controller = require('../controllers/usersController');
-const { authenticateJWT, authorizeRoles } = require('../middlewares/auth');
+const { authenticateJWT, requirePermission } = require('../middlewares/auth');
 const { validateBody } = require('../middlewares/validateBody');
 const { UserCreateSchema, UserUpdateSchema } = require('../schemas');
 
 const router = express.Router();
 
-router.use(authenticateJWT, authorizeRoles('admin'));
+router.use(authenticateJWT, requirePermission('can_manage_users'));
 router.get('/', controller.list);
 router.get('/:id', controller.getById);
 router.post('/', validateBody(UserCreateSchema), controller.create);

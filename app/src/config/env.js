@@ -26,15 +26,10 @@ const config = {
     password: process.env.DB_PASSWORD || '',
     name: process.env.DB_NAME || 'salud_db',
   },
+  // Credenciales del admin estático (solo usadas cuando AUTH_MODE=env)
   admin: {
-    enabled: toBool(process.env.ADMIN_ENABLED, false),
-    public: toBool(process.env.ADMIN_PUBLIC, false),
     email: process.env.ADMIN_EMAIL || 'admin@example.com',
-    password: process.env.ADMIN_PASSWORD,  // ⚠️ Requerido, sin fallback débil
-    sessionSecret: process.env.SESSION_SECRET,  // ⚠️ Requerido (validado en envValidator)
-    sessionSecure: toBool(process.env.SESSION_SECURE, false),
-    trustProxy: toBool(process.env.TRUST_PROXY, false),
-    multiRole: toBool(process.env.ADMIN_MULTIROLE, false),
+    password: process.env.ADMIN_PASSWORD,
   },
   auth: {
     mode: (process.env.AUTH_MODE || 'env').toLowerCase(),

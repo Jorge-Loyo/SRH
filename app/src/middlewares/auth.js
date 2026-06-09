@@ -55,16 +55,16 @@ function requirePermission(permissionKey) {
     if (!req.user) {
       return res.status(401).json({ error: 'No autenticado' });
     }
-    
-    const hasPermission = req.user.permissions?.some((p) => p.permission_key === permissionKey);
+
+    const hasPermission = req.user.permissions?.[permissionKey] === true;
     if (!hasPermission) {
       return res.status(403).json({
-        error: 'Permiso denegado', 
+        error: 'Permiso denegado',
         required: permissionKey,
-        role: req.user.role 
+        role: req.user.role,
       });
     }
-    
+
     next();
   };
 }

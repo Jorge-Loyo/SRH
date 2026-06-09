@@ -41,7 +41,8 @@ function findUserFromEnv(email) {
 }
 
 function makeAccessToken(payload) {
-  return jwt.sign(payload, config.auth.jwtSecret, { expiresIn: '15m' });
+  const minutes = config.auth.idleMinutes || 30;
+  return jwt.sign(payload, config.auth.jwtSecret, { expiresIn: `${minutes}m` });
 }
 
 function hashToken(raw) {
@@ -132,7 +133,7 @@ async function authenticateUser(email, username, password) {
     return {
       accessToken,
       refreshToken,
-      user: { id: u.id, username: u.username, email: u.email, role: u.role },
+      user: { id: u.id, username: u.username, email: u.email, role: u.role, hospital_code: u.hospital_code || null, role_alias: u.role_alias || null },
     };
   } else {
     // ENV mode
@@ -175,7 +176,7 @@ async function getCurrentUser(user) {
         where: [{ username: user.username || user.sub }, { email: user.email || null }],
       });
       if (u) {
-        return { id: u.id, username: u.username, email: u.email, role: u.role };
+        return { id: u.id, username: u.username, email: u.email, role: u.role, hospital_code: u.hospital_code || null, role_alias: u.role_alias || null };
       }
     } catch {}
   }
@@ -232,7 +233,11 @@ async function refreshAccessToken(rawRefreshToken) {
   rt.replaced_by_jti = newRt.jti;
   await revokeRefreshToken(rt, 'rotated');
 
-  return { accessToken, refreshToken: newRefreshToken };
+  return {
+    accessToken,
+    refreshToken: newRefreshToken,
+    user: { id: u.id, username: u.username, email: u.email, role: u.role, hospital_code: u.hospital_code || null, role_alias: u.role_alias || null },
+  };
 }
 
 /**

@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * Tests para Panel.jsx (vista_usuario)
  * Valida: consolidación de estados, loadDashboard, renderizado de KPIs
  */

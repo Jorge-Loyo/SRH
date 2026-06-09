@@ -21,11 +21,14 @@ async function login(req, res) {
     const { password, email, username } = LoginSchema.parse(req.body || {});
     const result = await authenticateUser(email, username, password);
 
+    // Setear req.user para que el middleware de auditoría capture el usuario
+    req.user = result.user;
+
     if (config.auth.cookies && result.refreshToken) {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: !!process.env.SESSION_SECURE,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/api/auth',
       });
@@ -78,13 +81,13 @@ async function refresh(req, res) {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: !!process.env.SESSION_SECURE,
+        secure: process.env.NODE_ENV === 'production',
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/api/auth',
       });
-      return res.json({ accessToken: result.accessToken });
+      return res.json({ accessToken: result.accessToken, user: result.user ?? null });
     }
-    return res.json({ accessToken: result.accessToken, refreshToken: result.refreshToken });
+    return res.json({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user ?? null });
   } catch (e) {
     if (e?.statusCode) {
       return res.status(e.statusCode).json({ error: e.message });

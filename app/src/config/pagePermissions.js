@@ -26,12 +26,9 @@ const PAGE_PERMISSIONS = {
     'SiglasFull',
     'BajasFull',
     
-    // Recorridas y Concursos
+    // Recorridas
     'RecorridasHospitales',
     'RecorridasDetalle',
-    'ConcursosDetailModal',
-    'HospitalesConcursos',
-    'TablonConcursos',
     
     // Dotación Total
     'DotacionTotal',
@@ -61,9 +58,6 @@ const PAGE_PERMISSIONS = {
     'BajasFull',
     'RecorridasHospitales',
     'RecorridasDetalle',
-    'ConcursosDetailModal',
-    'HospitalesConcursos',
-    'TablonConcursos',
     'DotacionTotal',
     'POUDetalle',
   ],
@@ -78,9 +72,6 @@ const PAGE_PERMISSIONS = {
     'Panel',
     'RecorridasHospitales',
     'RecorridasDetalle',
-    'ConcursosDetailModal',
-    'HospitalesConcursos',
-    'TablonConcursos',
     'DotacionTotal',
     'POUDetalle',
   ],
@@ -94,6 +85,25 @@ const PAGE_PERMISSIONS = {
     'TablaAmpliada',
   ],
 
+  // CONCURSALES: Gestión de procesos CEETPS + lectura del módulo de gestión
+  concursales: [
+    'Panel',
+    'Hospitales',
+    'OrganizacionTabla',
+    'TablaAmpliada',
+    'OrganigramaHome',
+    'OrganigramaDetalle',
+    'RecorridasHospitales',
+    'RecorridasDetalle',
+    'DotacionTotal',
+    'POUDetalle',
+    // Módulo concursales
+    'BajasConsolidadas',
+    'SeguimientoCph',
+    'SeguimientoCeetps',
+    'TableroKpis',
+  ],
+
   // GERENCIA: Igual que viewer + CRUD completo en recorridas y minutas
   gerencia: [
     'Hospitales',
@@ -104,9 +114,6 @@ const PAGE_PERMISSIONS = {
     'Panel',
     'RecorridasHospitales',
     'RecorridasDetalle',
-    'ConcursosDetailModal',
-    'HospitalesConcursos',
-    'TablonConcursos',
     'DotacionTotal',
     'POUDetalle',
   ],
@@ -141,7 +148,7 @@ function getAllowedPages(role) {
 /**
  * Helper para verificar acceso a tablas BD (PersonasFull, CargosFull, etc.)
  * Solo ADMIN y EDITOR pueden ver tablas BD completas
- * @param {Object} context - Contexto de AdminJS con currentAdmin
+ * @param {Object} context - Contexto con currentAdmin
  * @returns {boolean} true si tiene acceso a tablas BD
  */
 function canViewTablePages({ currentAdmin } = {}) {
@@ -152,7 +159,7 @@ function canViewTablePages({ currentAdmin } = {}) {
 /**
  * Helper para verificar acceso a páginas de estructura (Recorridas, Concursos, etc.)
  * ADMIN, EDITOR y VIEWER pueden verlas, pero NO DIRECTOR
- * @param {Object} context - Contexto de AdminJS con currentAdmin
+ * @param {Object} context - Contexto con currentAdmin
  * @returns {boolean} true si tiene acceso a páginas de estructura
  */
 function canViewStructurePages({ currentAdmin } = {}) {

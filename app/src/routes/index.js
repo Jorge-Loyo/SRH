@@ -5,7 +5,6 @@ const personas = require('./personasRoutes');
 const cargos = require('./cargosRoutes');
 const roles = require('./rolesRoutes');
 const bajasConcursos = require('./bajasConcursosRoutes');
-const concursos = require('./concursosRoutes');
 const schema = require('./schemaRoutes');
 const auth = require('./authRoutes');
 const users = require('./usersRoutes');
@@ -15,8 +14,18 @@ const organigrama = require('./organigramaRoutes');
 const recorridas = require('./recorridasRoutes');
 const minutas = require('./minutasRoutes');
 const pou = require('./pouRoutes');
-const pages = require('./pagesRoutes');
 const admin = require('./adminRoutes');
+const hospitalesApi = require('./hospitalesApiRoutes');
+const tablasApi = require('./tablasApiRoutes');
+const seguridadApi = require('./seguridadApiRoutes');
+const dotacionTotalApi = require('./dotacionTotalApiRoutes');
+
+// ─── Módulo 2: Bajas Consolidadas + Seguimiento CPH + CEETPS + Configuración ──
+const bajasConsolidadas   = require('../modules/bajas/bajaConsolidadaRoutes');
+const seguimientoCph      = require('../modules/seguimiento-cph/seguimientoCphRoutes');
+const seguimientoCeetps   = require('../modules/seguimiento-ceetps/seguimientoCeetpsRoutes');
+const conjuntosConfig     = require('../modules/conjuntos-config/conjuntosConfigRoutes');
+const tableroKpis         = require('../modules/tablero-kpis/tableroKpisRoutes');
 
 const router = express.Router();
 
@@ -25,7 +34,6 @@ router.use('/personas', personas);
 router.use('/cargos', cargos);
 router.use('/roles', roles);
 router.use('/bajas-concursos', bajasConcursos);
-router.use('/concursos', concursos);
 router.use('/_schema', schema);
 router.use('/auth', auth);
 router.use('/users', users);
@@ -35,7 +43,17 @@ router.use('/organigrama', organigrama);
 router.use('/recorridas', recorridas);
 router.use('/minutas', minutas);
 router.use('/pou', pou);
-router.use('/pages', pages);
 router.use('/admin', admin);
+router.use('/hospitales', hospitalesApi);
+router.use('/tablas', tablasApi);
+router.use('/seguridad', seguridadApi);
+router.use('/dotacion-total', dotacionTotalApi);
+
+// ─── Módulo 2 ─────────────────────────────────────────────────────────────────
+router.use('/concursales/bajas', bajasConsolidadas);
+router.use('/concursales/seguimiento-cph', seguimientoCph);
+router.use('/concursales/seguimiento-ceetps', seguimientoCeetps);
+router.use('/concursales/config', conjuntosConfig);
+router.use('/concursales/tablero', tableroKpis);
 
 module.exports = router;

@@ -96,7 +96,7 @@ class UserService {
    *   hospital_code: 'HGA'
    * });
    */
-  async create({ username, email = null, password, role = 'viewer', is_active = true, hospital_code = null }) {
+  async create({ username, email = null, password, role = 'viewer', is_active = true, hospital_code = null, role_alias = null }) {
     // Validar username único
     const existsUser = await this.userRepository.findOne({ where: { username } });
     if (existsUser) {
@@ -121,7 +121,8 @@ class UserService {
       password_hash,
       role,
       is_active,
-      hospital_code
+      hospital_code,
+      role_alias: role_alias || null,
     });
     
     return this.sanitize(created);
@@ -149,7 +150,7 @@ class UserService {
    *   password: 'newSecurePass456'
    * });
    */
-  async update(userId, { username, email, password, role, is_active, hospital_code }) {
+  async update(userId, { username, email, password, role, is_active, hospital_code, role_alias }) {
     // Buscar usuario existente
     const user = await this.userRepository.findOne({ 
       where: { id: Number(userId) } 
@@ -160,13 +161,13 @@ class UserService {
     }
     
     // Validar username único si se cambia
-    if (username && username !== user.username) {
+    if (username && username.toLowerCase() !== user.username.toLowerCase()) {
       const existsUser = await this.userRepository.findOne({ where: { username } });
       if (existsUser) {
         throw new Error('USERNAME_EXISTS');
       }
-      user.username = username;
     }
+    if (username) user.username = username;
     
     // Validar email único si se cambia
     if (typeof email !== 'undefined' && email !== user.email) {
@@ -183,6 +184,7 @@ class UserService {
     if (typeof role === 'string') user.role = role;
     if (typeof is_active === 'boolean') user.is_active = is_active;
     if (typeof hospital_code !== 'undefined') user.hospital_code = hospital_code ?? null;
+    if (typeof role_alias !== 'undefined') user.role_alias = role_alias || null;
     
     // Hash nuevo password si se proporciona (centralizado en passwordHelpers)
     if (password) {

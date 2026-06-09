@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * Tests para componentes tablas_full
  * Suite compartida que valida renderizado, carga, filtros, paginación y caché
  */

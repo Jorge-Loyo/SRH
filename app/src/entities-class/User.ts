@@ -17,11 +17,15 @@ export class User extends BaseEntity {
   password_hash!: string
 
   @Column({ type: 'varchar', length: 16, default: 'viewer' })
-  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia'
+  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia' | 'concursales'
 
   // Código de hospital al que pertenece (ej: HGACA)
   @Column({ type: 'varchar', length: 20, nullable: true })
   hospital_code!: string | null
+
+  // Nombre visual personalizado para el rol (puramente estético, no afecta permisos)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  role_alias!: string | null
 
   @Column({ type: 'boolean', default: true })
   is_active!: boolean

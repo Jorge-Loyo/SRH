@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * OrganigramaDetalle.test.js - Tests de Validación
  */
 

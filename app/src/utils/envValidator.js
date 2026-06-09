@@ -14,7 +14,6 @@ function validateEnvironment() {
   if (isProd) {
     const required = {
       'JWT_SECRET': 'Clave para firmar JWT (generar: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))")',
-      'SESSION_SECRET': 'Clave para sesiones (generar: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))")',
       'DB_HOST': 'Host de base de datos',
       'DB_USER': 'Usuario de base de datos',
       'DB_PASSWORD': 'Contraseña de base de datos (no dejar vacío)',
@@ -37,21 +36,10 @@ function validateEnvironment() {
       }
     });
     
-    // 🔴 BLOQUEANTE: SESSION_SECURE debe ser true en producción
-    if (process.env.SESSION_SECURE !== 'true') {
-      errors.push('❌ SESSION_SECURE: debe ser "true" en producción (cookies requieren HTTPS)');
-    }
-    
     // 🔴 BLOQUEANTE: JWT_SECRET debe tener mínimo 32 caracteres
     const jwtSecret = process.env.JWT_SECRET || '';
     if (jwtSecret.length < 32) {
       errors.push(`❌ JWT_SECRET: debe tener al menos 32 caracteres (actual: ${jwtSecret.length})`);
-    }
-    
-    // 🔴 BLOQUEANTE: SESSION_SECRET debe tener mínimo 32 caracteres
-    const sessionSecret = process.env.SESSION_SECRET || '';
-    if (sessionSecret.length < 32) {
-      errors.push(`❌ SESSION_SECRET: debe tener al menos 32 caracteres (actual: ${sessionSecret.length})`);
     }
     
     // ⚠️ WARNING: TRUST_PROXY no configurado (IPs incorrectas en audit)
@@ -59,9 +47,6 @@ function validateEnvironment() {
       logger.warn('[Env] TRUST_PROXY no configurado - audit logs tendrán IPs de proxy en lugar de cliente real');
     }
     
-    if (process.env.ADMIN_PASSWORD === 'admin123') {
-      errors.push('❌ ADMIN_PASSWORD: usa default "admin123"');
-    }
   }
   
   // En desarrollo: solo warnings

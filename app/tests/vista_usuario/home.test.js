@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * Tests para Home.jsx (vista_usuario)
  * Valida: consolidación de estados, manejo de errores, renderizado por rol
  */

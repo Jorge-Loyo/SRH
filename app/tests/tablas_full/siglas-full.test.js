@@ -1,4 +1,7 @@
 /**
+ * @jest-environment jsdom
+ */
+/**
  * Tests para componente SiglasFull
  * Pruebas específicas y casos particulares de siglas
  */

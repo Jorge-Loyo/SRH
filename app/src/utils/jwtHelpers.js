@@ -66,20 +66,17 @@ async function validateJWTAndLoadUser(token) {
       if (!user || !user.is_active) return null;
       
       // Build user object with all required fields
-      // NOTE: email field is set to username for AdminJS UI display (shows username instead of email)
-      // ✅ [FIX ROOT CAUSE] NO include permissions object - AdminJS v6 will serialize it as [object Object]
       const userObj = {
         username: user.username,
-        email: user.username,  // Show username in AdminJS UI, not email
+        email: user.username,
         role: user.role,
         hospital_code: user.hospital_code || null,
+        role_alias: user.role_alias || null,
         user_id: user.id,
-        id: user.id  // Also include 'id' field for AdminJS compatibility
+        id: user.id,
+        permissions: permissions || null,
       };
-      
-      // ❌ DO NOT attach permissions to userObj - it's an object that will be serialized
-      // Store permissions separately if needed for API access control (in next section)
-      
+
       return userObj;
     }
     
