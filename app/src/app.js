@@ -19,6 +19,12 @@ function createApp(options = {}) {
   const { AppDataSource, toCsvBase64 } = options
   const app = express();
 
+  // Confiar en el proxy reverso (Nginx/Docker) para que req.ip sea la IP real del cliente
+  // Sin esto, todos los usuarios comparten la misma IP del proxy y se bloquean mutuamente en rate limiting
+  if (process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1') {
+    app.set('trust proxy', 1);
+  }
+
   // Compresión HTTP (gzip/brotli) para reducir payload de responses en 70-80%
   app.use(compression({ 
     level: 6, // Balance entre velocidad y ratio de compresión
@@ -114,6 +120,11 @@ function createApp(options = {}) {
   // Se registran antes del catch-all para tener prioridad
   const { registerHospitalsRouters } = require('./hospitals');
   registerHospitalsRouters(app);
+
+  // Redirect rutas legacy de AdminJS → SPA (browsers con caché vieja)
+  app.use('/admin', (req, res) => {
+    res.redirect(301, '/');
+  });
 
   // SPA catch-all: cualquier ruta sin handler Express la resuelve React Router
   app.get('*', (req, res) => {

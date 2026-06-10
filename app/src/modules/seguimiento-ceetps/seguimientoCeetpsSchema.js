@@ -49,6 +49,10 @@ const seguimientoCeetpsEditableFields = z.object({
   carga_horaria:            z.string().max(20).optional().nullable(),
   motivo_baja:              z.string().max(150).optional().nullable(),
   doc_respaldatoria:        z.string().max(150).optional().nullable(),
+
+  // Solicitud de cambio
+  cambio_especialidad:      z.string().max(3).optional().nullable(),
+  doc_cambio_especialidad:  z.string().max(500).optional().nullable(),
 });
 
 const seguimientoCeetpsCreateSchema = seguimientoCeetpsEditableFields;
