@@ -11,8 +11,7 @@ const dsOptions = {
   // Entities are loaded explicitly in server.js/tests to avoid glob issues on Windows
   entities: [],
   logging: false, // ✅ Silenciado: No loguear queries SQL (demasiado ruido en consola)
-  // Migrations cargadas desde src/migrations/ (TypeScript, ejecutadas con ts-node)
-  migrations: [path.join(__dirname, '..', 'migrations', '*.ts')],
+  migrations: [],
   migrationsTableName: 'typeorm_migrations',
 };
 
