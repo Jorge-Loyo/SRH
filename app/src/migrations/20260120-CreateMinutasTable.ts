@@ -81,36 +81,42 @@ export class CreateMinutasTable1737350000000 implements MigrationInterface {
       true
     )
 
-    // Índice compuesto: hospital_code + created_at (query principal)
-    await queryRunner.createIndex(
-      'minutas',
-      new TableIndex({
-        name: 'IDX_minutas_hospital_created',
-        columnNames: ['hospital_code', 'created_at']
-      })
-    )
+    const table = await queryRunner.getTable('minutas')
 
-    // Índice: user_id (auditoría)
-    await queryRunner.createIndex(
-      'minutas',
-      new TableIndex({
-        name: 'IDX_minutas_user',
-        columnNames: ['user_id']
-      })
-    )
+    if (table && !table.indices.find(i => i.name === 'IDX_minutas_hospital_created')) {
+      await queryRunner.createIndex(
+        'minutas',
+        new TableIndex({
+          name: 'IDX_minutas_hospital_created',
+          columnNames: ['hospital_code', 'created_at']
+        })
+      )
+    }
 
-    // Foreign Key: user_id → users
-    await queryRunner.createForeignKey(
-      'minutas',
-      new TableForeignKey({
-        name: 'FK_minutas_user',
-        columnNames: ['user_id'],
-        referencedTableName: 'users',
-        referencedColumnNames: ['id'],
-        onDelete: 'CASCADE', // Si se elimina usuario, eliminar minutas asociadas
-        onUpdate: 'CASCADE'
-      })
-    )
+    if (table && !table.indices.find(i => i.name === 'IDX_minutas_user')) {
+      await queryRunner.createIndex(
+        'minutas',
+        new TableIndex({
+          name: 'IDX_minutas_user',
+          columnNames: ['user_id']
+        })
+      )
+    }
+
+    const foreignKeys = table?.foreignKeys ?? []
+    if (!foreignKeys.find(fk => fk.name === 'FK_minutas_user')) {
+      await queryRunner.createForeignKey(
+        'minutas',
+        new TableForeignKey({
+          name: 'FK_minutas_user',
+          columnNames: ['user_id'],
+          referencedTableName: 'users',
+          referencedColumnNames: ['id'],
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE'
+        })
+      )
+    }
   }
 
   async down(queryRunner: QueryRunner): Promise<void> {
