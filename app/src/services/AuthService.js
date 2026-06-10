@@ -118,8 +118,10 @@ async function revokeFamily(familyId) {
 async function authenticateUser(email, username, password) {
   if (config.auth.mode === 'db') {
     const repo = AppDataSource.getRepository(User);
-    const where = email ? { email: email.toLowerCase() } : { username: username.toLowerCase() };
-    const u = await repo.findOne({ where });
+    // El frontend siempre envía 'username', pero el usuario puede tipear su email o su username.
+    // Buscar por ambos simultáneamente para soportar los dos casos.
+    const input = (email || username || '').toLowerCase();
+    const u = await repo.findOne({ where: [{ username: input }, { email: input }] });
     if (!u || !u.is_active) {
       throw { statusCode: 401, message: 'Credenciales inválidas' };
     }
