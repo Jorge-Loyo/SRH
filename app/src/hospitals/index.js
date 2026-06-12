@@ -38,9 +38,9 @@ function createHospitalRouter(hospitalCode) {
 
   /**
    * GET /:hospitalCode/organizacion-tabla
-   * Query params: periodo, page, perPage, sortBy, sortDir, procesos_concursales, filters...
-   * 
-   * Retorna tabla de organización (dotación o procesos concursales)
+   * Query params: periodo, page, perPage, sortBy, sortDir, filters...
+   *
+   * Retorna tabla de organización de dotación
    * con soporte para:
    * - Filtros multi-select encadenados
    * - Paginación

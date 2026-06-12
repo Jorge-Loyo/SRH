@@ -5,7 +5,6 @@ const { Sigla } = require('./Sigla')
 const { Persona } = require('./Persona')
 const { Cargo } = require('./Cargo')
 const { Rol } = require('./Rol')
-const { BajaConcurso } = require('./BajaConcurso')
 const { User } = require('./User')
 const { RefreshToken } = require('./RefreshToken')
 const { AuditLog } = require('./AuditLog')
@@ -20,7 +19,7 @@ const { SeguimientoCph }     = require('../modules/seguimiento-cph/SeguimientoCp
 const { ConjuntosConfig }    = require('../modules/conjuntos-config/ConjuntosConfigEntity')
 const { SeguimientoCeetps }  = require('../modules/seguimiento-ceetps/SeguimientoCeetpsEntity')
 
-const entities = [Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps]
+const entities = [Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps]
 
-module.exports = { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, entities }
+module.exports = { Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, entities }
 

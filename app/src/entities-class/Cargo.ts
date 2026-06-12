@@ -1,6 +1,5 @@
 import { BaseEntity, Entity, PrimaryColumn, Column, OneToMany, Index } from 'typeorm'
 import { Rol } from './Rol'
-import { BajaConcurso } from './BajaConcurso'
 
 @Entity({ name: 'cargos' })
 @Index(['id_cargo', 'periodo'])
@@ -20,7 +19,4 @@ export class Cargo extends BaseEntity {
 
   @OneToMany(() => Rol, (rol) => rol.cargo)
   roles!: Rol[]
-
-  @OneToMany(() => BajaConcurso, (b) => b.cargo)
-  bajas!: BajaConcurso[]
 }

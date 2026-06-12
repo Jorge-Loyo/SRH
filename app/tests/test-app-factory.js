@@ -25,14 +25,13 @@ async function createTestApp() {
   const { Persona } = require('../src/entities-class/Persona');
   const { Cargo } = require('../src/entities-class/Cargo');
   const { Rol } = require('../src/entities-class/Rol');
-  const { BajaConcurso } = require('../src/entities-class/BajaConcurso');
   const { User } = require('../src/entities-class/User');
   const { RefreshToken } = require('../src/entities-class/RefreshToken');
   const { AuditLog } = require('../src/entities-class/AuditLog');
   const { Permission } = require('../src/entities-class/Permission');
   const { Recorrida } = require('../src/entities-class/Recorrida');
 
-  await initTestDataSource([Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, AuditLog, Permission, Recorrida]);
+  await initTestDataSource([Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida]);
 
   const app = express();
   app.use(bodyParser.json({ limit: '2mb' }));
@@ -47,7 +46,7 @@ async function createTestApp() {
     }
   });
   app.use('/api', auditMiddleware, apiRoutes);
-  return { app, ds: AppDataSource, entities: { Sigla, Persona, Cargo, Rol, BajaConcurso, User, RefreshToken, Permission, Recorrida } };
+  return { app, ds: AppDataSource, entities: { Sigla, Persona, Cargo, Rol, User, RefreshToken, Permission, Recorrida } };
 }
 
 module.exports = { createTestApp };

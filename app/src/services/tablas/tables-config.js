@@ -167,36 +167,6 @@ const TABLES_CONFIG = {
     ]
   },
 
-  // =========== BAJAS ===========
-  bajas: {
-    key: 'bajas',
-    entityName: 'BajaConcurso',
-    alias: 'b',
-    label: 'Bajas y Concursos',
-    description: 'Vista completa de bajas y concursos',
-    pageName: 'BajasFull',
-    exportRoute: '/admin/export/bajas.xlsx',
-    defaultSort: { column: 'id_baja', direction: 'ASC' },
-    defaultPerPage: 50,
-    
-    excludeColumns: [],
-    
-    filters: [
-      // Periodo primero
-      { field: 'periodo', label: 'Periodo', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      
-      // IDs y códigos
-      { field: 'id_baja', label: 'ID Baja', type: FILTER_TYPES.TEXT, placeholder: 'Ej: 12345' },
-      { field: 'sigla', label: 'Sigla', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'motivo_baja', label: 'Motivo Baja', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      
-      // Campos full-width
-      { field: 'puesto_baja', label: 'Puesto Baja', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true, fullWidth: true },
-      { field: 'especialidad_baja', label: 'Especialidad Baja', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true, fullWidth: true },
-      { field: 'unificador_puestos', label: 'Unificador Puestos', type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true, fullWidth: true },
-      { field: 'fecha_baja', label: 'Fecha Baja', type: FILTER_TYPES.DATE_RANGE, fullWidth: true }
-    ]
-  }
 }
 
 // ============================================================================

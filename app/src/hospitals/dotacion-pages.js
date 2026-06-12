@@ -81,25 +81,24 @@ async function handleDotacionTotalPage({ AppDataSource, req }){
   if (req.query.export === 'xlsx' || req.query.export === 'csv') {
     try {
       const { toExcelBase64 } = require('../utils/excel')
-      const tipo = req.query.procesos_concursales === 'true' ? 'bajas_concursos' : 'dotacion'
+      const tipo = 'dotacion'
       const exportFilters = {
-        'Vista':     'Dotación Total (todos los hospitales)',
-        'Período':   req.query.periodo || '-',
-        'Tipo':      tipo === 'bajas_concursos' ? 'Procesos Concursales (Bajas)' : 'Dotación',
+        'Vista':   'Dotación Total (todos los hospitales)',
+        'Período': req.query.periodo || '-',
+        'Tipo':    'Dotación',
       }
       for (const [k, label] of Object.entries(DOTACION_FILTER_LABELS)) {
         const v = (req.query[k] || '').toString().trim()
         if (v) exportFilters[label] = v
       }
       result.xlsxBase64 = await toExcelBase64(result.rows || [], result.columns || [], { filters: exportFilters })
-      result.filename = `${tipo}_total_${req.query.periodo}_p${req.query.page || 1}.xlsx`
+      result.filename = `dotacion_total_${req.query.periodo}_p${req.query.page || 1}.xlsx`
     } catch (e) {
       const cols = result.columns || []
       const rowsData = result.rows || []
       const lines = [cols.join(','), ...rowsData.map(r => cols.map(c => JSON.stringify(r[c] ?? '')).join(','))]
       result.xlsxBase64 = Buffer.from(lines.join('\n'), 'utf8').toString('base64')
-      const tipo = req.query.procesos_concursales === 'true' ? 'bajas_concursos' : 'dotacion'
-      result.filename = `${tipo}_total_${req.query.periodo}_p${req.query.page || 1}.xlsx`
+      result.filename = `dotacion_total_${req.query.periodo}_p${req.query.page || 1}.xlsx`
     }
   }
 

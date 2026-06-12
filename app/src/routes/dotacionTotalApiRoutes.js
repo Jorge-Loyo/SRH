@@ -13,7 +13,7 @@ router.use(authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'director', '
  * Vista global de dotación (todos los hospitales combinados).
  *
  * Query params: periodo, page, perPage, sortBy, sortDir,
- *               procesos_concursales, sigla, universo_totalizador,
+ *               sigla, universo_totalizador,
  *               tipo_hospital_sigla, monovalencia,
  *               + filtros dinámicos (especialidad, escalafon, etc.)
  *               + export=xlsx para exportar

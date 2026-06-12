@@ -115,7 +115,6 @@ module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla(
     const perPage = Math.min(500, Math.max(1, parseInt(query.perPage) || 50))
     const sortBy = query.sortBy || 'id_cargo'
     const sortDir = (query.sortDir || 'ASC').toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
-    const procesosConcursales = query.procesos_concursales === 'true'
     const skipDistinct = query.skipDistinct === 'true'
 
     // Aplicar RLS: si el usuario es director, forzar su hospital
@@ -129,10 +128,6 @@ module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla(
         kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
         error: 'Período requerido'
       }
-    }
-
-    if (procesosConcursales) {
-      return await handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir, skipDistinct })
     }
 
     const sqlSortCol = ALLOWED_SORT_COLUMNS[sortBy] || 'r.id_cargo'
@@ -233,108 +228,3 @@ module.exports.handleOrganizacionTabla = async function handleOrganizacionTabla(
   }
 }
 
-/**
- * Handler para Procesos Concursales — consulta tabla bajas_concursos
- */
-async function handleBajasConcursos({ AppDataSource, query, hospital, periodo, page, perPage, sortBy, sortDir, skipDistinct }) {
-  try {
-    const BAJAS_SORT_COLUMNS = {
-      'Código de Cargo':       'b.codigo_cargo',
-      'Nombre y Apellido':     'b.nombre_apellido',
-      'Puesto de Baja':        'b.puesto_baja',
-      'Especialidad de Baja':  'b.especialidad_baja',
-      'Unificador de Puestos': 'b.unificador_puestos',
-      'Expediente Baja':       'b.ex_baja',
-      'Expediente Concurso':   'b.ex_concurso',
-      'Fecha de Baja':         'b.fecha_baja',
-      'Motivo de Baja':        'b.motivo_baja',
-    }
-    const sqlSortCol = BAJAS_SORT_COLUMNS[sortBy] || 'b.codigo_cargo'
-    const sqlSortDir = sortDir === 'DESC' ? 'DESC' : 'ASC'
-    const offset = (page - 1) * perPage
-
-    const BAJAS_FILTERS = [
-      { key: 'unificador_puesto',       column: 'b.unificador_puestos' },
-      { key: 'especialidad',            column: 'b.especialidad_baja' },
-      { key: 'literal_puesto',          column: 'b.puesto_baja' },
-      { key: 'literal_codigo_registro', column: 'b.motivo_baja' },
-    ]
-
-    const buildBajasWhere = (excludeField = null) => {
-      const clauses = []
-      const params = [periodo, hospital]
-
-      if (query.codigo_cargo)    { clauses.push(`b.codigo_cargo LIKE ?`);    params.push(`%${query.codigo_cargo}%`) }
-      if (query.nombre_apellido) { clauses.push(`b.nombre_apellido LIKE ?`); params.push(`%${query.nombre_apellido}%`) }
-      if (query.ex_baja)         { clauses.push(`b.ex_baja LIKE ?`);         params.push(`%${query.ex_baja}%`) }
-      if (query.ex_concurso)     { clauses.push(`b.ex_concurso LIKE ?`);     params.push(`%${query.ex_concurso}%`) }
-
-      BAJAS_FILTERS.forEach(({ key, column }) => {
-        if (key === excludeField) return
-        const vals = query[key] ? query[key].split(',').map(v => v.trim()).filter(Boolean) : []
-        if (vals.length) { clauses.push(`${column} IN (?)`); params.push(vals) }
-      })
-
-      return { whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '', params }
-    }
-
-    const { whereSQL, params: mainParams } = buildBajasWhere()
-
-    const countSQL = `SELECT COUNT(*) AS total FROM bajas_concursos b WHERE b.periodo = ? AND b.sigla = ? ${whereSQL}`
-
-    const dataSQL = `
-      SELECT
-        b.codigo_cargo        AS 'Código de Cargo',
-        b.nombre_apellido     AS 'Nombre y Apellido',
-        b.puesto_baja         AS 'Puesto de Baja',
-        b.especialidad_baja   AS 'Especialidad de Baja',
-        b.unificador_puestos  AS 'Unificador de Puestos',
-        b.ex_baja             AS 'Expediente Baja',
-        b.ex_concurso         AS 'Expediente Concurso',
-        b.fecha_baja          AS 'Fecha de Baja',
-        b.motivo_baja         AS 'Motivo de Baja'
-      FROM bajas_concursos b
-      WHERE b.periodo = ? AND b.sigla = ? ${whereSQL}
-      ORDER BY ${sqlSortCol} ${sqlSortDir}
-      LIMIT ${perPage} OFFSET ${offset}
-    `
-
-    const distinctPromises = skipDistinct ? [] : BAJAS_FILTERS.map(({ key, column }) => {
-      const { whereSQL: dWhere, params: dParams } = buildBajasWhere(key)
-      return AppDataSource.query(
-        `SELECT DISTINCT ${column} AS val FROM bajas_concursos b WHERE b.periodo = ? AND b.sigla = ? ${dWhere} AND ${column} IS NOT NULL ORDER BY val ASC`,
-        dParams
-      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean) }))
-    })
-
-    const [countRows, dataRows, ...distinctResults] = await Promise.all([
-      AppDataSource.query(countSQL, mainParams),
-      AppDataSource.query(dataSQL,  mainParams),
-      ...distinctPromises
-    ])
-
-    const total = parseInt(countRows[0]?.total || 0)
-    const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
-
-    let distinctValues = null
-    if (!skipDistinct) {
-      distinctValues = {}
-      distinctResults.forEach(({ key, values }) => { distinctValues[key] = values })
-    }
-
-    return {
-      columns, rows: dataRows, total,
-      kpis: { total, activos: 0, bloqueados: 0, comision: 0, retencion: 0 },
-      distinctValues, page, perPage,
-      info: 'Mostrando datos de Bajas y Concursos'
-    }
-
-  } catch (error) {
-    logger.error('[handleBajasConcursos] Error:', { error: error.message, stack: error.stack })
-    return {
-      columns: [], rows: [], total: 0,
-      kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
-      error: error.message
-    }
-  }
-}

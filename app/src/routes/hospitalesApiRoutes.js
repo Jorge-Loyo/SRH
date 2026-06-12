@@ -22,7 +22,7 @@ router.use(authenticateJWT);
  * pero expuesta bajo /api para el nuevo frontend.
  *
  * Query params: periodo, page, perPage, sortBy, sortDir,
- *               procesos_concursales, skipDistinct,
+ *               skipDistinct,
  *               + todos los filtros dinámicos
  */
 router.get('/:code/organizacion-tabla', async (req, res) => {
@@ -44,15 +44,14 @@ router.get('/:code/organizacion-tabla', async (req, res) => {
 
 /**
  * GET /api/hospitales/:code/export/:tipo
- * Exportación Excel de dotación o bajas/concursos.
- * tipos válidos: dotacion-total | bajas-concursos
+ * Exportación Excel de dotación.
+ * tipos válidos: dotacion-total
  */
 router.get('/:code/export/:tipo', async (req, res) => {
   const code = (req.params.code || '').toUpperCase();
   const tipo = req.params.tipo;
 
-  const validTipos = ['dotacion-total', 'bajas-concursos'];
-  if (!validTipos.includes(tipo)) {
+  if (tipo !== 'dotacion-total') {
     return res.status(400).json({ error: 'Tipo de exportación inválido' });
   }
 
@@ -60,7 +59,6 @@ router.get('/:code/export/:tipo', async (req, res) => {
     const { AppDataSource } = require('../config/data-source');
     req.query.hospital = code;
     req.query.export = 'xlsx';
-    if (tipo === 'bajas-concursos') req.query.procesos_concursales = 'true';
 
     const result = await handleOrganizacionTabla({ AppDataSource, req }, code);
 

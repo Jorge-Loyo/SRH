@@ -158,34 +158,6 @@ const RolCreateSchema = RolEditableFieldsSchema.strict();
 // NO permite modificar PKs (id_rol, periodo)
 const RolUpdateSchema = RolEditableFieldsSchema.partial().strict();
 
-// ===== BAJA/CONCURSO SCHEMAS =====
-// Schema base SOLO con campos editables (sin PKs)
-// PKs (id_baja, periodo) vienen de params, NO de body
-const BajaConcursoEditableFieldsSchema = z.object({
-  // FK obligatoria (relación con Cargo)
-  id_cargo: z.number()
-    .int('ID cargo debe ser entero')
-    .positive('ID cargo debe ser positivo'),
-  
-  // Campos opcionales
-  ex_baja: z.string().max(50).nullable().optional(),
-  sigla: z.string().max(20).nullable().optional(),
-  codigo_cargo: z.string().max(50).nullable().optional(),
-  ex_concurso: z.string().max(50).nullable().optional(),
-  fecha_baja: z.string().max(20).nullable().optional(),
-  motivo_baja: z.string().max(255).nullable().optional(),
-  nombre_apellido: z.string().max(255).nullable().optional(),
-  puesto_baja: z.string().max(255).nullable().optional(),
-  especialidad_baja: z.string().max(100).nullable().optional(),
-  unificador_puestos: z.string().max(255).nullable().optional(),
-});
-
-// Schema para CREATE: id_cargo obligatorio + strict (rechaza campos extra)
-const BajaConcursoCreateSchema = BajaConcursoEditableFieldsSchema.strict();
-
-// Schema para UPDATE: todos los campos opcionales + strict (rechaza campos extra)
-// NO permite modificar PKs (id_baja, periodo)
-const BajaConcursoUpdateSchema = BajaConcursoEditableFieldsSchema.partial().strict();
 
 const LoginSchema = z.object({
   email: z.string()
@@ -302,8 +274,6 @@ module.exports = {
   CargoUpdateSchema,
   RolCreateSchema,
   RolUpdateSchema,
-  BajaConcursoCreateSchema,
-  BajaConcursoUpdateSchema,
   LoginSchema,
   UserCreateSchema,
   UserUpdateSchema,

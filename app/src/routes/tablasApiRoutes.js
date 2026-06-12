@@ -15,7 +15,7 @@ const router = express.Router();
 // Solo roles con acceso a tablas de estructura de BD
 router.use(authenticateJWT, requirePermission('can_alter_structure'));
 
-const VALID_TABLES = ['personas', 'cargos', 'roles', 'siglas', 'bajas'];
+const VALID_TABLES = ['personas', 'cargos', 'roles', 'siglas'];
 
 /**
  * GET /api/tablas/:tableKey

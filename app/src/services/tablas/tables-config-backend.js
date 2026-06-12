@@ -10,7 +10,6 @@ const { Persona } = require('../../entities-class/Persona')
 const { Cargo } = require('../../entities-class/Cargo')
 const { Rol } = require('../../entities-class/Rol')
 const { Sigla } = require('../../entities-class/Sigla')
-const { BajaConcurso } = require('../../entities-class/BajaConcurso')
 
 // Mapeo de nombres de entidades a clases TypeORM
 const ENTITY_MAP = {
@@ -18,7 +17,6 @@ const ENTITY_MAP = {
   'Cargo': Cargo,
   'Rol': Rol,
   'Sigla': Sigla,
-  'BajaConcurso': BajaConcurso
 }
 
 /**

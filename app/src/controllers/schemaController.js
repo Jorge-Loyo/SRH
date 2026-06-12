@@ -3,7 +3,7 @@ const { getTableColumns } = require('../services/schemaService');
 module.exports = {
   async list(req, res) {
     try {
-      const tables = ['siglas', 'personas', 'cargos', 'roles', 'bajas_concursos'];
+      const tables = ['siglas', 'personas', 'cargos', 'roles'];
       const result = {};
       for (const t of tables) {
         // eslint-disable-next-line no-await-in-loop

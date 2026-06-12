@@ -1,9 +1,8 @@
-async function seed(ds, { Sigla, Persona, Cargo, Rol, BajaConcurso, Permission }) {
+async function seed(ds, { Sigla, Persona, Cargo, Rol, Permission }) {
   const siglaRepo = ds.getRepository(Sigla);
   const personaRepo = ds.getRepository(Persona);
   const cargoRepo = ds.getRepository(Cargo);
   const rolRepo = ds.getRepository(Rol);
-  const bajaRepo = ds.getRepository(BajaConcurso);
   const permRepo = ds.getRepository(Permission);
 
   // Seed permissions for all roles
@@ -82,9 +81,7 @@ async function seed(ds, { Sigla, Persona, Cargo, Rol, BajaConcurso, Permission }
     agrupador: 'ADM',
   });
 
-  const baja = await bajaRepo.save({ id_baja: 1, periodo: '2024-01', id_cargo: cargo.id_cargo, motivo_baja: 'Renuncia', nombre_apellido: 'Juan Perez' });
-
-  return { sigla, persona, cargo, rol, baja };
+  return { sigla, persona, cargo, rol };
 }
 
 module.exports = { seed };
