@@ -121,7 +121,7 @@ function createApp(options = {}) {
   const { registerHospitalsRouters } = require('./hospitals');
   registerHospitalsRouters(app);
 
-  // Redirect rutas legacy de AdminJS → SPA (browsers con caché vieja)
+  // Redirect del viejo panel de administración (ya removido) → SPA, para browsers con caché vieja
   app.use('/admin', (req, res) => {
     res.redirect(301, '/');
   });

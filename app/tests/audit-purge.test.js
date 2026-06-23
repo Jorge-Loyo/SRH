@@ -1,6 +1,7 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 const { createTestApp } = require('./test-app-factory');
+const { seed } = require('./fixtures');
 
 describe('Audit purge', () => {
   let app, ds;
@@ -10,6 +11,7 @@ describe('Audit purge', () => {
     process.env.AUTH_MODE = 'db';
     const ctx = await createTestApp();
     app = ctx.app; ds = ctx.ds;
+    await seed(ds, ctx.entities); // permisos por rol, incl. can_view_audit para 'admin'
     const { User } = require('../src/entities-class/User');
     const urepo = ds.getRepository(User);
     await urepo.save({ username: 'purger', email: 'purger@example.com', password_hash: bcrypt.hashSync('secret', 10), role: 'admin', is_active: true });

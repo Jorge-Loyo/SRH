@@ -18,6 +18,7 @@ const hospitalesApi = require('./hospitalesApiRoutes');
 const tablasApi = require('./tablasApiRoutes');
 const seguridadApi = require('./seguridadApiRoutes');
 const dotacionTotalApi = require('./dotacionTotalApiRoutes');
+const dotacionActivaApi = require('./dotacionActivaRoutes');
 
 // ─── Módulo 2: Bajas Consolidadas + Seguimiento CPH + CEETPS + Configuración ──
 const bajasConsolidadas   = require('../modules/bajas/bajaConsolidadaRoutes');
@@ -46,6 +47,7 @@ router.use('/hospitales', hospitalesApi);
 router.use('/tablas', tablasApi);
 router.use('/seguridad', seguridadApi);
 router.use('/dotacion-total', dotacionTotalApi);
+router.use('/dotacion-activa', dotacionActivaApi);
 
 // ─── Módulo 2 ─────────────────────────────────────────────────────────────────
 router.use('/concursales/bajas', bajasConsolidadas);

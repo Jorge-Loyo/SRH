@@ -1,5 +1,6 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const { AppDataSource } = require('../src/config/data-source');
 const apiRoutes = require('../src/routes');
 const { auditMiddleware } = require('../src/middlewares/audit');
@@ -34,6 +35,7 @@ async function createTestApp() {
   await initTestDataSource([Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida]);
 
   const app = express();
+  app.use(cookieParser());
   app.use(bodyParser.json({ limit: '2mb' }));
   app.use(bodyParser.urlencoded({ extended: true }));
   // Minimal health route similar to server's

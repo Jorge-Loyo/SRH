@@ -94,6 +94,13 @@ export class BajaConsolidada extends BaseEntity {
   @Column({ type: 'varchar', length: 5, nullable: true })
   genera_concurso?: string | null
 
+  // ============ CONCURSO (solo Origen = Ampliación) ============
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  expediente_concurso?: string | null
+
+  @Column({ type: 'varchar', length: 15, nullable: true })
+  fecha_generacion?: string | null
+
   // ============ SIAL ============
   @Column({ type: 'varchar', length: 200, nullable: true })
   cargo_baja?: string | null

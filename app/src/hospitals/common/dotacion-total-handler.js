@@ -114,6 +114,10 @@ function buildWhere(query, periodo, excludeField = null) {
     params.push(`%${norm}%`)
   }
 
+  // Código numérico de registro (distinto de literal_codigo_registro) — sin UI propia,
+  // usado por el drill-down del Panel para acotar la categoría "Administrativos" (código 83).
+  if (query.codigo_registro) { clauses.push(`r.codigo_registro = ?`); params.push(query.codigo_registro) }
+
   return { params, whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '' }
 }
 

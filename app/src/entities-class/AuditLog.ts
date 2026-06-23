@@ -5,7 +5,7 @@ export class AuditLog extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number
 
-  // Username or email from API/JWT/AdminJS
+  // Username o email del usuario autenticado (API/JWT)
   @Index()
   @Column({ type: 'varchar', length: 120, nullable: true })
   user_username!: string | null

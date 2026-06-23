@@ -12,7 +12,7 @@ class SeguimientoCeetpsService {
       codigo_registro, sigla_efector, estado_concurso,
       usuario, cuil, search, id_baja,
       // Concurso
-      ee_concurso, expediente_concurso, tipificador_obra_servicio, tipificador_origen,
+      expediente_concurso, tipificador_obra_servicio, tipificador_origen,
       puesto_solicitado, dispo_llamado,
       // Designación
       cuil_designado, puesto_designado, expediente_designacion, estado_apto, alta_sial,
@@ -30,7 +30,6 @@ class SeguimientoCeetpsService {
     if (cuil)             where.cuil             = ILike(`%${cuil}%`);
     if (id_baja)          where.id_baja          = Number(id_baja);
     // Concurso
-    if (ee_concurso)              where.ee_concurso              = ILike(`%${ee_concurso}%`);
     if (expediente_concurso)      where.expediente_concurso      = ILike(`%${expediente_concurso}%`);
     if (tipificador_obra_servicio) where.tipificador_obra_servicio = ILike(`%${tipificador_obra_servicio}%`);
     if (tipificador_origen)       where.tipificador_origen       = ILike(`%${tipificador_origen}%`);
@@ -59,7 +58,6 @@ class SeguimientoCeetpsService {
           { ...where, cuil_designado:            ILike(`%${search}%`) },
           { ...where, sigla_efector:             ILike(`%${search}%`) },
           { ...where, descr_efector:             ILike(`%${search}%`) },
-          { ...where, ee_concurso:               ILike(`%${search}%`) },
           { ...where, expediente_concurso:       ILike(`%${search}%`) },
           { ...where, ex_baja:                   ILike(`%${search}%`) },
           { ...where, cargo:                     ILike(`%${search}%`) },

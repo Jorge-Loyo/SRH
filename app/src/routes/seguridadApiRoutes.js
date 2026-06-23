@@ -92,21 +92,19 @@ router.patch('/tokens/user/:username/revoke', async (req, res) => {
   try {
     const { AppDataSource } = require('../config/data-source');
     const { RefreshToken } = require('../entities-class/RefreshToken');
+    const { User } = require('../entities-class/User');
+
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({ where: { username: req.params.username } });
+    if (!user) return res.json({ revoked: 0 });
+
     const repo = AppDataSource.getRepository(RefreshToken);
     const result = await repo
       .createQueryBuilder()
       .update(RefreshToken)
       .set({ revoked: true, revoked_reason: 'admin_revoke', revoked_at: new Date() })
       .where('revoked = :r', { r: false })
-      .andWhere(qb => {
-        const sub = qb.subQuery()
-          .select('u.id')
-          .from('users', 'u')
-          .where('u.username = :un')
-          .getQuery();
-        return 'user_id IN ' + sub;
-      })
-      .setParameter('un', req.params.username)
+      .andWhere('user_id = :uid', { uid: user.id })
       .execute();
     return res.json({ revoked: result.affected || 0 });
   } catch (e) {

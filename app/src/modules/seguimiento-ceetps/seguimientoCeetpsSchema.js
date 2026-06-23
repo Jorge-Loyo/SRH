@@ -14,7 +14,7 @@ const seguimientoCeetpsEditableFields = z.object({
   tipificador_origen:       z.string().max(200).optional().nullable(),
   fecha_caratulacion:       z.string().max(15).optional().nullable(),
   expediente_concurso:      z.string().max(150).optional().nullable(),
-  ee_concurso:              z.string().max(150).optional().nullable(),
+  fecha_generacion:         z.string().max(15).optional().nullable(),
   fecha_autorizacion:       z.string().max(15).optional().nullable(),
   puesto_solicitado:        z.string().max(150).optional().nullable(),
   dispo_llamado:            z.string().max(500).optional().nullable(),
@@ -67,7 +67,6 @@ const seguimientoCeetssPaginationSchema = z.object({
   usuario:                  z.string().optional(),
   // Concurso
   estado_concurso:          z.string().optional(),
-  ee_concurso:              z.string().optional(),
   expediente_concurso:      z.string().optional(),
   tipificador_obra_servicio: z.string().optional(),
   tipificador_origen:       z.string().optional(),

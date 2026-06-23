@@ -1,6 +1,7 @@
 const request = require('supertest');
 const bcrypt = require('bcryptjs');
 const { createTestApp } = require('./test-app-factory');
+const { seed } = require('./fixtures');
 
 describe('Audit logs middleware and filters', () => {
   let app, ds, entities;
@@ -10,6 +11,7 @@ describe('Audit logs middleware and filters', () => {
     process.env.AUTH_MODE = 'db';
     const ctx = await createTestApp();
     app = ctx.app; ds = ctx.ds; entities = ctx.entities;
+    await seed(ds, entities); // permisos por rol, incl. can_view_audit para 'admin'
     const { User } = require('../src/entities-class/User');
     const repo = ds.getRepository(User);
     await repo.save({

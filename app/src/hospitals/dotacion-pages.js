@@ -1,4 +1,4 @@
-// Dispatcher for DotacionTotal AdminJS custom page
+// Dispatcher para la página de Dotación Total
 
 const logger = require('../utils/logger')
 
