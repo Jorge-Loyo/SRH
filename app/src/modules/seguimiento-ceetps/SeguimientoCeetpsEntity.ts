@@ -50,10 +50,6 @@ export class SeguimientoCeetps extends BaseEntity {
   @Column({ type: 'varchar', length: 150, nullable: true })
   expediente_concurso?: string | null
 
-  /** Fecha de generación del expediente de concurso — copiada desde bajas_consolidadas (Origen = Ampliación) */
-  @Column({ type: 'varchar', length: 15, nullable: true })
-  fecha_generacion?: string | null
-
   @Column({ type: 'varchar', length: 15, nullable: true })
   fecha_autorizacion?: string | null
 

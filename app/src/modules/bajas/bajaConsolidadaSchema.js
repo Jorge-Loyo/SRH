@@ -33,7 +33,7 @@ const bajaConsolidadaEditableFields = z.object({
   genera_concurso:       z.string().max(5).optional().nullable(),
   cargo_baja:            z.string().max(200).optional().nullable(),
   expediente_concurso:   z.string().max(150).optional().nullable(),
-  fecha_generacion:      z.string().max(15).optional().nullable(),
+  fecha_caratulacion:    z.string().max(15).optional().nullable(),
 });
 
 // ─── Create: requiere al menos cuil o nombre_apellido ─────────────────────────

@@ -99,7 +99,7 @@ export class BajaConsolidada extends BaseEntity {
   expediente_concurso?: string | null
 
   @Column({ type: 'varchar', length: 15, nullable: true })
-  fecha_generacion?: string | null
+  fecha_caratulacion?: string | null
 
   // ============ SIAL ============
   @Column({ type: 'varchar', length: 200, nullable: true })

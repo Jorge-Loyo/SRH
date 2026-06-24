@@ -88,7 +88,7 @@ class BajaConsolidadaService {
       motivo_baja:          baja.motivo_baja,
       doc_respaldatoria:    baja.doc_respaldatoria,
       expediente_concurso: baja.expediente_concurso,
-      fecha_generacion:     baja.fecha_generacion,
+      fecha_caratulacion:   baja.fecha_caratulacion,
     };
   }
 
@@ -330,7 +330,7 @@ class BajaConsolidadaService {
         if (payload.motivo_baja       !== undefined) syncFields.motivo_baja       = payload.motivo_baja;
         if (payload.doc_respaldatoria !== undefined) syncFields.doc_respaldatoria = payload.doc_respaldatoria;
         if (payload.codigo_registro   !== undefined) syncFields.codigo_registro   = payload.codigo_registro;
-        if (payload.fecha_generacion  !== undefined) syncFields.fecha_generacion  = payload.fecha_generacion;
+        if (payload.fecha_caratulacion !== undefined) syncFields.fecha_caratulacion = payload.fecha_caratulacion;
         // expediente_concurso: no pisar el valor ya cargado en CEETPS si en la Baja todavía no se cargó nada
         if (payload.expediente_concurso) syncFields.expediente_concurso = payload.expediente_concurso;
         if (Object.keys(syncFields).length > 0) {
