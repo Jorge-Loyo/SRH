@@ -6,14 +6,14 @@
  * Soporta: personas | cargos | roles | siglas | bajas
  */
 const express = require('express');
-const { authenticateJWT, requirePermission } = require('../middlewares/auth');
+const { authenticateJWT, authorizeRoles } = require('../middlewares/auth');
 const { buildGenericTableFull } = require('../services/tablas/genericTableFull');
 const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// Solo roles con acceso a tablas de estructura de BD
-router.use(authenticateJWT, requirePermission('can_alter_structure'));
+// Solo roles con acceso de lectura a tablas de BD (admin/editor)
+router.use(authenticateJWT, authorizeRoles('admin', 'editor'));
 
 const VALID_TABLES = ['personas', 'cargos', 'roles', 'siglas'];
 

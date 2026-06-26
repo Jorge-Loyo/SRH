@@ -1,3 +1,5 @@
+const { In } = require('typeorm');
+
 class PouService {
   constructor(pouRepository) {
     if (!pouRepository) throw new Error('PouService requiere un repositorio de Pou');
@@ -16,6 +18,22 @@ class PouService {
       take
     });
     return { rows, count };
+  }
+
+  async listBySiglasAndPeriodo({ siglas, periodo }) {
+    return await this.pouRepository.find({
+      where: { sigla: In(siglas), periodo },
+      order: { perfil: 'ASC', especialidad: 'ASC', sigla: 'ASC' },
+    });
+  }
+
+  async listSiglasDisponibles() {
+    const rows = await this.pouRepository
+      .createQueryBuilder('pou')
+      .select('DISTINCT pou.sigla', 'sigla')
+      .orderBy('pou.sigla', 'ASC')
+      .getRawMany();
+    return rows.map(r => r.sigla);
   }
 
   async getById(id, periodo) {

@@ -35,6 +35,7 @@ const PAGE_PERMISSIONS = {
     
     // POU
     'POUDetalle',
+    'POUComparativa',
     
     // Seguridad (solo admin)
     'Auditoria',
@@ -60,6 +61,7 @@ const PAGE_PERMISSIONS = {
     'RecorridasDetalle',
     'DotacionTotal',
     'POUDetalle',
+    'POUComparativa',
   ],
   
   // VIEWER: Puede ver estructura, organigrama, recorridas (solo lectura)
@@ -74,6 +76,7 @@ const PAGE_PERMISSIONS = {
     'RecorridasDetalle',
     'DotacionTotal',
     'POUDetalle',
+    'POUComparativa',
   ],
   
   // DIRECTOR: Solo su página personalizada y organigrama
@@ -97,6 +100,7 @@ const PAGE_PERMISSIONS = {
     'RecorridasDetalle',
     'DotacionTotal',
     'POUDetalle',
+    'POUComparativa',
     // Módulo concursales
     'BajasConsolidadas',
     'SeguimientoCph',
@@ -116,6 +120,7 @@ const PAGE_PERMISSIONS = {
     'RecorridasDetalle',
     'DotacionTotal',
     'POUDetalle',
+    'POUComparativa',
   ],
 };
 
