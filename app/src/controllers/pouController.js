@@ -5,7 +5,7 @@ const { toExcelBase64 } = require('../utils/excel');
 const logger = require('../utils/logger');
 
 const MIN_SIGLAS_COMPARAR = 2;
-const MAX_SIGLAS_COMPARAR = 8;
+const MAX_SIGLAS_COMPARAR = 50;
 
 // Parsea y valida la lista de siglas recibida en query (?siglas=A,B,C) para /comparar.
 // Devuelve { siglasList } o { error } con el mensaje a responder al cliente.
