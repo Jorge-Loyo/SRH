@@ -1,1 +1,0 @@
-import{j as e}from"./index-Cs_MTwey.js";function i({size:r="md",className:a=""}){const s={sm:"w-4 h-4",md:"w-6 h-6",lg:"w-8 h-8"};return e.jsx("div",{className:`${s[r]} border-4 border-primary-200 border-t-primary-700 rounded-full animate-spin ${a}`,role:"status","aria-label":"Cargando"})}export{i as S};

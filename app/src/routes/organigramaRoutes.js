@@ -95,7 +95,13 @@ router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
           p.nombre_apellido,
           r.literal_puesto,
           r.codigo_registro,
-          r.unificador_puesto
+          r.unificador_puesto,
+          p.fecha_nacimiento,
+          p.cuil,
+          p.edad,
+          p.antiguedad,
+          r.cargo_desde,
+          r.cargo_hasta
         FROM roles r
         INNER JOIN personas p
           ON r.id_persona = p.id_persona
@@ -172,7 +178,13 @@ router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
         if (!personasMap[p.codigo_reparticion]) {
           personasMap[p.codigo_reparticion] = {
             nombre: p.nombre_apellido,
-            cargo: p.literal_puesto
+            cargo: p.literal_puesto,
+            fecha_nacimiento: p.fecha_nacimiento,
+            cuil: p.cuil,
+            edad: p.edad,
+            antiguedad: p.antiguedad,
+            cargo_desde: p.cargo_desde,
+            cargo_hasta: p.cargo_hasta
           };
         }
       });
