@@ -52,7 +52,6 @@ const seguimientoCphEditableFields = z.object({
   escalafon_2:           z.string().max(50).optional().nullable(),
   puesto_2:              z.string().max(150).optional().nullable(),
   especialidad_solicitada: z.string().max(150).optional().nullable(),
-  ccoo_especialidad:     z.string().max(150).optional().nullable(),
   if_solicitante:        z.string().max(150).optional().nullable(),
   if_autorizacion:       z.string().max(150).optional().nullable(),
   fecha_autorizacion:    z.string().max(15).optional().nullable(),
@@ -127,8 +126,7 @@ const seguimientoCphPaginationSchema = z.object({
   tipo_efector:            z.string().optional(),
   motivo_baja:             z.string().optional(),
   unificador_puestos:      z.string().optional(),
-  // Campos nuevos
-  escalafon_baja:          z.string().optional(),   // Médico / No Médico
+  escalafon_baja:          z.string().optional(),
   especialidad_baja:       z.string().optional(),
   escalafon_2:             z.string().optional(),
   puesto_2:                z.string().optional(),
@@ -137,11 +135,60 @@ const seguimientoCphPaginationSchema = z.object({
   cambio_especialidad:     z.string().optional(),
   dispo_desierta:          z.string().optional(),
   tipo_baja:               z.string().optional(),
-  suspendido:              z.string().optional(),   // 'true' | 'false'
-  examen_publicado:        z.string().optional(),   // 'true' | 'false'
-  orden_merito:            z.string().optional(),   // 'true' | 'false'
-  insal:                   z.string().optional(),   // 'true' | 'false'
-  cargo_sial:              z.string().optional(),   // 'true' | 'false'
+  suspendido:              z.string().optional(),
+  examen_publicado:        z.string().optional(),
+  orden_merito:            z.string().optional(),
+  insal:                   z.string().optional(),
+  cargo_sial:              z.string().optional(),
+  // Baja — nuevos
+  fecha_baja_desde:          z.string().optional(),
+  fecha_baja_hasta:          z.string().optional(),
+  // Estado — nuevos
+  fecha_dispo_desierta_desde: z.string().optional(),
+  fecha_dispo_desierta_hasta: z.string().optional(),
+  // Concurso — nuevos
+  ee_concurso:               z.string().optional(),
+  fecha_ee_concurso_desde:   z.string().optional(),
+  fecha_ee_concurso_hasta:   z.string().optional(),
+  if_solicitante:            z.string().optional(),
+  fecha_autorizacion_desde:  z.string().optional(),
+  fecha_autorizacion_hasta:  z.string().optional(),
+  sorteo_jurado:             z.string().optional(),
+  disposicion:               z.string().optional(),
+  // Inscripción — nuevos
+  insc_desde_desde:          z.string().optional(),
+  insc_desde_hasta:          z.string().optional(),
+  insc_hasta_desde:          z.string().optional(),
+  insc_hasta_hasta:          z.string().optional(),
+  // Evaluación — nuevos
+  fecha_examen_desde:        z.string().optional(),
+  fecha_examen_hasta:        z.string().optional(),
+  fecha_orden_merito_desde:  z.string().optional(),
+  fecha_orden_merito_hasta:  z.string().optional(),
+  // Adjudicación — nuevos
+  fecha_ifacs_desde:         z.string().optional(),
+  fecha_ifacs_hasta:         z.string().optional(),
+  fecha_insal_desde:         z.string().optional(),
+  fecha_insal_hasta:         z.string().optional(),
+  // Designación — nuevos
+  ee_designacion:            z.string().optional(),
+  fecha_ee_designacion_desde: z.string().optional(),
+  fecha_ee_designacion_hasta: z.string().optional(),
+  nombre_designacion:        z.string().optional(),
+  cuil_designacion:          z.string().optional(),
+  carga_documentacion:       z.string().optional(),
+  fecha_apto_medico_desde:   z.string().optional(),
+  fecha_apto_medico_hasta:   z.string().optional(),
+  fecha_ite_desde:           z.string().optional(),
+  fecha_ite_hasta:           z.string().optional(),
+  reso_a_la_firma:           z.string().optional(),
+  resolucion_designacion:    z.string().optional(),
+  fecha_resolucion_desde:    z.string().optional(),
+  fecha_resolucion_hasta:    z.string().optional(),
+  fecha_cargo_desde:         z.string().optional(),
+  fecha_cargo_hasta:         z.string().optional(),
+  // POU — nuevos
+  cargo_baja:                z.string().optional(),
   search:                  z.string().optional(),
   id_baja:                 z.coerce.number().int().optional(),
   sort:                    z.string().default('id'),

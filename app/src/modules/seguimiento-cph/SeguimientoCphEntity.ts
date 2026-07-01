@@ -134,9 +134,6 @@ export class SeguimientoCph extends BaseEntity {
   especialidad_solicitada?: string | null
 
   @Column({ type: 'varchar', length: 150, nullable: true })
-  ccoo_especialidad?: string | null
-
-  @Column({ type: 'varchar', length: 150, nullable: true })
   if_solicitante?: string | null
 
   @Column({ type: 'varchar', length: 15, nullable: true })

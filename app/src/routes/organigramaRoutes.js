@@ -37,41 +37,57 @@ const { heavyEndpointsLimiter } = require('../middlewares/rateLimiters');
  * - Autenticación requerida (JWT)
  * - Timeout configurado desde environment
  */
+// Valor de universo_totalizador que identifica cada sección estructural de la BD
+const SECCION_UNIVERSOS = {
+  'nivel-central':     'NIVEL CENTRAL',
+  'atencion-primaria': 'ATENCION PRIMARIA',
+};
+
 router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
   // ✅ TIMEOUT: Configurado desde config/env.js
   res.setTimeout(config.heavyQueryTimeout);
   
   try {
     const sigla = req.query.sigla;
+    const seccion = req.query.seccion;
     const periodo = req.query.periodo;
-    
-    // ✅ VALIDACIÓN: Requerida y con formato
-    if (!sigla) {
-      return res.status(400).json({ error: 'Se requiere el parámetro sigla', data: null });
+
+    if (!sigla && !seccion) {
+      return res.status(400).json({ error: 'Se requiere sigla o seccion', data: null });
     }
-    
-    // ✅ VALIDACIÓN: Formato de sigla (2-10 caracteres alfanuméricos mayúsculas)
-    if (!/^[A-Z0-9]{2,10}$/.test(sigla)) {
+    if (sigla && !/^[A-Z0-9]{2,10}$/.test(sigla)) {
       return res.status(400).json({ error: 'Formato de sigla inválido (esperado: 2-10 caracteres alfanuméricos)', data: null });
     }
-    
-    // ✅ VALIDACIÓN: Formato de periodo si está presente (YYYY-MM)
+    if (seccion && !SECCION_UNIVERSOS[seccion]) {
+      return res.status(400).json({ error: `Sección inválida. Valores: ${Object.keys(SECCION_UNIVERSOS).join(', ')}`, data: null });
+    }
     if (periodo && !/^\d{4}-\d{2}$/.test(periodo)) {
       return res.status(400).json({ error: 'Formato de periodo inválido (esperado: YYYY-MM)', data: null });
     }
-    
+
     // === 1. CONSULTAR ESTRUCTURA DEL ORGANIGRAMA ===
-    const rows = await AppDataSource.query(
-      `SELECT lvl, tipo, codigo_reparticion as cod_rep, desc_rep, sigla, padre, 
-              path, path_nombres, regimen_empleo 
-       FROM organigramas 
-       WHERE sigla = ? 
-       ORDER BY lvl, codigo_reparticion`,
-      [sigla]
-    );
+    const SQL_COLS = `SELECT lvl, tipo, codigo_reparticion as cod_rep, desc_rep, sigla, padre,
+       path, path_nombres, regimen_empleo FROM organigramas`;
+
+    let rows;
+    if (sigla) {
+      rows = await AppDataSource.query(
+        `${SQL_COLS} WHERE sigla = ? ORDER BY lvl, codigo_reparticion`,
+        [sigla]
+      );
+    } else {
+      const universo = SECCION_UNIVERSOS[seccion];
+      rows = await AppDataSource.query(
+        `${SQL_COLS} WHERE universo_totalizador COLLATE utf8mb4_unicode_ci = ? ORDER BY lvl, codigo_reparticion`,
+        [universo]
+      );
+    }
 
     if (!rows || rows.length === 0) {
-      return res.json({ error: `No se encontró organigrama para la sigla: ${sigla}`, data: null });
+      const errMsg = sigla
+        ? `No se encontró organigrama para la sigla: ${sigla}`
+        : `No se encontró organigrama para la sección: ${seccion}`;
+      return res.json({ error: errMsg, data: null });
     }
 
     // === 2. OBTENER PERSONAS ASIGNADAS ===
@@ -85,93 +101,64 @@ router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
     //    c) Código 37: Jefaturas/Dirección Médica (con j_categoria no vacía)
     //    d) Códigos 83/85/87: Jefaturas Operativas (con j_categoria no vacía)
     // Resultado: Una persona por nodo (la primera del ordenamiento)
-    let personasMap = {};
-    
-    if (periodo) {
+    // Condición AND compartida para filtrar solo cargos de conducción/jefatura
+    const CONDICION_CARGOS = `
+          AND (
+            (r.codigo_registro = '25' AND r.unificador_puesto = 'Autoridades Superiores')
+            OR (r.codigo_registro = '60' AND r.unificador_puesto IN ('Gerente', 'Subgerente'))
+            OR (
+              r.codigo_registro = '37'
+              AND r.unificador_puesto IN (
+                'CPH de Planta','CPH de Guardia','Director/a Medico/a','Subdirector/a Medico/a',
+                'Jefe/a de DEPARTAMENTO','Jefe/a de DIVISION','Jefe/a de UNIDAD','Jefe/a de SECCION'
+              )
+              AND r.j_categoria IS NOT NULL AND r.j_categoria != '' AND r.j_categoria != '0'
+            )
+            OR (
+              r.codigo_registro IN ('83', '85', '87')
+              AND r.unificador_puesto IN ('Administrativo/a','Enfermero/a','Servicios Generales','Tecnico/a de la salud')
+              AND r.j_categoria IS NOT NULL AND r.j_categoria != '' AND r.j_categoria != '0'
+            )
+          )`;
 
-      const personas = await AppDataSource.query(`
-        SELECT
-          r.codigo_reparticion,
-          p.nombre_apellido,
-          r.literal_puesto,
-          r.codigo_registro,
-          r.unificador_puesto,
-          p.fecha_nacimiento,
-          p.cuil,
-          p.edad,
-          p.antiguedad,
-          r.cargo_desde,
-          r.cargo_hasta
+    const SQL_PERSONAS_SELECT = `
+        SELECT r.codigo_reparticion, p.nombre_apellido, r.literal_puesto,
+          r.codigo_registro, r.unificador_puesto, p.fecha_nacimiento,
+          p.cuil, p.edad, p.antiguedad, r.cargo_desde, r.cargo_hasta`;
+
+    let personasMap = {};
+
+    if (periodo) {
+      let personas;
+
+      if (sigla) {
+        personas = await AppDataSource.query(`
+        ${SQL_PERSONAS_SELECT}
         FROM roles r
-        INNER JOIN personas p
-          ON r.id_persona = p.id_persona
-          AND r.periodo = p.periodo
-        INNER JOIN siglas s
-          ON r.id_sigla = s.id_sigla
+        INNER JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+        INNER JOIN siglas s ON r.id_sigla = s.id_sigla
         INNER JOIN organigramas o
           ON o.codigo_reparticion = r.codigo_reparticion COLLATE utf8mb4_unicode_ci
           AND o.sigla COLLATE utf8mb4_unicode_ci = s.sigla COLLATE utf8mb4_unicode_ci
-        WHERE
-          s.sigla = ?
-          AND r.periodo = ?
-          AND r.situacion_revista = 'Activo'
-
-          AND (
-            -- 🔹 CÓDIGO 25 – AUTORIDADES SUPERIORES
-            (
-              r.codigo_registro = '25'
-              AND r.unificador_puesto = 'Autoridades Superiores'
-            )
-
-            OR
-
-            -- 🔹 CÓDIGO 60 – GERENCIA
-            (
-              r.codigo_registro = '60'
-              AND r.unificador_puesto IN ('Gerente', 'Subgerente')
-            )
-
-            OR
-
-            -- 🔹 CÓDIGO 37 – JEFATURAS / DIRECCIÓN MÉDICA
-            (
-              r.codigo_registro = '37'
-              AND r.unificador_puesto IN (
-                'CPH de Planta',
-                'CPH de Guardia',
-                'Director/a Medico/a',
-                'Subdirector/a Medico/a',
-                'Jefe/a de DEPARTAMENTO',
-                'Jefe/a de DIVISION',
-                'Jefe/a de UNIDAD',
-                'Jefe/a de SECCION'
-              )
-              AND r.j_categoria IS NOT NULL
-              AND r.j_categoria != ''
-              AND r.j_categoria != '0'
-            )
-
-            OR
-
-            -- 🔹 CÓDIGOS 83 / 85 / 87 – JEFATURAS OPERATIVAS
-            (
-              r.codigo_registro IN ('83', '85', '87')
-              AND r.unificador_puesto IN (
-                'Administrativo/a',
-                'Enfermero/a',
-                'Servicios Generales',
-                'Tecnico/a de la salud'
-              )
-              AND r.j_categoria IS NOT NULL
-              AND r.j_categoria != ''
-              AND r.j_categoria != '0'
-            )
-          )
-        ORDER BY
-          r.codigo_reparticion,
-          r.codigo_registro,
-          r.unificador_puesto;
-      `, [sigla, periodo]);
+        WHERE s.sigla = ? AND r.periodo = ? AND r.situacion_revista = 'Activo'
+        ${CONDICION_CARGOS}
+        ORDER BY r.codigo_reparticion, r.codigo_registro, r.unificador_puesto;
+        `, [sigla, periodo]);
+      } else {
+        // Para secciones se une contra organigramas filtrado por universo_totalizador
+        const universo = SECCION_UNIVERSOS[seccion];
+        personas = await AppDataSource.query(`
+        ${SQL_PERSONAS_SELECT}
+        FROM roles r
+        INNER JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+        INNER JOIN organigramas o
+          ON o.codigo_reparticion = r.codigo_reparticion COLLATE utf8mb4_unicode_ci
+          AND o.universo_totalizador COLLATE utf8mb4_unicode_ci = ?
+        WHERE r.periodo = ? AND r.situacion_revista = 'Activo'
+        ${CONDICION_CARGOS}
+        ORDER BY r.codigo_reparticion, r.codigo_registro, r.unificador_puesto;
+        `, [universo, periodo]);
+      }
       
       // Crear mapa: una sola persona por nodo (la primera encontrada)
       personas.forEach(p => {
@@ -205,27 +192,65 @@ router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
       };
     });
 
-    // === 4. IDENTIFICAR SDHOS (PARA AGRUPACIÓN POR RÉGIMEN) ===
-    // Solo se agrupa por régimen si el SDHOS es específicamente "Subdirección Médica"
+    // === 4. IDENTIFICAR SDHOS (PARA AGRUPACIÓN POR RÉGIMEN, SOLO EN VISTAS DE HOSPITAL) ===
+    // El agrupamiento por régimen aplica solo cuando se filtra por sigla de hospital.
+    // En secciones (nivel-central, atencion-primaria) el regimen_empleo identifica
+    // la sección misma, no es un agrupador interno del árbol.
     let sdhosCod = null;
-    rows.forEach(r => {
-      if (r.tipo === 'SDHOS' && r.desc_rep && r.desc_rep.includes('Subdirección Médica')) {
-        sdhosCod = r.cod_rep;
-      }
-    });
+    if (sigla) {
+      rows.forEach(r => {
+        if (r.tipo === 'SDHOS' && r.desc_rep && r.desc_rep.includes('Subdirección Médica')) {
+          sdhosCod = r.cod_rep;
+        }
+      });
+    }
 
     // === 5. ARMAR RELACIONES PADRE-HIJO ===
-    let raiz = null;
+    const rootCandidates = [];
     rows.forEach(r => {
       if (r.padre && mapa[r.padre]) {
         mapa[r.padre].children.push(mapa[r.cod_rep]);
       } else {
-        raiz = mapa[r.cod_rep];
+        rootCandidates.push(mapa[r.cod_rep]);
       }
     });
 
+    let raiz = null;
+    if (rootCandidates.length === 1) {
+      raiz = rootCandidates[0];
+    } else if (rootCandidates.length > 1) {
+      // Si todos los huérfanos comparten el mismo padre (nodo de otra sección, ej. la SS
+      // de Atención Primaria que está en Nivel Central), se busca ese nodo ancla en la
+      // BD para usarlo como raíz visual del árbol.
+      const padreSet = new Set(rootCandidates.map(n => n.padre).filter(p => p && p !== 'ROOT'));
+      if (padreSet.size === 1) {
+        const anchorCod = [...padreSet][0];
+        const anchorRows = await AppDataSource.query(
+          `${SQL_COLS} WHERE codigo_reparticion = ?`, [anchorCod]
+        );
+        if (anchorRows.length) {
+          const a = anchorRows[0];
+          raiz = {
+            id: a.cod_rep,
+            name: a.desc_rep,
+            title: a.tipo,
+            lvl: a.lvl,
+            padre: a.padre,
+            regimen_empleo: a.regimen_empleo || '',
+            persona: personasMap[a.cod_rep] || null,
+            children: rootCandidates
+          };
+        }
+      }
+      // Fallback: elegir el candidato con el nivel más alto (más ancestral)
+      if (!raiz) {
+        raiz = rootCandidates.reduce((best, n) => (!best || n.lvl < best.lvl ? n : best), null);
+      }
+    }
+
     if (!raiz) {
-      return res.status(404).json({ error: `No se encontró nodo raíz para el hospital ${sigla}`, data: null });
+      const ctxMsg = sigla ? `el hospital ${sigla}` : `la sección ${seccion}`;
+      return res.status(404).json({ error: `No se encontró nodo raíz para ${ctxMsg}`, data: null });
     }
 
     // === 6. AGRUPAR HIJOS DE SDHOS POR RÉGIMEN DE EMPLEO ===
@@ -312,7 +337,7 @@ router.get('/', authenticateJWT, heavyEndpointsLimiter, async (req, res) => {
 
     ordenarHijos(raiz);
 
-    res.json({ data: raiz, sigla });
+    res.json({ data: raiz, ...(sigla ? { sigla } : { seccion }) });
     
   } catch (error) {
     logger.error('[GET /api/organigrama] Error:', { error: error.message, stack: error.stack });

@@ -1,4 +1,4 @@
-const { ILike } = require('typeorm');
+const { ILike, Between, MoreThanOrEqual, LessThanOrEqual } = require('typeorm');
 const logger = require('../../utils/logger');
 
 /**
@@ -37,6 +37,25 @@ class SeguimientoCphService {
       escalafon_2, puesto_2, especialidad_solicitada,
       conjuntos, cambio_especialidad, dispo_desierta, tipo_baja,
       suspendido, examen_publicado, orden_merito, insal, cargo_sial,
+      // Nuevos
+      fecha_baja_desde, fecha_baja_hasta,
+      fecha_dispo_desierta_desde, fecha_dispo_desierta_hasta,
+      ee_concurso, fecha_ee_concurso_desde, fecha_ee_concurso_hasta,
+      if_solicitante, fecha_autorizacion_desde, fecha_autorizacion_hasta,
+      sorteo_jurado, disposicion,
+      insc_desde_desde, insc_desde_hasta, insc_hasta_desde, insc_hasta_hasta,
+      fecha_examen_desde, fecha_examen_hasta,
+      fecha_orden_merito_desde, fecha_orden_merito_hasta,
+      fecha_ifacs_desde, fecha_ifacs_hasta,
+      fecha_insal_desde, fecha_insal_hasta,
+      ee_designacion, fecha_ee_designacion_desde, fecha_ee_designacion_hasta,
+      nombre_designacion, cuil_designacion, carga_documentacion,
+      fecha_apto_medico_desde, fecha_apto_medico_hasta,
+      fecha_ite_desde, fecha_ite_hasta,
+      reso_a_la_firma, resolucion_designacion,
+      fecha_resolucion_desde, fecha_resolucion_hasta,
+      fecha_cargo_desde, fecha_cargo_hasta,
+      cargo_baja,
       search, id_baja,
       limit = 50, offset = 0,
       sort = 'id', order = 'DESC',
@@ -67,17 +86,77 @@ class SeguimientoCphService {
     if (cambio_especialidad)     where.cambio_especialidad     = ILike(`%${cambio_especialidad}%`);
     if (dispo_desierta)          where.dispo_desierta          = ILike(`%${dispo_desierta}%`);
     if (tipo_baja)               where.tipo_baja               = ILike(`%${tipo_baja}%`);
+    if (ee_concurso)             where.ee_concurso             = ILike(`%${ee_concurso}%`);
+    if (if_solicitante)          where.if_solicitante          = ILike(`%${if_solicitante}%`);
+    if (disposicion)             where.disposicion             = ILike(`%${disposicion}%`);
+    if (ee_designacion)          where.ee_designacion          = ILike(`%${ee_designacion}%`);
+    if (nombre_designacion)      where.nombre_designacion      = ILike(`%${nombre_designacion}%`);
+    if (cuil_designacion)        where.cuil_designacion        = ILike(`%${cuil_designacion}%`);
+    if (resolucion_designacion)  where.resolucion_designacion  = ILike(`%${resolucion_designacion}%`);
+    if (cargo_baja)              where.cargo_baja              = ILike(`%${cargo_baja}%`);
     // Filtros booleanos: string 'true'/'false' → boolean
-    if (suspendido === 'true')       where.suspendido       = true;
-    if (suspendido === 'false')      where.suspendido       = false;
-    if (examen_publicado === 'true') where.examen_publicado = true;
-    if (examen_publicado === 'false') where.examen_publicado = false;
-    if (orden_merito === 'true')     where.orden_merito     = true;
-    if (orden_merito === 'false')    where.orden_merito     = false;
-    if (insal === 'true')            where.insal            = true;
-    if (insal === 'false')           where.insal            = false;
-    if (cargo_sial === 'true')       where.cargo_sial       = true;
-    if (cargo_sial === 'false')      where.cargo_sial       = false;
+    if (suspendido === 'true')           where.suspendido           = true;
+    if (suspendido === 'false')          where.suspendido           = false;
+    if (examen_publicado === 'true')     where.examen_publicado     = true;
+    if (examen_publicado === 'false')    where.examen_publicado     = false;
+    if (orden_merito === 'true')         where.orden_merito         = true;
+    if (orden_merito === 'false')        where.orden_merito         = false;
+    if (insal === 'true')                where.insal                = true;
+    if (insal === 'false')               where.insal                = false;
+    if (cargo_sial === 'true')           where.cargo_sial           = true;
+    if (cargo_sial === 'false')          where.cargo_sial           = false;
+    if (sorteo_jurado === 'true')        where.sorteo_jurado        = true;
+    if (sorteo_jurado === 'false')       where.sorteo_jurado        = false;
+    if (carga_documentacion === 'true')  where.carga_documentacion  = true;
+    if (carga_documentacion === 'false') where.carga_documentacion  = false;
+    if (reso_a_la_firma === 'true')      where.reso_a_la_firma      = true;
+    if (reso_a_la_firma === 'false')     where.reso_a_la_firma      = false;
+    // Rangos de fechas
+    if (fecha_baja_desde && fecha_baja_hasta) where.fecha_baja = Between(fecha_baja_desde, fecha_baja_hasta);
+    else if (fecha_baja_desde) where.fecha_baja = MoreThanOrEqual(fecha_baja_desde);
+    else if (fecha_baja_hasta) where.fecha_baja = LessThanOrEqual(fecha_baja_hasta);
+    if (fecha_dispo_desierta_desde && fecha_dispo_desierta_hasta) where.fecha_dispo_desierta = Between(fecha_dispo_desierta_desde, fecha_dispo_desierta_hasta);
+    else if (fecha_dispo_desierta_desde) where.fecha_dispo_desierta = MoreThanOrEqual(fecha_dispo_desierta_desde);
+    else if (fecha_dispo_desierta_hasta) where.fecha_dispo_desierta = LessThanOrEqual(fecha_dispo_desierta_hasta);
+    if (fecha_ee_concurso_desde && fecha_ee_concurso_hasta) where.fecha_ee_concurso = Between(fecha_ee_concurso_desde, fecha_ee_concurso_hasta);
+    else if (fecha_ee_concurso_desde) where.fecha_ee_concurso = MoreThanOrEqual(fecha_ee_concurso_desde);
+    else if (fecha_ee_concurso_hasta) where.fecha_ee_concurso = LessThanOrEqual(fecha_ee_concurso_hasta);
+    if (fecha_autorizacion_desde && fecha_autorizacion_hasta) where.fecha_autorizacion = Between(fecha_autorizacion_desde, fecha_autorizacion_hasta);
+    else if (fecha_autorizacion_desde) where.fecha_autorizacion = MoreThanOrEqual(fecha_autorizacion_desde);
+    else if (fecha_autorizacion_hasta) where.fecha_autorizacion = LessThanOrEqual(fecha_autorizacion_hasta);
+    if (insc_desde_desde && insc_desde_hasta) where.fecha_insc_desde = Between(insc_desde_desde, insc_desde_hasta);
+    else if (insc_desde_desde) where.fecha_insc_desde = MoreThanOrEqual(insc_desde_desde);
+    else if (insc_desde_hasta) where.fecha_insc_desde = LessThanOrEqual(insc_desde_hasta);
+    if (insc_hasta_desde && insc_hasta_hasta) where.fecha_insc_hasta = Between(insc_hasta_desde, insc_hasta_hasta);
+    else if (insc_hasta_desde) where.fecha_insc_hasta = MoreThanOrEqual(insc_hasta_desde);
+    else if (insc_hasta_hasta) where.fecha_insc_hasta = LessThanOrEqual(insc_hasta_hasta);
+    if (fecha_examen_desde && fecha_examen_hasta) where.fecha_examen = Between(fecha_examen_desde, fecha_examen_hasta);
+    else if (fecha_examen_desde) where.fecha_examen = MoreThanOrEqual(fecha_examen_desde);
+    else if (fecha_examen_hasta) where.fecha_examen = LessThanOrEqual(fecha_examen_hasta);
+    if (fecha_orden_merito_desde && fecha_orden_merito_hasta) where.fecha_orden_merito = Between(fecha_orden_merito_desde, fecha_orden_merito_hasta);
+    else if (fecha_orden_merito_desde) where.fecha_orden_merito = MoreThanOrEqual(fecha_orden_merito_desde);
+    else if (fecha_orden_merito_hasta) where.fecha_orden_merito = LessThanOrEqual(fecha_orden_merito_hasta);
+    if (fecha_ifacs_desde && fecha_ifacs_hasta) where.fecha_ifacs = Between(fecha_ifacs_desde, fecha_ifacs_hasta);
+    else if (fecha_ifacs_desde) where.fecha_ifacs = MoreThanOrEqual(fecha_ifacs_desde);
+    else if (fecha_ifacs_hasta) where.fecha_ifacs = LessThanOrEqual(fecha_ifacs_hasta);
+    if (fecha_insal_desde && fecha_insal_hasta) where.fecha_insal = Between(fecha_insal_desde, fecha_insal_hasta);
+    else if (fecha_insal_desde) where.fecha_insal = MoreThanOrEqual(fecha_insal_desde);
+    else if (fecha_insal_hasta) where.fecha_insal = LessThanOrEqual(fecha_insal_hasta);
+    if (fecha_ee_designacion_desde && fecha_ee_designacion_hasta) where.fecha_ee_designacion = Between(fecha_ee_designacion_desde, fecha_ee_designacion_hasta);
+    else if (fecha_ee_designacion_desde) where.fecha_ee_designacion = MoreThanOrEqual(fecha_ee_designacion_desde);
+    else if (fecha_ee_designacion_hasta) where.fecha_ee_designacion = LessThanOrEqual(fecha_ee_designacion_hasta);
+    if (fecha_apto_medico_desde && fecha_apto_medico_hasta) where.fecha_apto_medico = Between(fecha_apto_medico_desde, fecha_apto_medico_hasta);
+    else if (fecha_apto_medico_desde) where.fecha_apto_medico = MoreThanOrEqual(fecha_apto_medico_desde);
+    else if (fecha_apto_medico_hasta) where.fecha_apto_medico = LessThanOrEqual(fecha_apto_medico_hasta);
+    if (fecha_ite_desde && fecha_ite_hasta) where.fecha_ite = Between(fecha_ite_desde, fecha_ite_hasta);
+    else if (fecha_ite_desde) where.fecha_ite = MoreThanOrEqual(fecha_ite_desde);
+    else if (fecha_ite_hasta) where.fecha_ite = LessThanOrEqual(fecha_ite_hasta);
+    if (fecha_resolucion_desde && fecha_resolucion_hasta) where.fecha_resolucion = Between(fecha_resolucion_desde, fecha_resolucion_hasta);
+    else if (fecha_resolucion_desde) where.fecha_resolucion = MoreThanOrEqual(fecha_resolucion_desde);
+    else if (fecha_resolucion_hasta) where.fecha_resolucion = LessThanOrEqual(fecha_resolucion_hasta);
+    if (fecha_cargo_desde && fecha_cargo_hasta) where.fecha_cargo = Between(fecha_cargo_desde, fecha_cargo_hasta);
+    else if (fecha_cargo_desde) where.fecha_cargo = MoreThanOrEqual(fecha_cargo_desde);
+    else if (fecha_cargo_hasta) where.fecha_cargo = LessThanOrEqual(fecha_cargo_hasta);
 
     if (search) {
       const [rows, count] = await this.seguimientoRepository.findAndCount({

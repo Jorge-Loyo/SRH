@@ -1,4 +1,4 @@
-const { ILike } = require('typeorm');
+const { ILike, Between, MoreThanOrEqual, LessThanOrEqual } = require('typeorm');
 const logger = require('../../utils/logger');
 
 /**
@@ -115,7 +115,6 @@ class BajaConsolidadaService {
       escalafon_1:       baja.pou_pof,
       puesto_1:          baja.puesto_baja,
       especialidad_baja: baja.especialidad_baja,
-      ccoo_especialidad:       baja.ccoo_especialidad,
       cargo_baja:              baja.cargo_baja,
       carga_horaria:           baja.carga_horaria,
       motivo_baja:             baja.motivo_baja,
@@ -139,6 +138,10 @@ class BajaConsolidadaService {
       genera_concurso, es_cph, motivo_baja,
       origen, tipo_efector, unificador_puestos, usuario,
       pou_pof, especialidad_baja,
+      ex_baja, codigo_cargo, cargo_baja, codigo_registro,
+      partida_presupuestaria, carga_horaria, doc_respaldatoria,
+      fecha_baja_desde, fecha_baja_hasta,
+      fecha_pase_paralelo_desde, fecha_pase_paralelo_hasta,
       search,
       limit = 50, offset = 0,
       sort = 'id', order = 'ASC',
@@ -159,6 +162,19 @@ class BajaConsolidadaService {
     if (usuario)            where.usuario            = ILike(`%${usuario}%`);
     if (pou_pof)            where.pou_pof            = ILike(`%${pou_pof}%`);
     if (especialidad_baja)  where.especialidad_baja  = ILike(`%${especialidad_baja}%`);
+    if (ex_baja)            where.ex_baja            = ILike(`%${ex_baja}%`);
+    if (codigo_cargo)       where.codigo_cargo       = ILike(`%${codigo_cargo}%`);
+    if (cargo_baja)         where.cargo_baja         = ILike(`%${cargo_baja}%`);
+    if (codigo_registro !== undefined && codigo_registro !== null) where.codigo_registro = codigo_registro;
+    if (partida_presupuestaria) where.partida_presupuestaria = ILike(`%${partida_presupuestaria}%`);
+    if (carga_horaria)      where.carga_horaria      = ILike(`%${carga_horaria}%`);
+    if (doc_respaldatoria)  where.doc_respaldatoria  = ILike(`%${doc_respaldatoria}%`);
+    if (fecha_baja_desde && fecha_baja_hasta) where.fecha_baja = Between(fecha_baja_desde, fecha_baja_hasta);
+    else if (fecha_baja_desde) where.fecha_baja = MoreThanOrEqual(fecha_baja_desde);
+    else if (fecha_baja_hasta) where.fecha_baja = LessThanOrEqual(fecha_baja_hasta);
+    if (fecha_pase_paralelo_desde && fecha_pase_paralelo_hasta) where.fecha_pase_paralelo = Between(fecha_pase_paralelo_desde, fecha_pase_paralelo_hasta);
+    else if (fecha_pase_paralelo_desde) where.fecha_pase_paralelo = MoreThanOrEqual(fecha_pase_paralelo_desde);
+    else if (fecha_pase_paralelo_hasta) where.fecha_pase_paralelo = LessThanOrEqual(fecha_pase_paralelo_hasta);
 
     // Búsqueda global: nombre o CUIL
     if (search) {
@@ -289,7 +305,6 @@ class BajaConsolidadaService {
       if (payload.puesto_baja         !== undefined) seguimientoFields.puesto_1               = payload.puesto_baja;
       if (payload.especialidad_baja   !== undefined) seguimientoFields.especialidad_baja      = payload.especialidad_baja;
       if (payload.codigo_cargo        !== undefined) seguimientoFields.cargo                  = payload.codigo_cargo;
-      if (payload.ccoo_especialidad   !== undefined) seguimientoFields.ccoo_especialidad      = payload.ccoo_especialidad;
       if (payload.cargo_baja          !== undefined) seguimientoFields.cargo_baja             = payload.cargo_baja;
       if (payload.carga_horaria       !== undefined) seguimientoFields.carga_horaria          = payload.carga_horaria;
       if (payload.motivo_baja         !== undefined) seguimientoFields.motivo_baja            = payload.motivo_baja;
