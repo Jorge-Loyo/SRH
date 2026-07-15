@@ -17,7 +17,7 @@ export class User extends BaseEntity {
   password_hash!: string
 
   @Column({ type: 'varchar', length: 16, default: 'viewer' })
-  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia' | 'concursales'
+  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia' | 'concursales' | 'autoridades'
 
   // Código de hospital al que pertenece (ej: HGACA)
   @Column({ type: 'varchar', length: 20, nullable: true })

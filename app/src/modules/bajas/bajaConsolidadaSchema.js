@@ -72,6 +72,7 @@ const bajaConsolidadaPaginationSchema = z.object({
   fecha_baja_hasta:          z.string().optional(),
   fecha_pase_paralelo_desde: z.string().optional(),
   fecha_pase_paralelo_hasta: z.string().optional(),
+  origenes:           z.string().optional(), // orígenes separados por coma: "Ampliación,POU a POF"
   search:             z.string().optional(),
   sort:               z.string().default('id'),
   order:              z.enum(['ASC', 'DESC']).default('DESC'),

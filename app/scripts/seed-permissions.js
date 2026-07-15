@@ -1,4 +1,4 @@
-// Seed para popular la tabla permissions con los 4 roles del sistema
+// Seed para popular la tabla permissions con los 7 roles del sistema
 const { initDatabase, closeDatabase } = require('./lib/init-db');
 const { Permission } = require('../src/entities-class/Permission');
 
@@ -69,6 +69,45 @@ async function seedPermissions() {
         can_view_audit: false,
         filter_by_hospital: true,  // ✅ Filtrado obligatorio por hospital
         hospital_code: null,       // Se toma del user.hospital_code en runtime
+      },
+      {
+        role: 'gerencia',
+        description: 'Lectura general + CRUD completo en Recorridas y Minutas',
+        can_read_all: true,
+        can_create: true,
+        can_update: true,
+        can_delete: true,
+        can_alter_structure: false,
+        can_manage_users: false,
+        can_view_audit: false,
+        filter_by_hospital: false,
+        hospital_code: null,
+      },
+      {
+        role: 'concursales',
+        description: 'Gestión de procesos concursales CEETPS (códigos 87, 85, 83)',
+        can_read_all: true,
+        can_create: true,
+        can_update: true,
+        can_delete: true,
+        can_alter_structure: false,
+        can_manage_users: false,
+        can_view_audit: false,
+        filter_by_hospital: false,
+        hospital_code: null,
+      },
+      {
+        role: 'autoridades',
+        description: 'Lectura de Organigramas y Dotación Total (todos los hospitales)',
+        can_read_all: true,
+        can_create: false,
+        can_update: false,
+        can_delete: false,
+        can_alter_structure: false,
+        can_manage_users: false,
+        can_view_audit: false,
+        filter_by_hospital: false,
+        hospital_code: null,
       },
     ];
 

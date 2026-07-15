@@ -7,7 +7,7 @@ export class Permission extends BaseEntity {
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 20 })
-  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia'
+  role!: 'admin' | 'editor' | 'viewer' | 'director' | 'gerencia' | 'concursales' | 'autoridades'
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   description!: string | null

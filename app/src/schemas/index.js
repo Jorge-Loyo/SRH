@@ -185,7 +185,7 @@ const UserEditableFieldsSchema = z.object({
   password: z.string()
     .min(4, 'Password debe tener al menos 4 caracteres')
     .max(255),
-  role: z.enum(['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales'], {
+  role: z.enum(['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales', 'autoridades'], {
     errorMap: () => ({ message: 'Role inválido' })
   }).optional(),
   is_active: z.boolean().optional(),

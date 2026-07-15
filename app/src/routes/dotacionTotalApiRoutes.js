@@ -6,7 +6,7 @@ const logger = require('../utils/logger');
 const router = express.Router();
 
 router.use(authenticateJWT);
-router.use(authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'director', 'concursales'));
+router.use(authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'director', 'concursales', 'autoridades'));
 
 /**
  * GET /api/dotacion-total
@@ -20,6 +20,10 @@ router.use(authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'director', '
  */
 router.get('/', async (req, res) => {
   try {
+    if (req.query.export === 'xlsx' && req.user.role === 'autoridades') {
+      return res.status(403).json({ error: 'No autorizado para exportar' });
+    }
+
     const { AppDataSource } = require('../config/data-source');
     const result = await handleDotacionTotalPage({ AppDataSource, req });
 

@@ -1,4 +1,4 @@
-const { ILike, Between, MoreThanOrEqual, LessThanOrEqual } = require('typeorm');
+const { ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } = require('typeorm');
 const logger = require('../../utils/logger');
 
 /**
@@ -136,7 +136,7 @@ class BajaConsolidadaService {
     const {
       sigla, cuil, nombre_apellido, puesto_baja, escalafon,
       genera_concurso, es_cph, motivo_baja,
-      origen, tipo_efector, unificador_puestos, usuario,
+      origen, origenes, tipo_efector, unificador_puestos, usuario,
       pou_pof, especialidad_baja,
       ex_baja, codigo_cargo, cargo_baja, codigo_registro,
       partida_presupuestaria, carga_horaria, doc_respaldatoria,
@@ -156,7 +156,13 @@ class BajaConsolidadaService {
     if (genera_concurso)    where.genera_concurso    = genera_concurso;
     if (es_cph !== undefined && es_cph !== null) where.es_cph = es_cph;
     if (motivo_baja)        where.motivo_baja        = ILike(`%${motivo_baja}%`);
-    if (origen)             where.origen             = ILike(`%${origen}%`);
+    // origenes (lista de módulo) tiene prioridad sobre origen (filtro individual)
+    if (origenes) {
+      const lista = origenes.split(',').map(o => o.trim()).filter(Boolean);
+      if (lista.length) where.origen = In(lista);
+    } else if (origen) {
+      where.origen = ILike(`%${origen}%`);
+    }
     if (tipo_efector)       where.tipo_efector       = ILike(`%${tipo_efector}%`);
     if (unificador_puestos) where.unificador_puestos = ILike(`%${unificador_puestos}%`);
     if (usuario)            where.usuario            = ILike(`%${usuario}%`);
