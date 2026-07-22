@@ -98,6 +98,7 @@ async function preview(req, res) {
     return res.json({
       uploadId,
       periodo,
+      periodoComparacion: diff.comparisonPeriodo,
       archivo: req.file.originalname,
       resumen: summarize(diff, invalidRows, warningRows),
       columnasNoMapeadas: IGNORED_HEADERS,
@@ -105,6 +106,11 @@ async function preview(req, res) {
       columnasDesconocidasEnArchivo: parsed.unknownHeaders,
       filasInvalidas: invalidRows.slice(0, PREVIEW_SAMPLE_LIMIT),
       advertencias: warningRows.slice(0, PREVIEW_SAMPLE_LIMIT),
+      nuevos: diff.nuevos.slice(0, PREVIEW_SAMPLE_LIMIT).map((n) => ({
+        cuil: n.row.cuil,
+        nombre: n.row.persona.nombre_apellido,
+        cargo: n.row.cargo.codigo_cargo,
+      })),
       modificados: diff.modificados.slice(0, PREVIEW_SAMPLE_LIMIT).map((m) => ({
         entryKey: m.key,
         cuil: m.row.cuil,
@@ -117,6 +123,16 @@ async function preview(req, res) {
         cuil: String(e.persona.cuil),
         nombre: e.persona.nombre_apellido,
         cargo: e.cargo?.codigo_cargo || null,
+      })),
+      siglasNuevas: diff.siglas.nuevas.slice(0, PREVIEW_SAMPLE_LIMIT).map((s) => ({
+        idSigla: s.payload.id_sigla,
+        sigla: s.payload.sigla,
+        universoTotalizador: s.payload.universo_totalizador,
+      })),
+      siglasModificadas: diff.siglas.modificadas.slice(0, PREVIEW_SAMPLE_LIMIT).map((s) => ({
+        idSigla: s.existing.id_sigla,
+        sigla: s.existing.sigla,
+        cambios: s.fieldDiffs,
       })),
     });
   } catch (err) {

@@ -84,13 +84,34 @@ async function loadSiglasById(manager) {
   return new Map(siglas.map((s) => [s.id_sigla, s]));
 }
 
+// Determina contra qué período comparar el archivo: si el período que se está
+// subiendo YA tiene datos (re-carga/corrección de un período ya cargado), se
+// compara contra sí mismo (como siempre). Si es un período nuevo (la carga
+// mensual normal), no hay nada cargado ahí todavía — comparar contra sí mismo
+// daría todo "nuevo" siempre, así que se compara contra el período anterior
+// más reciente que sí tenga datos, para poder mostrar quién sigue, quién
+// cambió y quién ya no está respecto al mes pasado.
+async function resolveComparisonPeriodo(manager, periodo) {
+  const exact = await manager.query('SELECT 1 FROM personas WHERE periodo = ? LIMIT 1', [periodo]);
+  if (exact.length > 0) return periodo;
+  const prev = await manager.query(
+    'SELECT DISTINCT periodo FROM personas WHERE periodo < ? ORDER BY periodo DESC LIMIT 1',
+    [periodo],
+  );
+  return prev[0]?.periodo || null;
+}
+
+const EMPTY_SNAPSHOT = { allEntries: [], byStrongKey: new Map(), byWeakKey: new Map(), cargoByCodigo: new Map() };
+
 /**
- * Compara las filas parseadas del archivo contra lo ya cargado en el período
- * (si existe) y las clasifica en nuevos / modificados / sin cambios /
- * eliminados. También arma el diff de Siglas (tabla global, sin período).
+ * Compara las filas parseadas del archivo contra el período de referencia
+ * (ver resolveComparisonPeriodo) y las clasifica en nuevos / modificados /
+ * sin cambios / eliminados. También arma el diff de Siglas (tabla global,
+ * sin período).
  */
 async function buildDiff({ manager, periodo, rows }) {
-  const snapshot = await loadPeriodoSnapshot(manager, periodo);
+  const comparisonPeriodo = await resolveComparisonPeriodo(manager, periodo);
+  const snapshot = comparisonPeriodo ? await loadPeriodoSnapshot(manager, comparisonPeriodo) : EMPTY_SNAPSHOT;
   const siglasById = await loadSiglasById(manager);
 
   const nuevos = [];
@@ -151,6 +172,7 @@ async function buildDiff({ manager, periodo, rows }) {
   }
 
   return {
+    comparisonPeriodo,
     nuevos,
     modificados,
     sinCambios,

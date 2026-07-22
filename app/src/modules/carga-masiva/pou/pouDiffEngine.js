@@ -27,8 +27,23 @@ function rowKey(pou) {
   return `${pou.sigla}::${pou.perfil}::${pou.especialidad}`;
 }
 
+// Igual que en dotacionDiffEngine: si el período que se sube ya tiene datos
+// (corrección), comparar contra sí mismo; si es un período nuevo, comparar
+// contra el período anterior más reciente con datos (si no, todo da "nuevo"
+// siempre, porque el período que se está subiendo está vacío hasta confirmar).
+async function resolveComparisonPeriodo(manager, periodo) {
+  const exact = await manager.query('SELECT 1 FROM pou WHERE periodo = ? LIMIT 1', [periodo]);
+  if (exact.length > 0) return periodo;
+  const prev = await manager.query(
+    'SELECT DISTINCT periodo FROM pou WHERE periodo < ? ORDER BY periodo DESC LIMIT 1',
+    [periodo],
+  );
+  return prev[0]?.periodo || null;
+}
+
 async function buildPouDiff({ manager, periodo, rows }) {
-  const existing = await manager.getRepository(Pou).find({ where: { periodo } });
+  const comparisonPeriodo = await resolveComparisonPeriodo(manager, periodo);
+  const existing = comparisonPeriodo ? await manager.getRepository(Pou).find({ where: { periodo: comparisonPeriodo } }) : [];
   const existingByKey = new Map(existing.map((p) => [rowKey(p), p]));
 
   const nuevos = [];
@@ -59,7 +74,7 @@ async function buildPouDiff({ manager, periodo, rows }) {
     if (!seenKeys.has(key)) eliminados.push({ key, existingRow });
   }
 
-  return { nuevos, modificados, sinCambios, eliminados };
+  return { comparisonPeriodo, nuevos, modificados, sinCambios, eliminados };
 }
 
 module.exports = { buildPouDiff, rowKey, diffFields, FIELDS };

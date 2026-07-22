@@ -77,10 +77,16 @@ async function preview(req, res) {
     return res.json({
       uploadId,
       periodo,
+      periodoComparacion: diff.comparisonPeriodo,
       archivo: req.file.originalname,
       resumen: summarize(diff, invalidRows),
       columnasFaltantesEnArchivo: parsed.missingHeaders,
       filasInvalidas: invalidRows.slice(0, PREVIEW_SAMPLE_LIMIT),
+      nuevos: diff.nuevos.slice(0, PREVIEW_SAMPLE_LIMIT).map((n) => ({
+        sigla: n.pou.sigla,
+        perfil: n.pou.perfil,
+        especialidad: n.pou.especialidad,
+      })),
       modificados: diff.modificados.slice(0, PREVIEW_SAMPLE_LIMIT).map((m) => ({
         entryKey: m.key,
         sigla: m.pou.sigla,
