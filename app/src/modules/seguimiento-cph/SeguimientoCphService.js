@@ -1,5 +1,6 @@
-const { ILike, Between, MoreThanOrEqual, LessThanOrEqual } = require('typeorm');
+const { ILike, Between, MoreThanOrEqual, LessThanOrEqual, Raw } = require('typeorm');
 const logger = require('../../utils/logger');
+const { SUB_ESTADO_3_SQL } = require('./seguimientoCphCalc');
 
 /**
  * SeguimientoCphService — Módulo Seguimiento de Concursos CPH
@@ -36,7 +37,7 @@ class SeguimientoCphService {
       escalafon_baja, especialidad_baja,
       escalafon_2, puesto_2, especialidad_solicitada,
       conjuntos, cambio_especialidad, dispo_desierta, tipo_baja,
-      suspendido, examen_publicado, orden_merito, insal, cargo_sial,
+      suspendido, examen_publicado, orden_merito, insal,
       // Nuevos
       fecha_baja_desde, fecha_baja_hasta,
       fecha_dispo_desierta_desde, fecha_dispo_desierta_hasta,
@@ -55,7 +56,7 @@ class SeguimientoCphService {
       reso_a_la_firma, resolucion_designacion,
       fecha_resolucion_desde, fecha_resolucion_hasta,
       fecha_cargo_desde, fecha_cargo_hasta,
-      cargo_baja,
+      cargo_baja, cargo_sial,
       search, id_baja,
       limit = 50, offset = 0,
       sort = 'id', order = 'DESC',
@@ -66,7 +67,10 @@ class SeguimientoCphService {
     if (sigla_efector)      where.sigla_efector      = ILike(`%${sigla_efector}%`);
     if (estado)             where.estado             = ILike(`%${estado}%`);
     if (sub_estado)         where.sub_estado         = ILike(`%${sub_estado}%`);
-    if (sub_estado_3)       where.sub_estado_3       = ILike(`%${sub_estado_3}%`);
+    // sub_estado_3 se filtra calculándolo en vivo (no contra el valor guardado),
+    // porque dos de sus ramas dependen de la fecha de hoy y se desactualizan
+    // solas con el paso del tiempo si nadie vuelve a guardar el registro.
+    if (sub_estado_3)       where.sub_estado_3       = Raw(() => `(${SUB_ESTADO_3_SQL}) LIKE :subEstado3Val`, { subEstado3Val: `%${sub_estado_3}%` });
     if (cuil_baja)          where.cuil_baja          = ILike(`%${cuil_baja}%`);
     if (ee_baja)            where.ee_baja            = ILike(`%${ee_baja}%`);
     if (nombre_baja)        where.nombre_baja        = ILike(`%${nombre_baja}%`);
@@ -94,6 +98,7 @@ class SeguimientoCphService {
     if (cuil_designacion)        where.cuil_designacion        = ILike(`%${cuil_designacion}%`);
     if (resolucion_designacion)  where.resolucion_designacion  = ILike(`%${resolucion_designacion}%`);
     if (cargo_baja)              where.cargo_baja              = ILike(`%${cargo_baja}%`);
+    if (cargo_sial)              where.cargo_sial              = ILike(`%${cargo_sial}%`);
     // Filtros booleanos: string 'true'/'false' → boolean
     if (suspendido === 'true')           where.suspendido           = true;
     if (suspendido === 'false')          where.suspendido           = false;
@@ -103,8 +108,6 @@ class SeguimientoCphService {
     if (orden_merito === 'false')        where.orden_merito         = false;
     if (insal === 'true')                where.insal                = true;
     if (insal === 'false')               where.insal                = false;
-    if (cargo_sial === 'true')           where.cargo_sial           = true;
-    if (cargo_sial === 'false')          where.cargo_sial           = false;
     if (sorteo_jurado === 'true')        where.sorteo_jurado        = true;
     if (sorteo_jurado === 'false')       where.sorteo_jurado        = false;
     if (carga_documentacion === 'true')  where.carga_documentacion  = true;

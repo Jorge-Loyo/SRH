@@ -1,5 +1,6 @@
 const { ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } = require('typeorm');
 const logger = require('../../utils/logger');
+const { calcEstado, calcSubEstado, calcSubEstado3 } = require('../seguimiento-cph/seguimientoCphCalc');
 
 /**
  * BajaConsolidadaService — Módulo Bajas
@@ -99,7 +100,7 @@ class BajaConsolidadaService {
    * @returns {object}
    */
   static buildSeguimientoPayload(baja) {
-    return {
+    const payload = {
       id_baja:           baja.id,
       usuario:           baja.usuario,
       origen:            baja.origen,
@@ -122,8 +123,11 @@ class BajaConsolidadaService {
       fecha_pase_paralelo:     baja.fecha_pase_paralelo,
       partida_presupuestaria:  baja.partida_presupuestaria,
       unificador_puestos:      baja.unificador_puestos,
-      estado:                  'A-VALID. VCTE',
     };
+    payload.estado       = calcEstado(payload);
+    payload.sub_estado   = calcSubEstado(payload);
+    payload.sub_estado_3 = calcSubEstado3(payload);
+    return payload;
   }
 
   // ─── LIST ────────────────────────────────────────────────────────────────────
@@ -319,6 +323,13 @@ class BajaConsolidadaService {
       if (payload.partida_presupuestaria !== undefined) seguimientoFields.partida_presupuestaria = payload.partida_presupuestaria;
       if (payload.unificador_puestos  !== undefined) seguimientoFields.unificador_puestos     = payload.unificador_puestos;
       if (Object.keys(seguimientoFields).length > 0) {
+        // Recalcular Estado/Sub-estado/Sub-estado 3 con los campos ya
+        // actualizados, para que no queden pisados con el valor de la
+        // última vez que alguien guardó manualmente desde el detalle CPH.
+        const merged = { ...existingSeg, ...seguimientoFields };
+        seguimientoFields.estado       = calcEstado(merged);
+        seguimientoFields.sub_estado   = calcSubEstado(merged);
+        seguimientoFields.sub_estado_3 = calcSubEstado3(merged);
         await this.seguimientoRepository.update({ id_baja: Number(id) }, seguimientoFields);
       }
     }

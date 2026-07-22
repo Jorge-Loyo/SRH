@@ -26,6 +26,8 @@ const seguimientoCph      = require('../modules/seguimiento-cph/seguimientoCphRo
 const seguimientoCeetps   = require('../modules/seguimiento-ceetps/seguimientoCeetpsRoutes');
 const conjuntosConfig     = require('../modules/conjuntos-config/conjuntosConfigRoutes');
 const tableroKpis         = require('../modules/tablero-kpis/tableroKpisRoutes');
+const cargaMasivaDotacion = require('../modules/carga-masiva/cargaMasivaRoutes');
+const cargaMasivaPou      = require('../modules/carga-masiva/pou/pouRoutes');
 
 const router = express.Router();
 
@@ -48,6 +50,8 @@ router.use('/tablas', tablasApi);
 router.use('/seguridad', seguridadApi);
 router.use('/dotacion-total', dotacionTotalApi);
 router.use('/dotacion-activa', dotacionActivaApi);
+router.use('/admin/carga-masiva/dotacion', cargaMasivaDotacion);
+router.use('/admin/carga-masiva/pou', cargaMasivaPou);
 
 // ─── Módulo 2 ─────────────────────────────────────────────────────────────────
 router.use('/concursales/bajas', bajasConsolidadas);

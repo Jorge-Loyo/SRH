@@ -92,7 +92,7 @@ const seguimientoCphEditableFields = z.object({
   resolucion_designacion: z.string().max(100).optional().nullable(),
   fecha_resolucion:      z.string().max(15).optional().nullable(),
   fecha_cargo:           z.string().max(15).optional().nullable(),
-  cargo_sial:            z.boolean().optional().nullable(),
+  cargo_sial:            z.string().max(50).optional().nullable(),
 
   // Control
   suspendido:            z.boolean().optional().nullable(),

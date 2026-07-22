@@ -217,8 +217,9 @@ export class SeguimientoCph extends BaseEntity {
   @Column({ type: 'varchar', length: 15, nullable: true })
   fecha_cargo?: string | null
 
-  @Column({ type: 'boolean', nullable: true })
-  cargo_sial?: boolean | null
+  /** Código real de cargo en SIAL (texto, ej: "001712179-3") — antes migrado por error como checkbox */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  cargo_sial?: string | null
 
   // ============ CONTROL ============
   @Column({ type: 'boolean', nullable: true })

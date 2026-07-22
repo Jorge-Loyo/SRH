@@ -41,7 +41,7 @@ const PersonaEditableFieldsSchema = z.object({
     .int('Edad debe ser un número entero')
     .min(18, 'Edad mínima es 18 años')
     .max(100, 'Edad máxima es 100 años'),
-  sexo: z.enum(['M', 'F', 'X'], { errorMap: () => ({ message: 'Sexo debe ser M, F o X' }) })
+  sexo: z.enum(['M', 'F', 'X', 'NB'], { errorMap: () => ({ message: 'Sexo debe ser M, F, X o NB' }) })
     .nullable()
     .optional(),
   tipo_doc: z.enum(['DNI', 'LC', 'LE', 'CI', 'PAS'], { 

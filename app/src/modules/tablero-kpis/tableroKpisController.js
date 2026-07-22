@@ -1,20 +1,6 @@
 const { AppDataSource } = require('../../config/data-source');
 const logger = require('../../utils/logger');
-
-// Replica la lógica de calcSubEstado3 del frontend, en SQL
-const SUB_ESTADO_CALC = `
-  CASE
-    WHEN COALESCE(sub_estado_3, '') <> '' THEN sub_estado_3
-    WHEN fecha_dispo_desierta IS NOT NULL THEN 'H-DESIERTO'
-    WHEN COALESCE(resolucion_designacion, '') <> '' THEN 'G-RESOLUCION'
-    WHEN COALESCE(ee_designacion, '') <> '' THEN 'F-PROX. A DESIG'
-    WHEN fecha_examen IS NOT NULL AND fecha_examen <= CURDATE() THEN 'E-ADJUDI'
-    WHEN fecha_insc_hasta IS NOT NULL AND fecha_insc_hasta <= CURDATE() THEN 'D-ETAPA EVAL'
-    WHEN COALESCE(disposicion, '') <> '' THEN 'C-INSCRIPCION'
-    WHEN fecha_autorizacion IS NOT NULL AND sorteo_jurado = 1 THEN 'B-AUTORIZADO'
-    ELSE 'A-VALID. VCTE'
-  END
-`;
+const { SUB_ESTADO_3_SQL: SUB_ESTADO_CALC } = require('../seguimiento-cph/seguimientoCphCalc');
 
 const toNum = (v) => parseInt(v ?? 0, 10);
 const normRows = (rows) => rows.map(r => {
