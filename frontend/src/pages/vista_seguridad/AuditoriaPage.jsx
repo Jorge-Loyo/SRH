@@ -5,6 +5,7 @@ import Spinner from '../../components/ui/Spinner';
 import Pagination from '../../components/ui/Pagination';
 import { useAuth } from '../../auth/AuthContext';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import RoleBadge from '../../components/ui/RoleBadge';
 
 const METHODS = ['', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const SOURCES = ['', 'api', 'admin', 'scheduler'];
@@ -89,21 +90,6 @@ function ActionBadge({ action }) {
       style={{ background: info.bg, color: info.color }}>
       <span>{info.emoji}</span>{info.label}
     </span>
-  );
-}
-
-function RoleBadge({ role }) {
-  const COLORS = {
-    admin:    { bg: '#dbeafe', color: '#1e40af' },
-    editor:   { bg: '#dcfce7', color: '#166534' },
-    viewer:   { bg: '#f3e8ff', color: '#6b21a8' },
-    director: { bg: '#fce7f3', color: '#9f1239' },
-    gerencia: { bg: '#fef3c7', color: '#92400e' },
-  };
-  const c = COLORS[role] || { bg: '#f3f4f6', color: '#374151' };
-  return (
-    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium"
-      style={{ background: c.bg, color: c.color }}>{role}</span>
   );
 }
 
@@ -278,7 +264,7 @@ export default function AuditoriaPage() {
       />
       {/* Header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <ShieldCheckIcon className="w-5 h-5 text-primary-700" />
             <h1 className="text-lg font-bold text-gray-900">Auditoría</h1>
@@ -304,6 +290,7 @@ export default function AuditoriaPage() {
           {[
             { key: 'source', label: 'Fuente', type: 'select', opts: SOURCES.map(v => ({ v, l: v || 'Todas' })) },
             { key: 'method', label: 'Método', type: 'select', opts: METHODS.map(v => ({ v, l: v || 'Todos' })) },
+            { key: 'status', label: 'Status', type: 'select', opts: STATUS_OPTS.map(({ value, label }) => ({ v: value, l: label })) },
           ].map(({ key, label, opts }) => (
             <div key={key}>
               <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>

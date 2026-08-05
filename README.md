@@ -14,7 +14,7 @@ Para mantener el orden y evitar conflictos en los despliegues, el repositorio es
 dotacion-rrhh/
 ├── app/                  # 💻 Espacio de Desarrollo
 │   ├── public/           # Archivos estáticos
-│   ├── src/              # Código fuente (React, Node, AdminJS)
+│   ├── src/              # Código fuente (Node/Express + TypeORM)
 │   ├── package.json      # Dependencias del proyecto
 │   └── Dockerfile        # Receta de construcción del contenedor
 ├── .gitlab-ci.yml        # ⚙️ Infra (Pipeline de despliegue automático)

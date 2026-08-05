@@ -84,7 +84,7 @@ export const CAMPOS_DISPONIBLES = [
   { key: 'resolucion_designacion',  label: 'Resolución designación',    type: 'text',                            group: 'Designación' },
   { key: 'fecha_resolucion',        label: 'Fecha resolución',          type: 'date',                            group: 'Designación' },
   { key: 'fecha_cargo',             label: 'Fecha cargo',               type: 'date',                            group: 'Designación' },
-  { key: 'cargo_sial',              label: 'Cargo SIAL',                type: 'boolean', options: BOOL_OPTS, optionLabels: BOOL_LABELS, group: 'Designación' },
+  { key: 'cargo_sial',              label: 'Cargo SIAL',                type: 'text',                            group: 'Designación' },
   // ── Estado ────────────────────────────────────────────────────────────────────
   { key: 'estado',                  label: 'Estado',                    options: OPCIONES_ESTADO,                group: 'Estado' },
   { key: 'sub_estado_3',            label: 'Sub-estado 3',              options: OPCIONES_SUB_ESTADO_3,          group: 'Estado' },

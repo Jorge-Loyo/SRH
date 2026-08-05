@@ -85,8 +85,10 @@ async function tryRefresh() {
 // -----------------------------------------------------------
 
 export async function apiFetch(path, options = {}) {
+  // FormData necesita que el browser fije el Content-Type (con boundary) solo
+  const isFormData = options.body instanceof FormData
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(_accessToken ? { Authorization: `Bearer ${_accessToken}` } : {}),
     ...(options.headers ?? {}),
   }
@@ -148,6 +150,15 @@ export async function apiPut(path, body = {}) {
     method: 'PUT',
     body: JSON.stringify(body),
   })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new ApiError(res.status, err.error || `Error ${res.status}`)
+  }
+  return res.json()
+}
+
+export async function apiUpload(path, formData) {
+  const res = await apiFetch(path, { method: 'POST', body: formData })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new ApiError(res.status, err.error || `Error ${res.status}`)

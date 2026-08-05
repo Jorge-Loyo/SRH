@@ -89,24 +89,6 @@ export const TABLES_CONFIG = {
       { field: 'monovalencia',           label: 'Monovalencia',        type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
     ],
   },
-
-  bajas: {
-    key: 'bajas',
-    label: 'Bajas y Concursos',
-    description: 'Vista completa de bajas y concursos',
-    defaultSort: { column: 'id_baja', direction: 'ASC' },
-    defaultPerPage: 50,
-    hasPeriodo: true,
-    filters: [
-      { field: 'id_baja',             label: 'ID Baja',             type: FILTER_TYPES.TEXT,         placeholder: 'Ej: 12345' },
-      { field: 'sigla',               label: 'Sigla',               type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'motivo_baja',         label: 'Motivo Baja',         type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'puesto_baja',         label: 'Puesto Baja',         type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'especialidad_baja',   label: 'Especialidad Baja',   type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'unificador_puestos',  label: 'Unificador Puestos',  type: FILTER_TYPES.MULTI_SELECT, fetchDistinct: true },
-      { field: 'fecha_baja',          label: 'Fecha Baja',          type: FILTER_TYPES.DATE_RANGE },
-    ],
-  },
 };
 
 export function getTableConfig(key) {

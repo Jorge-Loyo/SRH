@@ -1,30 +1,34 @@
 import {
   useState, useEffect, useRef, useCallback, useMemo, memo,
 } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
-  ChevronUpIcon, ChevronDownIcon,
+  ChevronUpIcon, ChevronDownIcon, ArrowLeftIcon,
   ArrowDownTrayIcon, FunnelIcon, XMarkIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { apiGet, ApiError } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext.jsx';
 import Pagination from '../../components/ui/Pagination';
 import MultiSelectDropdown from '../../components/ui/MultiSelectDropdown';
 import Spinner from '../../components/ui/Spinner';
 import TablaAmpliadaModal from '../../components/ui/TablaAmpliadaModal';
 import { hospitals } from '../../data/hospitals-data';
 import PeriodoSelect from '../../components/ui/PeriodoSelect';
+import { formatCellValue } from '../../utils/formatValue';
 
 // ─── constantes ─────────────────────────────────────────────────────────────
 
 const MULTI_FILTERS = [
   { key: 'unificador_puesto',       label: 'Unificador Puesto' },
   { key: 'especialidad',            label: 'Especialidad' },
-  { key: 'agrupador',               label: 'Agrupamiento',  hideOnConcursos: true },
+  { key: 'agrupador',               label: 'Agrupamiento' },
   { key: 'literal_puesto',          label: 'Puesto' },
-  { key: 'literal_codigo_registro', label: 'Código de Registro', labelConcursos: 'Motivo de Baja' },
-  { key: 'escalafon',               label: 'Escalafón',       hideOnConcursos: true },
-  { key: 'sexo',                    label: 'Sexo',           hideOnConcursos: true },
+  { key: 'literal_codigo_registro', label: 'Código de Registro' },
+  { key: 'escalafon',               label: 'Escalafón' },
+  { key: 'sexo',                    label: 'Sexo' },
+  { key: 'situacion_revista',       label: 'Situación de Revista' },
+  { key: 'reparticion',             label: 'Repartición' },
 ];
 
 const SIGLAS_FILTERS = [
@@ -41,10 +45,6 @@ const QUICK_FIELDS = [
   { key: 'codigo_rol',      label: 'Cód. SIAL',         placeholder: 'Buscar...' },
 ];
 
-const QUICK_FIELDS_CONCURSOS = [
-  { key: 'ex_baja',     label: 'Ex Baja',     placeholder: 'Buscar...' },
-  { key: 'ex_concurso', label: 'Ex Concurso', placeholder: 'Buscar...' },
-];
 
 const KPI_DEFS = [
   { key: 'total',      label: 'Total',             color: 'bg-gray-100',    textColor: 'text-gray-800',   estadoValue: '' },
@@ -57,9 +57,10 @@ const KPI_DEFS = [
 const EMPTY_MULTI = {
   unificador_puesto: [], especialidad: [], agrupador: [],
   literal_puesto: [], literal_codigo_registro: [], escalafon: [], sexo: [],
+  situacion_revista: [], reparticion: [],
 };
 const EMPTY_SIGLAS = { sigla: [], universo_totalizador: [], tipo_hospital_sigla: [], monovalencia: [] };
-const EMPTY_QUICK = { codigo_cargo: '', nombre_apellido: '', cuil: '', codigo_rol: '', ex_baja: '', ex_concurso: '' };
+const EMPTY_QUICK = { codigo_cargo: '', nombre_apellido: '', cuil: '', codigo_rol: '' };
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ const KpiCard = memo(({ def, value, active, onClick }) => (
   <button
     onClick={() => def.estadoValue && onClick(def.estadoValue)}
     className={[
-      'flex flex-col items-center justify-center rounded-lg px-8 py-2.5 min-w-[170px] transition-all',
+      'flex flex-col items-center justify-center rounded-lg px-5 sm:px-8 py-2.5 min-w-[120px] sm:min-w-[170px] transition-all',
       def.color,
       def.estadoValue
         ? active ? 'ring-2 ring-primary-600 shadow-md cursor-pointer scale-105' : 'hover:shadow cursor-pointer'
@@ -121,7 +122,7 @@ const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef }) =>
               : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
             {columns.map(col => (
               <td key={col} className="px-3 py-1.5 whitespace-nowrap text-gray-800 border-b border-gray-100">
-                {row[col] != null ? String(row[col]) : ''}
+                {formatCellValue(row[col], col)}
               </td>
             ))}
           </tr>
@@ -138,7 +139,14 @@ DataTable.displayName = 'DataTable';
 // ─── componente principal ────────────────────────────────────────────────────
 
 export default function DotacionTotalPage() {
+  const { user } = useAuth();
+  const canExport = user?.role !== 'autoridades';
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Solo se muestra "Volver" cuando se llegó por un drill-down desde el Panel
+  // (HomePage marca la navegación con este flag en el state del history).
+  const fromPanel = location.state?.fromPanel === true;
 
   const [periodo, setPeriodo] = useState(searchParams.get('periodo') || '');
   const [periodos, setPeriodos] = useState([]);
@@ -149,13 +157,31 @@ export default function DotacionTotalPage() {
     sortBy: undefined, sortDir: undefined,
     kpis: { total: 0, activos: 0, vacantes: 0, bloqueados: 0, comision: 0, retencion: 0 },
   });
-  const [filters, setFilters] = useState(EMPTY_MULTI);
-  const [siglasFilters, setSiglasFilters] = useState(EMPTY_SIGLAS);
+  // Estado inicial de los filtros: si se llega desde un link de drill-down
+  // (ej. el Panel) con query params como ?literal_puesto=X&situacion_revista=Y,
+  // arrancan ya aplicados.
+  const [filters, setFilters] = useState(() => {
+    const init = { ...EMPTY_MULTI };
+    MULTI_FILTERS.forEach(({ key }) => {
+      const v = searchParams.get(key);
+      if (v) init[key] = v.split(',');
+    });
+    return init;
+  });
+  const [siglasFilters, setSiglasFilters] = useState(() => {
+    const init = { ...EMPTY_SIGLAS };
+    SIGLAS_FILTERS.forEach(({ key }) => {
+      const v = searchParams.get(key);
+      if (v) init[key] = v.split(',');
+    });
+    return init;
+  });
   const [quickSearch, setQuickSearch] = useState(EMPTY_QUICK);
   const [rangoEdad, setRangoEdad] = useState({ min: '', max: '' });
   const [antiguedad, setAntiguedad] = useState({ min: '', max: '' });
-  const [procesosConcursales, setProcesosConcursales] = useState(false);
-  const [estadoFilter, setEstadoFilter] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState(searchParams.get('estado') || '');
+  // Código numérico de registro — sin UI propia, solo para el drill-down de "Administrativos".
+  const [codigoRegistroFilter, setCodigoRegistroFilter] = useState(searchParams.get('codigo_registro') || '');
   const [distinctValues, setDistinctValues] = useState({ ...EMPTY_MULTI });
   const [siglasDistinctValues, setSiglasDistinctValues] = useState({ ...EMPTY_SIGLAS });
   const [showFilters, setShowFilters] = useState(true);
@@ -176,10 +202,10 @@ export default function DotacionTotalPage() {
   useEffect(() => { rangoEdadRef.current = rangoEdad; }, [rangoEdad]);
   const antiguedadRef = useRef(antiguedad);
   useEffect(() => { antiguedadRef.current = antiguedad; }, [antiguedad]);
-  const procesosConcursalesRef = useRef(procesosConcursales);
-  useEffect(() => { procesosConcursalesRef.current = procesosConcursales; }, [procesosConcursales]);
   const estadoFilterRef = useRef(estadoFilter);
   useEffect(() => { estadoFilterRef.current = estadoFilter; }, [estadoFilter]);
+  const codigoRegistroFilterRef = useRef(codigoRegistroFilter);
+  useEffect(() => { codigoRegistroFilterRef.current = codigoRegistroFilter; }, [codigoRegistroFilter]);
   const tableRef = useRef(null);
 
   const buildActiveFilters = useCallback(() => {
@@ -191,8 +217,8 @@ export default function DotacionTotalPage() {
     if (rangoEdadRef.current.max) active.edad_max = rangoEdadRef.current.max;
     if (antiguedadRef.current.min) active.antiguedad_min = antiguedadRef.current.min;
     if (antiguedadRef.current.max) active.antiguedad_max = antiguedadRef.current.max;
-    if (procesosConcursalesRef.current) active.procesos_concursales = 'true';
     if (estadoFilterRef.current) active.estado = estadoFilterRef.current;
+    if (codigoRegistroFilterRef.current) active.codigo_registro = codigoRegistroFilterRef.current;
     return active;
   }, []);
 
@@ -255,12 +281,7 @@ export default function DotacionTotalPage() {
     const t = setTimeout(() => fetchData({ page: 1 }), 300);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, siglasFilters, quickSearch, rangoEdad, antiguedad, procesosConcursales, estadoFilter]);
-
-  useEffect(() => {
-    if (procesosConcursales && estadoFilter) setEstadoFilter('');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [procesosConcursales]);
+  }, [filters, siglasFilters, quickSearch, rangoEdad, antiguedad, estadoFilter]);
 
   const handleSort = useCallback(col => {
     const s = tableStateRef.current;
@@ -295,8 +316,8 @@ export default function DotacionTotalPage() {
     setQuickSearch(EMPTY_QUICK);
     setRangoEdad({ min: '', max: '' });
     setAntiguedad({ min: '', max: '' });
-    setProcesosConcursales(false);
     setEstadoFilter('');
+    setCodigoRegistroFilter('');
   }, []);
 
   const exportPage = useCallback(async () => {
@@ -335,14 +356,19 @@ export default function DotacionTotalPage() {
     Object.values(filters).some(v => v.length > 0) ||
     Object.values(siglasFilters).some(v => v.length > 0) ||
     Object.values(quickSearch).some(v => v.trim()) ||
-    rangoEdad.min || rangoEdad.max || antiguedad.min || antiguedad.max || estadoFilter
-  ), [filters, siglasFilters, quickSearch, rangoEdad, antiguedad, estadoFilter]);
+    rangoEdad.min || rangoEdad.max || antiguedad.min || antiguedad.max || estadoFilter || codigoRegistroFilter
+  ), [filters, siglasFilters, quickSearch, rangoEdad, antiguedad, estadoFilter, codigoRegistroFilter]);
 
   return (
     <div className={`flex flex-col h-full ${showFilters ? 'overflow-y-auto' : 'overflow-hidden'}`}>
       {/* Barra superior */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2 border-b border-gray-200 bg-white">
         <div className="flex flex-wrap items-center gap-3">
+          {fromPanel && (
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-700 transition-colors">
+              <ArrowLeftIcon className="w-4 h-4" />Volver
+            </button>
+          )}
           <h1 className="text-lg font-bold text-gray-900">Dotación Total</h1>
           <span className="text-xs text-gray-400">Todos los hospitales</span>
           <div className="flex-1" />
@@ -377,11 +403,10 @@ export default function DotacionTotalPage() {
       {/* Panel de filtros */}
       {showFilters && (
         <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b border-gray-200 space-y-3">
-          {/* Filtros de segmentación de hospitales - solo en modo normal */}
-          {!procesosConcursales && (
+          {/* Filtros de segmentación de hospitales */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Segmentación de hospitales</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {SIGLAS_FILTERS.map(({ key, label }) => (
                 <MultiSelectDropdown key={key} label={label}
                   value={siglasFilters[key]} options={siglasDistinctValues[key] || []}
@@ -389,44 +414,25 @@ export default function DotacionTotalPage() {
               ))}
             </div>
           </div>
-          )}
-          {/* Filtro de hospital para modo Cargos Vacantes */}
-          {procesosConcursales && (
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtrar por hospital</p>
-            <div className="w-64">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Hospital (Sigla)</label>
-              <select
-                value={siglasFilters.sigla[0] || ''}
-                onChange={e => setSiglasFilters(f => ({ ...f, sigla: e.target.value ? [e.target.value] : [] }))}
-                className="form-input text-sm w-full py-1.5">
-                <option value="">Todos los hospitales</option>
-                {hospitals.map(h => <option key={h.id} value={h.id}>{h.id} – {h.name}</option>)}
-              </select>
-            </div>
-          </div>
-          )}
           {/* Filtros de dotación */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtros de dotación</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
-              {MULTI_FILTERS.filter(f => !(procesosConcursales && f.hideOnConcursos)).map(({ key, label, labelConcursos }) => (
-                <MultiSelectDropdown key={key} label={procesosConcursales && labelConcursos ? labelConcursos : label}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
+              {MULTI_FILTERS.map(({ key, label }) => (
+                <MultiSelectDropdown key={key} label={label}
                   value={filters[key]} options={distinctValues[key] || []}
                   onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
               ))}
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-              {(procesosConcursales ? QUICK_FIELDS_CONCURSOS : QUICK_FIELDS).map(({ key, label, placeholder }) => (
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
+              {QUICK_FIELDS.map(({ key, label, placeholder }) => (
                 <div key={key}>
                   <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
                   <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
                     onChange={e => setQuickSearch(q => ({ ...q, [key]: e.target.value }))} />
                 </div>
               ))}
-              {!procesosConcursales && (
-                <>
-                  <div>
+              <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Edad</label>
                     <div className="flex items-center gap-2">
                       <input type="number" value={rangoEdad.min} min="0" max="120" placeholder="Mín."
@@ -450,8 +456,6 @@ export default function DotacionTotalPage() {
                         onChange={e => setAntiguedad(a => ({ ...a, max: e.target.value }))} />
                     </div>
                   </div>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -460,35 +464,21 @@ export default function DotacionTotalPage() {
       {/* KPIs + Cargos Vacantes */}
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Cargos Vacantes toggle - izquierda */}
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-            <div className="relative inline-block">
-              <input type="checkbox" className="sr-only peer" checked={procesosConcursales}
-                onChange={e => setProcesosConcursales(e.target.checked)} />
-              <div className="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 transition-colors" />
-              <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-            </div>
-            <span className={procesosConcursales ? 'text-primary-700 font-medium' : 'text-gray-600'}>
-              Cargos Vacantes
-            </span>
-          </label>
-          {/* KPIs - derecha */}
-          {!procesosConcursales && (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {KPI_DEFS.map(def => (
-                <KpiCard key={def.key} def={def}
-                  value={tableState.kpis?.[def.key]}
-                  active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
-                  onClick={handleKpiClick} />
-              ))}
-              {estadoFilter && (
-                <button onClick={() => setEstadoFilter('')}
-                  className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
-                  <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
-                </button>
-              )}
-            </div>
-          )}
+          {/* KPIs */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {KPI_DEFS.map(def => (
+              <KpiCard key={def.key} def={def}
+                value={tableState.kpis?.[def.key]}
+                active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
+                onClick={handleKpiClick} />
+            ))}
+            {estadoFilter && (
+              <button onClick={() => setEstadoFilter('')}
+                className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
+                <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -514,7 +504,7 @@ export default function DotacionTotalPage() {
                 {tableState.loading && <Spinner size="sm" />}
                 <span>{tableState.columns.length} columnas</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <label className="flex items-center gap-1.5 text-sm text-gray-500">
                   Mostrar
                   <select value={tableState.perPage} onChange={handlePerPageChange} className="form-input text-sm py-1 w-20">
@@ -525,12 +515,16 @@ export default function DotacionTotalPage() {
                 <button onClick={() => setTablaAmpliada(true)} className="btn-secondary flex items-center gap-1.5 text-sm" title="Ver tabla ampliada">
                   <TableCellsIcon className="w-4 h-4" />Ampliar
                 </button>
-                <button onClick={exportPage} className="btn-secondary flex items-center gap-1.5 text-sm" title="Exportar página actual">
-                  <ArrowDownTrayIcon className="w-4 h-4" />Página
-                </button>
-                <button onClick={exportFull} className="btn-secondary flex items-center gap-1.5 text-sm" title="Exportar todos los registros">
-                  <ArrowDownTrayIcon className="w-4 h-4" />Completo
-                </button>
+                {canExport && (
+                  <>
+                    <button onClick={exportPage} className="btn-secondary flex items-center gap-1.5 text-sm" title="Exportar página actual">
+                      <ArrowDownTrayIcon className="w-4 h-4" />Página
+                    </button>
+                    <button onClick={exportFull} className="btn-secondary flex items-center gap-1.5 text-sm" title="Exportar todos los registros">
+                      <ArrowDownTrayIcon className="w-4 h-4" />Completo
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 

@@ -49,6 +49,14 @@ function hashToken(raw) {
   return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
+// Compara dos strings en tiempo constante (evita timing attacks), sin
+// depender de que tengan la misma longitud como exige crypto.timingSafeEqual.
+function timingSafeEqualStr(a, b) {
+  const ha = crypto.createHash('sha256').update(String(a ?? '')).digest();
+  const hb = crypto.createHash('sha256').update(String(b ?? '')).digest();
+  return crypto.timingSafeEqual(ha, hb);
+}
+
 function makeId(bytes = 16) {
   return crypto.randomBytes(bytes).toString('hex');
 }
@@ -148,7 +156,7 @@ async function authenticateUser(email, username, password) {
     if (user.password && user.password.startsWith('$2')) {
       ok = comparePassword(password, user.password);
     } else {
-      ok = password === user.password;
+      ok = timingSafeEqualStr(password, user.password);
     }
     if (!ok) {
       throw { statusCode: 401, message: 'Credenciales inválidas' };

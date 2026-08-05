@@ -79,7 +79,7 @@ function PouPofPair({ label, rows, keyField }) {
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5 flex flex-col gap-4">
       <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">{label}</p>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-center">
           <p className="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-2">POU · Guardia</p>
           <p className="text-3xl font-extrabold text-blue-900">{fmt(pou)}</p>
@@ -102,7 +102,7 @@ function JefaturasPair({ label, rows, keyField, emptyMsg }) {
       {rows.length === 0
         ? <p className="text-sm text-gray-400">{emptyMsg}</p>
         : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 text-center">
               <p className="text-[11px] font-bold text-blue-500 uppercase tracking-wider mb-2">POU · Guardia</p>
               <p className="text-3xl font-extrabold text-blue-900">{fmt(pou)}</p>

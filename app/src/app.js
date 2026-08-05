@@ -116,11 +116,6 @@ function createApp(options = {}) {
     res.status(404).json({ error: 'Recurso no encontrado' });
   });
 
-  // Routers dinámicos por hospital (ej: /hgaca/organizacion-tabla)
-  // Se registran antes del catch-all para tener prioridad
-  const { registerHospitalsRouters } = require('./hospitals');
-  registerHospitalsRouters(app);
-
   // Redirect del viejo panel de administración (ya removido) → SPA, para browsers con caché vieja
   app.use('/admin', (req, res) => {
     res.redirect(301, '/');

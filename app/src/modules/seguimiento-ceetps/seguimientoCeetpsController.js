@@ -6,11 +6,12 @@ const {
 } = require('./seguimientoCeetpsSchema');
 const SeguimientoCeetpsService = require('./SeguimientoCeetpsService');
 const { SeguimientoCeetps }    = require('./SeguimientoCeetpsEntity');
+const { BajaConsolidada }      = require('../bajas/BajaConsolidadaEntity');
 const { ServiceFactory }       = require('../../utils/serviceFactory');
 const logger                   = require('../../utils/logger');
 
 function getService() {
-  return ServiceFactory.getService(SeguimientoCeetpsService, SeguimientoCeetps);
+  return ServiceFactory.getService(SeguimientoCeetpsService, SeguimientoCeetps, BajaConsolidada);
 }
 
 async function listSeguimientoCeetps(req, res) {

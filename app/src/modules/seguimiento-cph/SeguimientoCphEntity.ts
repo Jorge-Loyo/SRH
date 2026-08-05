@@ -18,6 +18,9 @@ import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, Index } from 'typeo
 @Index(['cuil_baja'])
 @Index(['id_baja'])
 @Index(['sigla_efector', 'estado'])
+@Index(['ee_concurso'])
+@Index(['ee_baja'])
+@Index(['nombre_baja'])
 export class SeguimientoCph extends BaseEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number

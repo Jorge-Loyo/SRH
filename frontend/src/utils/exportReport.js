@@ -117,7 +117,7 @@ export function exportSeguimientoToPdf(data) {
     ['Especialidad',       data.especialidad_baja || '-'],
     ['Escalafón',          v(data.escalafon_baja)],
     ['Tipo',               v(data.motivo_baja)],
-    ['Código de Registro', v(data.cargo)],
+    ['Código de Cargo',    v(data.cargo)],
     ['Fecha de Baja',      fmtFecha(data.fecha_baja)],
   ]
 
@@ -270,7 +270,7 @@ export async function exportSeguimientoToWord(data) {
     ['Especialidad',       data.especialidad_baja || '-'],
     ['Escalafón',          v(data.escalafon_baja)],
     ['Tipo',               v(data.motivo_baja)],
-    ['Código de Registro', v(data.cargo)],
+    ['Código de Cargo',    v(data.cargo)],
     ['Fecha de Baja',      fmtFecha(data.fecha_baja)],
   ]
 
@@ -407,7 +407,6 @@ const COLS_SEGUIMIENTO = [
   { header: 'Escalafón 2',          get: r => r.escalafon_2 },
   { header: 'Puesto 2',             get: r => r.puesto_2 },
   { header: 'Especialidad sol.',    get: r => r.especialidad_solicitada },
-  { header: 'CCOO esp.',            get: r => r.ccoo_especialidad },
   { header: 'IF solicitante',       get: r => r.if_solicitante },
   { header: 'F. autorización',      get: r => r.fecha_autorizacion },
   { header: 'Disposición',          get: r => r.disposicion },
@@ -427,7 +426,7 @@ const COLS_SEGUIMIENTO = [
   { header: 'Reso. designación',    get: r => r.resolucion_designacion },
   { header: 'F. resolución',        get: r => r.fecha_resolucion },
   { header: 'F. cargo',             get: r => r.fecha_cargo },
-  { header: 'Cargo SIAL',           get: r => r.cargo_sial ? 'Sí' : 'No' },
+  { header: 'Cargo SIAL',           get: r => r.cargo_sial },
   { header: 'Cargo baja (POU)',     get: r => r.cargo_baja },
   { header: 'Observaciones',        get: r => r.observaciones },
 ]

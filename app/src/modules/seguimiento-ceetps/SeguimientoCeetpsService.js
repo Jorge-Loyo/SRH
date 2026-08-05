@@ -1,10 +1,12 @@
-const { ILike, Between, MoreThanOrEqual, LessThanOrEqual } = require('typeorm');
+const { ILike } = require('typeorm');
 const logger = require('../../utils/logger');
+const { applyLike, applyDateRange } = require('../../utils/filterHelpers');
 
 class SeguimientoCeetpsService {
-  constructor(repo) {
+  constructor(repo, bajaRepository) {
     if (!repo) throw new Error('SeguimientoCeetpsService requiere un repositorio');
     this.repo = repo;
+    this.bajaRepository = bajaRepository || null;
   }
 
   async list(options = {}) {
@@ -31,54 +33,42 @@ class SeguimientoCeetpsService {
 
     const where = {};
     if (codigo_registro)  where.codigo_registro  = Number(codigo_registro);
-    if (sigla_efector)    where.sigla_efector    = ILike(`%${sigla_efector}%`);
-    if (estado_concurso)  where.estado_concurso  = ILike(`%${estado_concurso}%`);
-    if (usuario)          where.usuario          = ILike(`%${usuario}%`);
-    if (cuil)             where.cuil             = ILike(`%${cuil}%`);
+    applyLike(where, 'sigla_efector', sigla_efector);
+    applyLike(where, 'estado_concurso', estado_concurso);
+    applyLike(where, 'usuario', usuario);
+    applyLike(where, 'cuil', cuil);
     if (id_baja)          where.id_baja          = Number(id_baja);
     // Concurso
-    if (expediente_concurso)       where.expediente_concurso      = ILike(`%${expediente_concurso}%`);
-    if (tipificador_obra_servicio) where.tipificador_obra_servicio = ILike(`%${tipificador_obra_servicio}%`);
-    if (tipificador_origen)        where.tipificador_origen       = ILike(`%${tipificador_origen}%`);
-    if (puesto_solicitado)         where.puesto_solicitado        = ILike(`%${puesto_solicitado}%`);
-    if (dispo_llamado)             where.dispo_llamado            = ILike(`%${dispo_llamado}%`);
-    if (fecha_caratulacion_desde && fecha_caratulacion_hasta) where.fecha_caratulacion = Between(fecha_caratulacion_desde, fecha_caratulacion_hasta);
-    else if (fecha_caratulacion_desde) where.fecha_caratulacion = MoreThanOrEqual(fecha_caratulacion_desde);
-    else if (fecha_caratulacion_hasta) where.fecha_caratulacion = LessThanOrEqual(fecha_caratulacion_hasta);
-    if (fecha_autorizacion_desde && fecha_autorizacion_hasta) where.fecha_autorizacion = Between(fecha_autorizacion_desde, fecha_autorizacion_hasta);
-    else if (fecha_autorizacion_desde) where.fecha_autorizacion = MoreThanOrEqual(fecha_autorizacion_desde);
-    else if (fecha_autorizacion_hasta) where.fecha_autorizacion = LessThanOrEqual(fecha_autorizacion_hasta);
-    if (fecha_ifacs_desde && fecha_ifacs_hasta) where.fecha_ifacs = Between(fecha_ifacs_desde, fecha_ifacs_hasta);
-    else if (fecha_ifacs_desde) where.fecha_ifacs = MoreThanOrEqual(fecha_ifacs_desde);
-    else if (fecha_ifacs_hasta) where.fecha_ifacs = LessThanOrEqual(fecha_ifacs_hasta);
-    if (fecha_insal_desde && fecha_insal_hasta) where.fecha_insal = Between(fecha_insal_desde, fecha_insal_hasta);
-    else if (fecha_insal_desde) where.fecha_insal = MoreThanOrEqual(fecha_insal_desde);
-    else if (fecha_insal_hasta) where.fecha_insal = LessThanOrEqual(fecha_insal_hasta);
+    applyLike(where, 'expediente_concurso', expediente_concurso);
+    applyLike(where, 'tipificador_obra_servicio', tipificador_obra_servicio);
+    applyLike(where, 'tipificador_origen', tipificador_origen);
+    applyLike(where, 'puesto_solicitado', puesto_solicitado);
+    applyLike(where, 'dispo_llamado', dispo_llamado);
+    applyDateRange(where, 'fecha_caratulacion', fecha_caratulacion_desde, fecha_caratulacion_hasta);
+    applyDateRange(where, 'fecha_autorizacion', fecha_autorizacion_desde, fecha_autorizacion_hasta);
+    applyDateRange(where, 'fecha_ifacs', fecha_ifacs_desde, fecha_ifacs_hasta);
+    applyDateRange(where, 'fecha_insal', fecha_insal_desde, fecha_insal_hasta);
     // Designación
-    if (cuil_designado)            where.cuil_designado           = ILike(`%${cuil_designado}%`);
-    if (puesto_designado)          where.puesto_designado         = ILike(`%${puesto_designado}%`);
-    if (expediente_designacion)    where.expediente_designacion   = ILike(`%${expediente_designacion}%`);
-    if (estado_apto)               where.estado_apto              = ILike(`%${estado_apto}%`);
+    applyLike(where, 'cuil_designado', cuil_designado);
+    applyLike(where, 'puesto_designado', puesto_designado);
+    applyLike(where, 'expediente_designacion', expediente_designacion);
+    applyLike(where, 'estado_apto', estado_apto);
     if (alta_sial != null && alta_sial !== undefined) where.alta_sial = alta_sial;
-    if (numero_apto_medico)        where.numero_apto_medico       = ILike(`%${numero_apto_medico}%`);
-    if (fecha_proyecto_dispo_desde && fecha_proyecto_dispo_hasta) where.fecha_proyecto_dispo = Between(fecha_proyecto_dispo_desde, fecha_proyecto_dispo_hasta);
-    else if (fecha_proyecto_dispo_desde) where.fecha_proyecto_dispo = MoreThanOrEqual(fecha_proyecto_dispo_desde);
-    else if (fecha_proyecto_dispo_hasta) where.fecha_proyecto_dispo = LessThanOrEqual(fecha_proyecto_dispo_hasta);
-    if (dispo_designacion)         where.dispo_designacion        = ILike(`%${dispo_designacion}%`);
-    if (resolucion_designacion)    where.resolucion_designacion   = ILike(`%${resolucion_designacion}%`);
-    if (id_cargo)                  where.id_cargo                 = ILike(`%${id_cargo}%`);
+    applyLike(where, 'numero_apto_medico', numero_apto_medico);
+    applyDateRange(where, 'fecha_proyecto_dispo', fecha_proyecto_dispo_desde, fecha_proyecto_dispo_hasta);
+    applyLike(where, 'dispo_designacion', dispo_designacion);
+    applyLike(where, 'resolucion_designacion', resolucion_designacion);
+    applyLike(where, 'id_cargo', id_cargo);
     // Baja
-    if (sigla_baja)                where.sigla                    = ILike(`%${sigla_baja}%`);
-    if (ex_baja)                   where.ex_baja                  = ILike(`%${ex_baja}%`);
-    if (puesto_baja)               where.puesto_baja              = ILike(`%${puesto_baja}%`);
-    if (especialidad_baja)         where.especialidad_baja        = ILike(`%${especialidad_baja}%`);
-    if (motivo_baja)               where.motivo_baja              = ILike(`%${motivo_baja}%`);
-    if (carga_horaria)             where.carga_horaria            = ILike(`%${carga_horaria}%`);
-    if (cargo)                     where.cargo                    = ILike(`%${cargo}%`);
-    if (fecha_baja_desde && fecha_baja_hasta) where.fecha_baja = Between(fecha_baja_desde, fecha_baja_hasta);
-    else if (fecha_baja_desde) where.fecha_baja = MoreThanOrEqual(fecha_baja_desde);
-    else if (fecha_baja_hasta) where.fecha_baja = LessThanOrEqual(fecha_baja_hasta);
-    if (doc_respaldatoria)         where.doc_respaldatoria        = ILike(`%${doc_respaldatoria}%`);
+    applyLike(where, 'sigla', sigla_baja);
+    applyLike(where, 'ex_baja', ex_baja);
+    applyLike(where, 'puesto_baja', puesto_baja);
+    applyLike(where, 'especialidad_baja', especialidad_baja);
+    applyLike(where, 'motivo_baja', motivo_baja);
+    applyLike(where, 'carga_horaria', carga_horaria);
+    applyLike(where, 'cargo', cargo);
+    applyDateRange(where, 'fecha_baja', fecha_baja_desde, fecha_baja_hasta);
+    applyLike(where, 'doc_respaldatoria', doc_respaldatoria);
 
     if (search) {
       const [rows, count] = await this.repo.findAndCount({
@@ -138,6 +128,13 @@ class SeguimientoCeetpsService {
   async remove(id) {
     const existing = await this.repo.findOne({ where: { id: Number(id) } });
     if (!existing) return null;
+
+    // Eliminar la baja vinculada si existe (mismo comportamiento que SeguimientoCphService)
+    if (existing.id_baja && this.bajaRepository) {
+      await this.bajaRepository.delete({ id: Number(existing.id_baja) });
+      logger.info('[SeguimientoCeetpsService] Baja vinculada eliminada en cascada', { id_baja: existing.id_baja });
+    }
+
     await this.repo.delete({ id: Number(id) });
     return existing;
   }

@@ -4,7 +4,7 @@ import { useAuth } from '../../auth/AuthContext.jsx'
 import {
   PlusIcon, MagnifyingGlassIcon, FunnelIcon, XMarkIcon,
   ChevronUpIcon, ChevronDownIcon, PencilSquareIcon, TrashIcon,
-  ArrowDownTrayIcon,
+  ArrowDownTrayIcon, ArrowLeftIcon,
 } from '@heroicons/react/24/outline'
 import { bajasApi } from '../../api/concursalesApi'
 import Pagination from '../../components/ui/Pagination'
@@ -28,13 +28,26 @@ import BajaForm from './BajaForm'
 
 const PAGE_SIZE = 50
 
+// Metadatos visuales por origen (colores y etiquetas)
+const ORIGEN_META = {
+  'Alta por Baja':      { bg: 'bg-blue-50',   activeBg: 'bg-blue-100',   border: 'border-blue-200',   activeBorder: 'border-blue-500',   text: 'text-blue-800',   rowBorder: 'border-l-blue-400',   btnLabel: 'Nueva Alta por Baja'      },
+  'Ampliación':         { bg: 'bg-green-50',  activeBg: 'bg-green-100',  border: 'border-green-200',  activeBorder: 'border-green-500',  text: 'text-green-800',  rowBorder: 'border-l-green-400',  btnLabel: 'Nueva Ampliación'         },
+  'Cobertura Dotación': { bg: 'bg-red-50',    activeBg: 'bg-red-100',    border: 'border-red-200',    activeBorder: 'border-red-500',    text: 'text-red-800',    rowBorder: 'border-l-red-400',    btnLabel: 'Nueva Cobertura Dotación' },
+  'POU a POF':          { bg: 'bg-violet-50', activeBg: 'bg-violet-100', border: 'border-violet-200', activeBorder: 'border-violet-500', text: 'text-violet-800', rowBorder: 'border-l-violet-400', btnLabel: 'Nueva POU a POF'          },
+}
+
 const EMPTY_FILTERS = {
   // Identificación
   usuario:            '',
-  origen:             '',
   // Efector
   sigla:              '',
   tipo_efector:       '',
+  // Cargo
+  ex_baja:                   '',
+  codigo_cargo:              '',
+  cargo_baja:                '',
+  carga_horaria:             '',
+  partida_presupuestaria:    '',
   // Datos funcionales (con cascada)
   unificador_puestos: '',
   escalafon:          '',
@@ -42,9 +55,15 @@ const EMPTY_FILTERS = {
   puesto_baja:        '',
   especialidad_baja:  '',
   // Fechas y expediente
-  motivo_baja:        '',
+  fecha_baja_desde:          '',
+  fecha_baja_hasta:          '',
+  motivo_baja:               '',
+  fecha_pase_paralelo_desde: '',
+  fecha_pase_paralelo_hasta: '',
+  doc_respaldatoria:         '',
   // Concurso
   genera_concurso:    '',
+  codigo_registro:    '',
 }
 
 function GeneraBadge({ val }) {
@@ -69,11 +88,13 @@ export default function BajasConsolidadasPage() {
   const canEdit = BAJAS_WRITE_ROLES.includes(user?.role)
 
   // ─── State ─────────────────────────────────────────────────────────────────
-  const [rows, setRows]           = useState([])
-  const [count, setCount]         = useState(0)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState(null)
-  const [page, setPage]           = useState(1)
+  const [rows, setRows]                 = useState([])
+  const [count, setCount]               = useState(0)
+  const [loading, setLoading]           = useState(false)
+  const [error, setError]               = useState(null)
+  const [page, setPage]                 = useState(1)
+  const [selectedOrigen, setSelectedOrigen] = useState(null)
+  const [kpiCounts, setKpiCounts]       = useState({})
 
   const [search, setSearch]           = useState('')
   const [filters, setFilters]         = useState({ ...EMPTY_FILTERS })
@@ -103,22 +124,50 @@ export default function BajasConsolidadasPage() {
   // ─── Carga de datos ────────────────────────────────────────────────────────
   const buildParams = useCallback((extras = {}) => {
     const p = { sort: sortBy, order: sortDir, ...extras }
-    if (search)                      p.search             = search
-    if (filters.usuario)             p.usuario            = filters.usuario
-    if (filters.origen)              p.origen             = filters.origen
-    if (filters.sigla)               p.sigla              = filters.sigla
-    if (filters.tipo_efector)        p.tipo_efector       = filters.tipo_efector
-    if (filters.unificador_puestos)  p.unificador_puestos = filters.unificador_puestos
-    if (filters.escalafon)           p.escalafon          = filters.escalafon
-    if (filters.pou_pof)             p.pou_pof            = filters.pou_pof
-    if (filters.puesto_baja)         p.puesto_baja        = filters.puesto_baja
-    if (filters.especialidad_baja)   p.especialidad_baja  = filters.especialidad_baja
-    if (filters.motivo_baja)         p.motivo_baja        = filters.motivo_baja
-    if (filters.genera_concurso)     p.genera_concurso    = filters.genera_concurso
+    if (selectedOrigen)                    p.origenes                  = selectedOrigen
+    if (search)                            p.search                    = search
+    if (filters.usuario)                   p.usuario                   = filters.usuario
+    // (origen driven by selectedOrigen / KPI, not by filters)
+    if (filters.sigla)                     p.sigla                     = filters.sigla
+    if (filters.tipo_efector)              p.tipo_efector              = filters.tipo_efector
+    if (filters.ex_baja)                   p.ex_baja                   = filters.ex_baja
+    if (filters.codigo_cargo)              p.codigo_cargo              = filters.codigo_cargo
+    if (filters.cargo_baja)                p.cargo_baja                = filters.cargo_baja
+    if (filters.carga_horaria)             p.carga_horaria             = filters.carga_horaria
+    if (filters.partida_presupuestaria)    p.partida_presupuestaria    = filters.partida_presupuestaria
+    if (filters.unificador_puestos)        p.unificador_puestos        = filters.unificador_puestos
+    if (filters.escalafon)                 p.escalafon                 = filters.escalafon
+    if (filters.pou_pof)                   p.pou_pof                   = filters.pou_pof
+    if (filters.puesto_baja)               p.puesto_baja               = filters.puesto_baja
+    if (filters.especialidad_baja)         p.especialidad_baja         = filters.especialidad_baja
+    if (filters.fecha_baja_desde)          p.fecha_baja_desde          = filters.fecha_baja_desde
+    if (filters.fecha_baja_hasta)          p.fecha_baja_hasta          = filters.fecha_baja_hasta
+    if (filters.motivo_baja)               p.motivo_baja               = filters.motivo_baja
+    if (filters.fecha_pase_paralelo_desde) p.fecha_pase_paralelo_desde = filters.fecha_pase_paralelo_desde
+    if (filters.fecha_pase_paralelo_hasta) p.fecha_pase_paralelo_hasta = filters.fecha_pase_paralelo_hasta
+    if (filters.doc_respaldatoria)         p.doc_respaldatoria         = filters.doc_respaldatoria
+    if (filters.genera_concurso)           p.genera_concurso           = filters.genera_concurso
+    if (filters.codigo_registro)           p.codigo_registro           = filters.codigo_registro
     return p
-  }, [sortBy, sortDir, search, filters])
+  }, [sortBy, sortDir, search, filters, selectedOrigen])
+
+  const fetchKpiCounts = useCallback(async () => {
+    try {
+      const results = await Promise.all(
+        OPCIONES_ORIGEN.map(origen => bajasApi.list({ origenes: origen, limit: 1, offset: 0 }))
+      )
+      const counts = {}
+      OPCIONES_ORIGEN.forEach((origen, i) => { counts[origen] = results[i].meta?.count ?? 0 })
+      setKpiCounts(counts)
+    } catch {}
+  }, [])
 
   const fetchData = useCallback(async () => {
+    if (!selectedOrigen) {
+      setRows([])
+      setCount(0)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
@@ -130,9 +179,10 @@ export default function BajasConsolidadasPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, buildParams])
+  }, [page, buildParams, selectedOrigen])
 
   useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { fetchKpiCounts() }, [fetchKpiCounts])
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSort = (col) => {
@@ -180,14 +230,14 @@ export default function BajasConsolidadasPage() {
     setPage(1)
   }
 
-  const hasFilters = search || Object.values(filters).some(Boolean)
+  const hasFilters = !!(search || Object.values(filters).some(Boolean))
   const activeInSection = (keys) => keys.filter(k => filters[k]).length
 
   const openCreate  = () => { setEditTarget(null); setFormOpen(true) }
   const openEdit    = (row) => { setEditTarget(row); setFormOpen(true) }
   const openView    = (row) => { setViewTarget(row) }
   const closeForm   = () => { setFormOpen(false); setEditTarget(null) }
-  const handleSaved = () => { closeForm(); fetchData() }
+  const handleSaved = () => { closeForm(); fetchData(); fetchKpiCounts() }
 
   const handleExport = async (filtered) => {
     setExporting(true)
@@ -210,6 +260,7 @@ export default function BajasConsolidadasPage() {
       await bajasApi.remove(confirmDel.id)
       setConfirmDel(null)
       fetchData()
+      fetchKpiCounts()
     } catch (e) {
       alert('Error al eliminar: ' + e.message)
     }
@@ -225,32 +276,94 @@ export default function BajasConsolidadasPage() {
   const totalPages = Math.ceil(count / PAGE_SIZE)
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  const goBack = () => {
+    setSelectedOrigen(null)
+    setSearch('')
+    setFilters({ ...EMPTY_FILTERS })
+    setShowFilters(false)
+    setPage(1)
+  }
+
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full">
 
-      {/* Cabecera */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Bajas Consolidadas</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Registro de desvinculaciones de personal</p>
+      {/* ══════════════════════════════════════════════
+          PANTALLA 1 — Selector de origen (2×2 KPI)
+      ══════════════════════════════════════════════ */}
+      {!selectedOrigen && (
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Bajas Consolidadas</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Registro de desvinculaciones de personal</p>
+            </div>
+          </div>
+
+          {/* Grid 2×2 centrado */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="grid grid-cols-2 gap-6 w-full max-w-lg">
+              {OPCIONES_ORIGEN.map(origen => {
+                const meta = ORIGEN_META[origen]
+                const cnt  = kpiCounts[origen]
+                return (
+                  <button
+                    key={origen}
+                    onClick={() => { setSelectedOrigen(origen); setPage(1) }}
+                    className={`rounded-xl border-2 px-6 py-5 text-left transition-all shadow-sm hover:shadow-md hover:scale-[1.02] active:scale-100 ${meta.bg} ${meta.border}`}
+                  >
+                    <div className={`text-xs font-bold uppercase tracking-widest mb-3 ${meta.text} opacity-70`}>{origen}</div>
+                    <div className={`text-4xl font-bold mb-1 ${meta.text}`}>
+                      {cnt !== undefined ? cnt.toLocaleString('es-AR') : '—'}
+                    </div>
+                    <div className={`text-xs ${meta.text} opacity-50`}>registros</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
-        {canEdit && (
-          <button onClick={openCreate} className="btn-primary flex items-center gap-2">
-            <PlusIcon className="w-4 h-4" />
-            Nueva baja
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Barra de búsqueda + botón filtros */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* ══════════════════════════════════════════════
+          PANTALLA 2 — Detalle del origen seleccionado
+      ══════════════════════════════════════════════ */}
+      {selectedOrigen && (
+        <div className="flex flex-col h-full gap-4">
+
+          {/* Botón volver */}
+          <button
+            onClick={goBack}
+            className="self-start flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            Volver
+          </button>
+
+          {/* Cabecera con origen coloreado */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-gray-900">Bajas Consolidadas</h1>
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${ORIGEN_META[selectedOrigen].activeBg} ${ORIGEN_META[selectedOrigen].activeBorder} ${ORIGEN_META[selectedOrigen].text}`}>
+                {selectedOrigen}
+              </span>
+            </div>
+            {canEdit && (
+              <button onClick={openCreate} className="btn-primary flex items-center gap-2">
+                <PlusIcon className="w-4 h-4" />
+                {ORIGEN_META[selectedOrigen]?.btnLabel ?? 'Nueva baja'}
+              </button>
+            )}
+          </div>
+
+          {/* Barra de búsqueda + botón filtros */}
+          <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Buscar por nombre o CUIL..."
+            placeholder="Buscar..."
             className="form-input pl-9 text-sm w-full"
           />
         </div>
@@ -276,7 +389,7 @@ export default function BajasConsolidadasPage() {
           </button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleExport(true)}
             disabled={exporting || !hasFilters}
@@ -300,11 +413,9 @@ export default function BajasConsolidadasPage() {
         <div className="space-y-1.5 rounded-xl border border-gray-200 bg-gray-50/60 p-3">
 
           {/* 1 — Identificación */}
-          <FilterAccSection title="Identificación" activeCount={activeInSection(['usuario', 'origen'])}>
+          <FilterAccSection title="Identificación" activeCount={activeInSection(['usuario'])}>
             <FilterSelect label="Usuario" value={filters.usuario}
               onChange={v => setFilter('usuario', v)} options={OPCIONES_USUARIOS} />
-            <FilterSelect label="Origen" value={filters.origen}
-              onChange={v => setFilter('origen', v)} options={OPCIONES_ORIGEN} />
           </FilterAccSection>
 
           {/* 2 — Efector */}
@@ -319,7 +430,24 @@ export default function BajasConsolidadasPage() {
               onChange={v => setFilter('tipo_efector', v)} options={OPCIONES_TIPO_EFECTOR} />
           </FilterAccSection>
 
-          {/* 3 — Datos funcionales (con cascada) */}
+          {/* 3 — Cargo */}
+          <FilterAccSection
+            title="Cargo"
+            activeCount={activeInSection(['ex_baja', 'codigo_cargo', 'cargo_baja', 'carga_horaria', 'partida_presupuestaria'])}
+          >
+            <FilterInput label="EX Baja / Ampliación" value={filters.ex_baja}
+              onChange={v => setFilter('ex_baja', v)} />
+            <FilterInput label="Código cargo" value={filters.codigo_cargo}
+              onChange={v => setFilter('codigo_cargo', v)} />
+            <FilterInput label="ID SIAL" value={filters.cargo_baja}
+              onChange={v => setFilter('cargo_baja', v)} />
+            <FilterInput label="Carga horaria" value={filters.carga_horaria}
+              onChange={v => setFilter('carga_horaria', v)} />
+            <FilterInput label="Partida presup." value={filters.partida_presupuestaria}
+              onChange={v => setFilter('partida_presupuestaria', v)} />
+          </FilterAccSection>
+
+          {/* 4 — Datos funcionales (con cascada) */}
           <FilterAccSection
             title="Datos funcionales"
             activeCount={activeInSection(['unificador_puestos', 'escalafon', 'pou_pof', 'puesto_baja', 'especialidad_baja'])}
@@ -351,16 +479,38 @@ export default function BajasConsolidadasPage() {
             />
           </FilterAccSection>
 
-          {/* 4 — Fechas y expediente */}
-          <FilterAccSection title="Fechas y expediente" activeCount={activeInSection(['motivo_baja'])}>
+          {/* 5 — Fechas y expediente */}
+          <FilterAccSection
+            title="Fechas y expediente"
+            activeCount={activeInSection(['fecha_baja_desde', 'fecha_baja_hasta', 'motivo_baja', 'fecha_pase_paralelo_desde', 'fecha_pase_paralelo_hasta', 'doc_respaldatoria'])}
+          >
+            <FilterDate label="Fecha baja — desde" value={filters.fecha_baja_desde}
+              onChange={v => setFilter('fecha_baja_desde', v)} />
+            <FilterDate label="Fecha baja — hasta" value={filters.fecha_baja_hasta}
+              onChange={v => setFilter('fecha_baja_hasta', v)} />
             <FilterSelect label="Motivo de baja" value={filters.motivo_baja}
               onChange={v => setFilter('motivo_baja', v)} options={OPCIONES_MOTIVO_BAJA} />
+            <FilterDate label="F. pase paralelo — desde" value={filters.fecha_pase_paralelo_desde}
+              onChange={v => setFilter('fecha_pase_paralelo_desde', v)} />
+            <FilterDate label="F. pase paralelo — hasta" value={filters.fecha_pase_paralelo_hasta}
+              onChange={v => setFilter('fecha_pase_paralelo_hasta', v)} />
+            <FilterInput label="Doc. respaldatoria" value={filters.doc_respaldatoria}
+              onChange={v => setFilter('doc_respaldatoria', v)} />
           </FilterAccSection>
 
-          {/* 5 — Concurso */}
-          <FilterAccSection title="Concurso" activeCount={activeInSection(['genera_concurso'])}>
+          {/* 6 — Concurso */}
+          <FilterAccSection title="Concurso" activeCount={activeInSection(['genera_concurso', 'codigo_registro'])}>
             <FilterSelect label="Genera concurso" value={filters.genera_concurso}
               onChange={v => setFilter('genera_concurso', v)} options={['SI', 'NO']} />
+            <FilterSelect label="Cód. registro" value={filters.codigo_registro}
+              onChange={v => setFilter('codigo_registro', v)}
+              options={[
+                { value: '23',  label: '23 — CPH'      },
+                { value: '37',  label: '37 — CPH'      },
+                { value: '83',  label: '83 — CEETPS'   },
+                { value: '85',  label: '85 — CEETPS'   },
+                { value: '87',  label: '87 — CEETPS'   },
+              ]} />
           </FilterAccSection>
 
         </div>
@@ -373,7 +523,7 @@ export default function BajasConsolidadasPage() {
 
       {/* Stats */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-        <span>23 columnas</span>
+        <span>22 columnas · {selectedOrigen}</span>
         <span>
           {loading
             ? 'Cargando...'
@@ -392,7 +542,6 @@ export default function BajasConsolidadasPage() {
             <tr>
               {[
                 { col: 'usuario',                label: 'Usuario'               },
-                { col: 'origen',                 label: 'Origen'                },
                 { col: 'ex_baja',                label: 'EX Baja / Ampliación'  },
                 { col: 'sigla',                  label: 'Sigla'                 },
                 { col: 'efector',                label: 'Efector'               },
@@ -430,17 +579,16 @@ export default function BajasConsolidadasPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={24} className="py-10 text-center"><Spinner /></td></tr>
+              <tr><td colSpan={23} className="py-10 text-center"><Spinner /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={24} className="py-10 text-center text-gray-400 text-sm">Sin registros</td></tr>
+              <tr><td colSpan={23} className="py-10 text-center text-gray-400 text-sm">Sin registros</td></tr>
             ) : rows.map(row => (
               <tr
                 key={row.id}
                 onClick={() => openView(row)}
-                className="hover:bg-blue-50 cursor-pointer transition-colors"
+                className={`hover:bg-blue-50 cursor-pointer transition-colors border-l-4 ${ORIGEN_META[row.origen]?.rowBorder ?? 'border-l-gray-200'}`}
               >
                 <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.usuario || '—'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.origen || '—'}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.ex_baja || '—'}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   {row.sigla ? (
@@ -476,7 +624,7 @@ export default function BajasConsolidadasPage() {
                         <PencilSquareIcon className="w-4 h-4" />
                       </button>
                     )}
-                    {(Number(row.codigo_registro) === 37 || CODIGOS_CEETPS.includes(Number(row.codigo_registro))) && (
+                    {(Number(row.codigo_registro) === 37 || Number(row.codigo_registro) === 23 || CODIGOS_CEETPS.includes(Number(row.codigo_registro))) && (
                       <button
                         onClick={() => navigate(
                           CODIGOS_CEETPS.includes(Number(row.codigo_registro))
@@ -511,7 +659,10 @@ export default function BajasConsolidadasPage() {
       <Pagination currentPage={page} totalPages={totalPages} totalRecords={count}
         onPageChange={setPage} loading={loading} tableRef={tableRef} />
 
-      {formOpen && <BajaForm initial={editTarget} onSaved={handleSaved} onClose={closeForm} />}
+        </div>
+      )}
+
+      {formOpen && <BajaForm initial={editTarget} lockedOrigen={editTarget?.origen ?? selectedOrigen} onSaved={handleSaved} onClose={closeForm} />}
       {viewTarget && <BajaForm initial={viewTarget} readOnly onSaved={() => {}} onClose={() => setViewTarget(null)} />}
 
       <ConfirmModal
@@ -551,7 +702,7 @@ function FilterAccSection({ title, activeCount = 0, children }) {
         )}
       </button>
       {open && (
-        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
           {children}
         </div>
       )}
@@ -561,6 +712,7 @@ function FilterAccSection({ title, activeCount = 0, children }) {
 
 // ─── FilterSelect ─────────────────────────────────────────────────────────────
 function FilterSelect({ label, value, onChange, options = [], disabled = false, hint = null }) {
+  const normalized = options.map(o => typeof o === 'string' ? { value: o, label: o } : o)
   return (
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
@@ -571,9 +723,40 @@ function FilterSelect({ label, value, onChange, options = [], disabled = false, 
         className={`form-input text-sm w-full ${disabled ? 'opacity-50 cursor-default' : ''}`}
       >
         <option value="">Todos</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {normalized.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
       {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
+    </div>
+  )
+}
+
+// ─── FilterInput ──────────────────────────────────────────────────────────────
+function FilterInput({ label, value, onChange, placeholder = '' }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder || 'Filtrar...'}
+        className="form-input text-sm w-full"
+      />
+    </div>
+  )
+}
+
+// ─── FilterDate ───────────────────────────────────────────────────────────────
+function FilterDate({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <input
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="form-input text-sm w-full"
+      />
     </div>
   )
 }

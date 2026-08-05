@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { XMarkIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
-import { seguimientoCeetpsApi, configApi } from '../../api/concursalesApi'
-import { OPCIONES_USUARIOS_CEETPS, SIGLAS_POR_USUARIO_CEETPS, SIGLAS_DATA, isoToDmy, dmyToIso, computeEstadoConcurso } from '../../utils/concursalesHelpers'
+import { seguimientoCeetpsApi, configApi, bajasApi } from '../../api/concursalesApi'
+import { OPCIONES_USUARIOS_CEETPS, SIGLAS_POR_USUARIO_CEETPS, SIGLAS_DATA, OPCIONES_PUESTO_CEETPS_TODOS, isoToDmy, dmyToIso, computeEstadoConcurso, formatDateMask } from '../../utils/concursalesHelpers'
 import { applyRulesCeetps } from '../../utils/conjuntosRulesCeetps'
+import { Section, CheckField } from '../../components/ui/ConcursalesFormFields'
 
 const TABS = [
   { label: 'Enfermeros',      codigo: 87 },
@@ -30,7 +31,6 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     tipificador_origen:       initial?.tipificador_origen        ?? '',
     fecha_caratulacion:       isoToDmy(initial?.fecha_caratulacion) ?? '',
     expediente_concurso:      initial?.expediente_concurso      ?? '',
-    ee_concurso:              initial?.ee_concurso              ?? '',
     fecha_autorizacion:       isoToDmy(initial?.fecha_autorizacion) ?? '',
     puesto_solicitado:        initial?.puesto_solicitado        ?? '',
     dispo_llamado:            initial?.dispo_llamado            ?? '',
@@ -63,10 +63,29 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     carga_horaria:            initial?.carga_horaria            ?? '',
     motivo_baja:              initial?.motivo_baja              ?? '',
     doc_respaldatoria:        initial?.doc_respaldatoria        ?? '',
+    // Solicitud de cambio
+    cambio_especialidad:      initial?.cambio_especialidad      ?? 'NO',
+    doc_cambio_especialidad:  initial?.doc_cambio_especialidad  ?? '',
   })
 
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState(null)
+
+  // Si el registro está vinculado a una baja, los campos copiados se bloquean
+  const hasBajaLink = !!initial?.id_baja
+
+  // Cuando hay id_baja, traer el campo "origen" de esa baja y usarlo como tipificador_origen
+  useEffect(() => {
+    if (!initial?.id_baja) return
+    bajasApi.getById(initial.id_baja)
+      .then(baja => {
+        if (baja?.origen) {
+          setForm(prev => ({ ...prev, tipificador_origen: baja.origen }))
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial?.id_baja])
 
   // Reglas de autocompletado para el campo Conjuntos
   const [conjuntosRules, setConjuntosRules] = useState([])
@@ -81,7 +100,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     'codigo_registro', 'cuil', 'nombre_apellido_baja', 'cargo',
     'puesto_baja', 'especialidad_baja', 'fecha_baja', 'carga_horaria',
     'motivo_baja', 'ex_baja', 'sigla', 'efector', 'doc_respaldatoria',
-    'tipificador_origen', 'expediente_concurso', 'ee_concurso',
+    'tipificador_origen', 'expediente_concurso',
     'puesto_solicitado', 'dispo_llamado',
     'fecha_caratulacion', 'fecha_autorizacion', 'fecha_ifacs', 'fecha_insal', 'estado_concurso',
     'expediente_designacion', 'puesto_designado', 'cuil_designado', 'nombre_apellido_designado',
@@ -135,6 +154,19 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
   const set = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
   const setBool = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }))
 
+  const handleCambioEspecialidadChange = (e) => {
+    const esCambio = e.target.value === 'SI'
+    setForm(prev => ({
+      ...prev,
+      cambio_especialidad: e.target.value,
+      // Si se desmarca, restaura los valores originales de la baja
+      ...(esCambio ? {} : {
+        puesto_baja:       initial?.puesto_baja       ?? '',
+        especialidad_baja: initial?.especialidad_baja ?? '',
+      })
+    }))
+  }
+
   const handleSiglaChange = (sigla) => {
     const found = SIGLAS_DATA.find(s => s.sigla === sigla)
     setForm(prev => ({
@@ -181,7 +213,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
   if (readOnly) return <PipelineViewCeetps initial={initial} onClose={onClose} />
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl my-8 border-t-4 border-teal-500">
 
         {/* Header */}
@@ -208,7 +240,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
           {/* 1 — Datos generales */}
           <Section title="Datos generales">
             <div className="grid grid-cols-4 gap-3">
-              <SelectField label="Usuario"           value={form.usuario}       onChange={set('usuario')}       options={OPCIONES_USUARIOS_CEETPS} cols={1} />
+              <StyledSelectField label="Usuario"           value={form.usuario}       onChange={set('usuario')}       options={OPCIONES_USUARIOS_CEETPS} cols={1} />
               <SiglaSearchField value={form.sigla_efector} onChange={handleSiglaChange} options={allowedSiglas} />
               <Field label="Descripción efector"     value={form.descr_efector} onChange={set('descr_efector')} cols={2} disabled={!!form.sigla_efector} />
               <EstadoConcursoField value={form.estado_concurso} />
@@ -219,14 +251,13 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
           <Section title="Concurso">
             <div className="grid grid-cols-4 gap-3">
               <Field         label="Conjuntos"                      value={form.tipificador_obra_servicio}  onChange={set('tipificador_obra_servicio')}  cols={2} />
-              <Field         label="Tipificador (Origen)"           value={form.tipificador_origen}         onChange={set('tipificador_origen')}         cols={2} />
-              <Field         label="Expediente Concurso"            value={form.expediente_concurso}        onChange={set('expediente_concurso')}        cols={2} />
-              <Field         label="EE Concurso"                    value={form.ee_concurso}               onChange={set('ee_concurso')}                cols={2} />
+              <Field         label="Tipificador (Origen)"           value={form.tipificador_origen}         onChange={set('tipificador_origen')}         cols={2} disabled={hasBajaLink} />
+              <Field         label="Expediente Concurso"            value={form.expediente_concurso}        onChange={set('expediente_concurso')}        cols={2} disabled={hasBajaLink} />
               <DateMaskField label="Fecha Caratulación"             value={form.fecha_caratulacion}         onChange={set('fecha_caratulacion')}         cols={1} />
               <DateMaskField label="Fecha Autorización"             value={form.fecha_autorizacion}         onChange={set('fecha_autorizacion')}         cols={1} />
               <DateMaskField label="Fecha IFACS"                    value={form.fecha_ifacs}               onChange={set('fecha_ifacs')}                cols={1} />
               <DateMaskField label="Fecha INSAL"                    value={form.fecha_insal}               onChange={set('fecha_insal')}                cols={1} />
-              <Field         label="Puesto Solicitado"              value={form.puesto_solicitado}         onChange={set('puesto_solicitado')}          cols={2} />
+              <StyledSelectField label="Puesto Solicitado"          value={form.puesto_solicitado}         onChange={set('puesto_solicitado')}          options={OPCIONES_PUESTO_CEETPS_TODOS} cols={2} />
               <Field         label="Dispo. Llamado a Concurso"      value={form.dispo_llamado}             onChange={set('dispo_llamado')}              cols={2} />
             </div>
           </Section>
@@ -235,7 +266,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
           <Section title="Designación">
             <div className="grid grid-cols-4 gap-3">
               <Field         label="Expediente Designación"       value={form.expediente_designacion}   onChange={set('expediente_designacion')}    cols={2} />
-              <Field         label="Puesto Designado"             value={form.puesto_designado}         onChange={set('puesto_designado')}          cols={2} />
+              <StyledSelectField label="Puesto Designado"         value={form.puesto_designado}         onChange={set('puesto_designado')}          options={OPCIONES_PUESTO_CEETPS_TODOS} cols={2} />
               <Field         label="CUIL Designado"               value={form.cuil_designado}           onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,11); setForm(p => ({...p, cuil_designado: v})) }} placeholder="20123456789" cols={1} />
               <Field         label="Nombre y Apellido"            value={form.nombre_apellido_designado} onChange={set('nombre_apellido_designado')} cols={3} />
               <Field         label="Estado Apto"                  value={form.estado_apto}              onChange={set('estado_apto')}               cols={1} />
@@ -252,18 +283,23 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
           {/* 4 — Datos de la Baja */}
           <Section title="Datos de la Baja / Ampliación">
             <div className="grid grid-cols-4 gap-3">
-              <Field         label="EX Baja / Ampliación"   value={form.ex_baja}          onChange={set('ex_baja')}          cols={3} />
-              <Field         label="Sigla"                  value={form.sigla}            onChange={set('sigla')}            cols={1} />
-              <Field         label="Efector"                value={form.efector}          onChange={set('efector')}          cols={2} />
-              <Field         label="Cargo (Código)"         value={form.cargo}            onChange={set('cargo')}            cols={1} />
-              <Field         label="CUIL"                   value={form.cuil}             onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,11); setForm(p => ({...p, cuil: v})) }} placeholder="20123456789" cols={1} />
-              <Field         label="Nombre y Apellido"      value={form.nombre_apellido_baja} onChange={set('nombre_apellido_baja')} cols={4} />
-              <Field         label="Puesto Baja"            value={form.puesto_baja}      onChange={set('puesto_baja')}      cols={2} />
-              <Field         label="Especialidad Baja"      value={form.especialidad_baja} onChange={set('especialidad_baja')} cols={2} />
-              <DateMaskField label="Fecha de Baja / Ampl."  value={form.fecha_baja}       onChange={set('fecha_baja')}       cols={1} />
-              <Field         label="Carga Horaria"          value={form.carga_horaria}    onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,2); setForm(p => ({...p, carga_horaria: v})) }} cols={1} />
-              <Field         label="Motivo de Baja"         value={form.motivo_baja}      onChange={set('motivo_baja')}      cols={2} />
-              <Field         label="Doc. Respaldatoria"     value={form.doc_respaldatoria} onChange={set('doc_respaldatoria')} cols={4} />
+              <Field         label="EX Baja / Ampliación"   value={form.ex_baja}          onChange={set('ex_baja')}          cols={3} disabled={hasBajaLink} />
+              <Field         label="Sigla"                  value={form.sigla}            onChange={set('sigla')}            cols={1} disabled={hasBajaLink} />
+              <Field         label="Efector"                value={form.efector}          onChange={set('efector')}          cols={2} disabled={hasBajaLink} />
+              <Field         label="Cargo (Código)"         value={form.cargo}            onChange={set('cargo')}            cols={1} disabled={hasBajaLink} />
+              <Field         label="CUIL"                   value={form.cuil}             onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,11); setForm(p => ({...p, cuil: v})) }} placeholder="20123456789" cols={1} disabled={hasBajaLink} />
+              <Field         label="Nombre y Apellido"      value={form.nombre_apellido_baja} onChange={set('nombre_apellido_baja')} cols={4} disabled={hasBajaLink} />
+              <StyledSelectField label="Puesto Baja"        value={form.puesto_baja}      onChange={set('puesto_baja')}      options={OPCIONES_PUESTO_CEETPS_TODOS} cols={2} disabled={hasBajaLink && form.cambio_especialidad !== 'SI'} />
+              <Field         label="Especialidad Baja"      value={form.especialidad_baja} onChange={set('especialidad_baja')} cols={2} disabled={hasBajaLink && form.cambio_especialidad !== 'SI'} />
+              <CheckField    label="Solicitud de cambio"    value={form.cambio_especialidad === 'SI'} onChange={(e) => handleCambioEspecialidadChange({ target: { value: e.target.value ? 'SI' : 'NO' } })} cols={1} />
+              {form.cambio_especialidad === 'SI'
+                ? <Field label="Documentación de cambio" value={form.doc_cambio_especialidad} onChange={set('doc_cambio_especialidad')} cols={3} />
+                : <div className="col-span-3" />
+              }
+              <DateMaskField label="Fecha de Baja / Ampl."  value={form.fecha_baja}       onChange={set('fecha_baja')}       cols={1} disabled={hasBajaLink} />
+              <Field         label="Carga Horaria"          value={form.carga_horaria}    onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,2); setForm(p => ({...p, carga_horaria: v})) }} cols={1} disabled={hasBajaLink} />
+              <Field         label="Motivo de Baja"         value={form.motivo_baja}      onChange={set('motivo_baja')}      cols={2} disabled={hasBajaLink} />
+              <Field         label="Doc. Respaldatoria"     value={form.doc_respaldatoria} onChange={set('doc_respaldatoria')} cols={4} disabled={hasBajaLink} />
             </div>
           </Section>
 
@@ -316,7 +352,6 @@ function PipelineViewCeetps({ initial, onClose }) {
         ['Tipif./Obra/Serv.',   initial?.tipificador_obra_servicio],
         ['Tipif. Origen',       initial?.tipificador_origen],
         ['Exp. Concurso',       initial?.expediente_concurso],
-        ['EE Concurso',         initial?.ee_concurso],
         ['F. Caratulación',     initial?.fecha_caratulacion],
         ['F. Autorización',     initial?.fecha_autorizacion],
         ['Puesto Solicitado',   initial?.puesto_solicitado],
@@ -365,7 +400,7 @@ function PipelineViewCeetps({ initial, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 border-t-4 border-teal-500">
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
           <div>
@@ -435,22 +470,6 @@ function EstadoConcursoField({ value }) {
   )
 }
 
-function Section({ title, children, defaultOpen = true }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="space-y-3">
-      <button type="button" onClick={() => setOpen(o => !o)} className="flex items-center gap-3 w-full group">
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-200${open ? '' : ' -rotate-90'}`} />
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-700 transition-colors">{title}</h3>
-        </div>
-        <div className="flex-1 h-px bg-gray-200" />
-      </button>
-      {open && children}
-    </div>
-  )
-}
-
 function Field({ label, value, onChange, placeholder = '', type = 'text', cols = 1, disabled = false }) {
   const displayValue = disabled && !value ? '—' : (value ?? '')
   return (
@@ -462,44 +481,76 @@ function Field({ label, value, onChange, placeholder = '', type = 'text', cols =
   )
 }
 
-function SelectField({ label, value, onChange, cols = 1, options = [], disabled = false }) {
+// ─── StyledSelectField — mismo look del buscador, sin caja de búsqueda ───────
+// (para selects con pocas opciones, donde no hace falta buscar)
+function StyledSelectField({ label, value, onChange, options = [], cols = 1, disabled = false }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const handleSelect = (opt) => {
+    onChange({ target: { value: opt } })
+    setOpen(false)
+  }
+
   return (
-    <div className={`col-span-${cols}`}>
+    <div className={`col-span-${cols}`} ref={wrapRef}>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select value={value ?? ''} onChange={onChange} disabled={disabled} className={`form-input text-sm w-full${disabled ? ' cursor-default' : ''}`}>
-        <option value="">Seleccionar...</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => !disabled && setOpen(o => !o)}
+          disabled={disabled}
+          className={`form-input text-sm w-full text-left flex items-center justify-between gap-1 pr-7${disabled ? ' cursor-default' : ''}`}
+        >
+          {value ? (
+            <span className="text-gray-900 truncate">{value}</span>
+          ) : (
+            <span className="text-gray-400">{disabled ? '—' : 'Seleccionar...'}</span>
+          )}
+          <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+
+        {open && (
+          <div className="absolute z-40 left-0 top-full mt-1 w-full max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              {options.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin opciones</div>
+              ) : options.map(opt => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => handleSelect(opt)}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors ${opt === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function CheckField({ label, value, onChange, cols = 1 }) {
-  return (
-    <div className={`col-span-${cols}`}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <label className="flex items-center gap-2 form-input text-sm w-full select-none cursor-pointer hover:bg-gray-50">
-        <input type="checkbox" checked={!!value} onChange={e => onChange({ target: { value: e.target.checked } })}
-          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 pointer-events-none" />
-        <span className={`text-sm ${!!value ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{!!value ? 'Sí' : 'No'}</span>
-      </label>
-    </div>
-  )
-}
-
-function DateMaskField({ label, value, onChange, cols = 1 }) {
+function DateMaskField({ label, value, onChange, cols = 1, disabled = false }) {
   const handleChange = (e) => {
-    let v = e.target.value.replace(/[^\d]/g, '')
-    if (v.length > 2) v = v.slice(0, 2) + '-' + v.slice(2)
-    if (v.length > 5) v = v.slice(0, 5) + '-' + v.slice(5)
-    if (v.length > 10) v = v.slice(0, 10)
-    onChange({ target: { value: v } })
+    onChange({ target: { value: formatDateMask(e.target.value) } })
   }
   return (
     <div className={`col-span-${cols}`}>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input type="text" value={value ?? ''} onChange={handleChange} placeholder="dd-mm-aaaa" maxLength={10}
-        className="form-input text-sm w-full font-mono" />
+      <input type="text" value={disabled && !value ? '—' : (value ?? '')} onChange={disabled ? undefined : handleChange}
+        placeholder={disabled ? '' : 'dd/mm/aaaa'} maxLength={10} disabled={disabled}
+        className={`form-input text-sm w-full font-mono${disabled ? ' cursor-default' : ''}`} />
     </div>
   )
 }
@@ -549,7 +600,7 @@ function SiglaSearchField({ value, onChange, options = SIGLAS_DATA }) {
           </button>
         )}
         {open && (
-          <div className="absolute z-40 left-0 top-full mt-1 w-[380px] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+          <div className="absolute z-40 left-0 top-full mt-1 w-[380px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
             <div className="max-h-64 overflow-y-auto">
               {filtered.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin resultados</div>

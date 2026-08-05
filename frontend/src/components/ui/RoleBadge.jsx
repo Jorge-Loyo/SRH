@@ -7,6 +7,7 @@ const ROLE_STYLES = {
   director:    'bg-purple-100 text-purple-700',
   gerencia:    'bg-amber-100 text-amber-700',
   concursales: 'bg-teal-100 text-teal-700',
+  autoridades: 'bg-indigo-100 text-indigo-700',
 }
 
 const ROLE_LABELS = {
@@ -16,6 +17,7 @@ const ROLE_LABELS = {
   director:    'Director',
   gerencia:    'Gerencia',
   concursales: 'Concursales',
+  autoridades: 'Autoridades',
 }
 
 /**

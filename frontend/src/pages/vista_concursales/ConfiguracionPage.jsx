@@ -71,7 +71,7 @@ function FieldPickerModal({ selectedField, onSelect, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]">
@@ -529,13 +529,18 @@ function ConfigSection({ getConfig, saveConfig, campos, grupos, title, descripti
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 
-const CONFIG_WRITE_ROLES = ['admin', 'editor']
+const CONFIG_WRITE_ROLES = ['admin', 'editor', 'gerencia', 'concursales']
 
 export default function ConfiguracionPage() {
   const { user } = useAuth()
-  const canEdit = CONFIG_WRITE_ROLES.includes(user?.role)
+  const role = user?.role
+  const canEdit = CONFIG_WRITE_ROLES.includes(role)
 
-  const [activeTab, setActiveTab] = useState('cph')
+  // concursales solo ve CEETPS; gerencia solo ve CPH; resto ve ambas
+  const canSeeCph    = role !== 'concursales'
+  const canSeeCeetps = role !== 'gerencia'
+
+  const [activeTab, setActiveTab] = useState(() => role === 'concursales' ? 'ceetps' : 'cph')
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -546,32 +551,34 @@ export default function ConfiguracionPage() {
           <p className="text-sm text-gray-500 mt-1">Procesos Concursales</p>
         </div>
 
-        {/* Tabs CPH / CEETPS */}
-        <div className="flex border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('cph')}
-            className={`px-6 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'cph'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            CPH
-          </button>
-          <button
-            onClick={() => setActiveTab('ceetps')}
-            className={`px-6 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'ceetps'
-                ? 'border-teal-500 text-teal-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            CEETPS
-          </button>
-        </div>
+        {/* Tabs CPH / CEETPS — visibles según rol */}
+        {(canSeeCph && canSeeCeetps) && (
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('cph')}
+              className={`px-6 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === 'cph'
+                  ? 'border-indigo-500 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              CPH
+            </button>
+            <button
+              onClick={() => setActiveTab('ceetps')}
+              className={`px-6 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
+                activeTab === 'ceetps'
+                  ? 'border-teal-500 text-teal-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              CEETPS
+            </button>
+          </div>
+        )}
 
         {/* Sección CPH */}
-        {activeTab === 'cph' && (
+        {canSeeCph && activeTab === 'cph' && (
           <ConfigSection
             getConfig={configApi.getConjuntos}
             saveConfig={configApi.saveConjuntos}
@@ -585,7 +592,7 @@ export default function ConfiguracionPage() {
         )}
 
         {/* Sección CEETPS */}
-        {activeTab === 'ceetps' && (
+        {canSeeCeetps && activeTab === 'ceetps' && (
           <ConfigSection
             getConfig={configApi.getConjuntosCeetps}
             saveConfig={configApi.saveConjuntosCeetps}

@@ -1,6 +1,7 @@
-const { ILike, Between, MoreThanOrEqual, LessThanOrEqual, In } = require('typeorm');
+const { ILike, In } = require('typeorm');
 const logger = require('../../utils/logger');
 const { calcEstado, calcSubEstado, calcSubEstado3 } = require('../seguimiento-cph/seguimientoCphCalc');
+const { applyLike, applyDateRange } = require('../../utils/filterHelpers');
 
 /**
  * BajaConsolidadaService — Módulo Bajas
@@ -44,6 +45,18 @@ class BajaConsolidadaService {
     return [87, 85, 83].includes(Number(codigo_registro));
   }
 
+  /**
+   * Evalúa si corresponde crear/mantener el seguimiento CEETPS.
+   * Regla: codigo_registro en [87, 85, 83] Y genera_concurso = 'SI' (ambos obligatorios).
+   * @param {string|null} genera_concurso
+   * @param {number|string|null} codigo_registro
+   * @returns {boolean}
+   */
+  static evaluarGeneraCeetps(genera_concurso, codigo_registro) {
+    if (!BajaConsolidadaService.evaluarCeetps(codigo_registro)) return false;
+    return !!genera_concurso && genera_concurso.toUpperCase() === 'SI';
+  }
+
   // ─── Regla CPH ───────────────────────────────────────────────────────────────
   /**
    * Evalúa si una baja cumple la regla CPH.
@@ -73,6 +86,7 @@ class BajaConsolidadaService {
   static buildCeetpsPayload(baja) {
     return {
       id_baja:              baja.id,
+      usuario:              baja.usuario,
       codigo_registro:      baja.codigo_registro,
       sigla_efector:        baja.sigla,
       descr_efector:        baja.efector,
@@ -123,6 +137,7 @@ class BajaConsolidadaService {
       fecha_pase_paralelo:     baja.fecha_pase_paralelo,
       partida_presupuestaria:  baja.partida_presupuestaria,
       unificador_puestos:      baja.unificador_puestos,
+      ee_concurso:             baja.expediente_concurso,
     };
     payload.estado       = calcEstado(payload);
     payload.sub_estado   = calcSubEstado(payload);
@@ -152,39 +167,35 @@ class BajaConsolidadaService {
     } = options;
 
     const where = {};
-    if (sigla)              where.sigla              = ILike(`%${sigla}%`);
-    if (cuil)               where.cuil               = ILike(`%${cuil}%`);
-    if (nombre_apellido)    where.nombre_apellido    = ILike(`%${nombre_apellido}%`);
-    if (puesto_baja)        where.puesto_baja        = ILike(`%${puesto_baja}%`);
-    if (escalafon)          where.escalafon          = ILike(`%${escalafon}%`);
+    applyLike(where, 'sigla', sigla);
+    applyLike(where, 'cuil', cuil);
+    applyLike(where, 'nombre_apellido', nombre_apellido);
+    applyLike(where, 'puesto_baja', puesto_baja);
+    applyLike(where, 'escalafon', escalafon);
     if (genera_concurso)    where.genera_concurso    = genera_concurso;
     if (es_cph !== undefined && es_cph !== null) where.es_cph = es_cph;
-    if (motivo_baja)        where.motivo_baja        = ILike(`%${motivo_baja}%`);
+    applyLike(where, 'motivo_baja', motivo_baja);
     // origenes (lista de módulo) tiene prioridad sobre origen (filtro individual)
     if (origenes) {
       const lista = origenes.split(',').map(o => o.trim()).filter(Boolean);
       if (lista.length) where.origen = In(lista);
-    } else if (origen) {
-      where.origen = ILike(`%${origen}%`);
+    } else {
+      applyLike(where, 'origen', origen);
     }
-    if (tipo_efector)       where.tipo_efector       = ILike(`%${tipo_efector}%`);
-    if (unificador_puestos) where.unificador_puestos = ILike(`%${unificador_puestos}%`);
-    if (usuario)            where.usuario            = ILike(`%${usuario}%`);
-    if (pou_pof)            where.pou_pof            = ILike(`%${pou_pof}%`);
-    if (especialidad_baja)  where.especialidad_baja  = ILike(`%${especialidad_baja}%`);
-    if (ex_baja)            where.ex_baja            = ILike(`%${ex_baja}%`);
-    if (codigo_cargo)       where.codigo_cargo       = ILike(`%${codigo_cargo}%`);
-    if (cargo_baja)         where.cargo_baja         = ILike(`%${cargo_baja}%`);
+    applyLike(where, 'tipo_efector', tipo_efector);
+    applyLike(where, 'unificador_puestos', unificador_puestos);
+    applyLike(where, 'usuario', usuario);
+    applyLike(where, 'pou_pof', pou_pof);
+    applyLike(where, 'especialidad_baja', especialidad_baja);
+    applyLike(where, 'ex_baja', ex_baja);
+    applyLike(where, 'codigo_cargo', codigo_cargo);
+    applyLike(where, 'cargo_baja', cargo_baja);
     if (codigo_registro !== undefined && codigo_registro !== null) where.codigo_registro = codigo_registro;
-    if (partida_presupuestaria) where.partida_presupuestaria = ILike(`%${partida_presupuestaria}%`);
-    if (carga_horaria)      where.carga_horaria      = ILike(`%${carga_horaria}%`);
-    if (doc_respaldatoria)  where.doc_respaldatoria  = ILike(`%${doc_respaldatoria}%`);
-    if (fecha_baja_desde && fecha_baja_hasta) where.fecha_baja = Between(fecha_baja_desde, fecha_baja_hasta);
-    else if (fecha_baja_desde) where.fecha_baja = MoreThanOrEqual(fecha_baja_desde);
-    else if (fecha_baja_hasta) where.fecha_baja = LessThanOrEqual(fecha_baja_hasta);
-    if (fecha_pase_paralelo_desde && fecha_pase_paralelo_hasta) where.fecha_pase_paralelo = Between(fecha_pase_paralelo_desde, fecha_pase_paralelo_hasta);
-    else if (fecha_pase_paralelo_desde) where.fecha_pase_paralelo = MoreThanOrEqual(fecha_pase_paralelo_desde);
-    else if (fecha_pase_paralelo_hasta) where.fecha_pase_paralelo = LessThanOrEqual(fecha_pase_paralelo_hasta);
+    applyLike(where, 'partida_presupuestaria', partida_presupuestaria);
+    applyLike(where, 'carga_horaria', carga_horaria);
+    applyLike(where, 'doc_respaldatoria', doc_respaldatoria);
+    applyDateRange(where, 'fecha_baja', fecha_baja_desde, fecha_baja_hasta);
+    applyDateRange(where, 'fecha_pase_paralelo', fecha_pase_paralelo_desde, fecha_pase_paralelo_hasta);
 
     // Búsqueda global: nombre o CUIL
     if (search) {
@@ -223,10 +234,13 @@ class BajaConsolidadaService {
    * @returns {Promise<{ baja: object, seguimiento: object|null }>}
    */
   async create(payload) {
-    const esCeetps = BajaConsolidadaService.evaluarCeetps(payload.codigo_registro);
-    const esCph    = BajaConsolidadaService.evaluarCph(
+    const esCph = BajaConsolidadaService.evaluarCph(
       payload.genera_concurso,
       payload.puesto_baja,
+      payload.codigo_registro,
+    );
+    const generaCeetps = BajaConsolidadaService.evaluarGeneraCeetps(
+      payload.genera_concurso,
       payload.codigo_registro,
     );
 
@@ -249,7 +263,7 @@ class BajaConsolidadaService {
         logger.info('[BajaConsolidadaService] Seguimiento CPH creado automáticamente', {
           id_baja: savedBaja.id, id_seguimiento: seguimiento.id,
         });
-      } else if (esCeetps && this.seguimientoCeetpsRepository) {
+      } else if (generaCeetps && this.seguimientoCeetpsRepository) {
         const ceetpsTxRepo   = manager.getRepository(this.seguimientoCeetpsRepository.target);
         const ceetpsPayload  = BajaConsolidadaService.buildCeetpsPayload(savedBaja);
         const ceetpsEntity   = ceetpsTxRepo.create(ceetpsPayload);
@@ -277,8 +291,8 @@ class BajaConsolidadaService {
     const generaConcurso  = payload.genera_concurso  ?? existing.genera_concurso;
     const puestoBaja      = payload.puesto_baja       ?? existing.puesto_baja;
     const codigoRegistro  = payload.codigo_registro   ?? existing.codigo_registro;
-    const esCeetps        = BajaConsolidadaService.evaluarCeetps(codigoRegistro);
     const esCph           = BajaConsolidadaService.evaluarCph(generaConcurso, puestoBaja, codigoRegistro);
+    const generaCeetps    = BajaConsolidadaService.evaluarGeneraCeetps(generaConcurso, codigoRegistro);
 
     await this.bajaRepository.update({ id: Number(id) }, { ...payload, es_cph: esCph });
 
@@ -322,6 +336,7 @@ class BajaConsolidadaService {
       if (payload.fecha_pase_paralelo !== undefined) seguimientoFields.fecha_pase_paralelo    = payload.fecha_pase_paralelo;
       if (payload.partida_presupuestaria !== undefined) seguimientoFields.partida_presupuestaria = payload.partida_presupuestaria;
       if (payload.unificador_puestos  !== undefined) seguimientoFields.unificador_puestos     = payload.unificador_puestos;
+      if (payload.expediente_concurso !== undefined) seguimientoFields.ee_concurso            = payload.expediente_concurso;
       if (Object.keys(seguimientoFields).length > 0) {
         // Recalcular Estado/Sub-estado/Sub-estado 3 con los campos ya
         // actualizados, para que no queden pisados con el valor de la
@@ -338,15 +353,15 @@ class BajaConsolidadaService {
     if (this.seguimientoCeetpsRepository) {
       const existingCeetps = await this.seguimientoCeetpsRepository.findOne({ where: { id_baja: Number(id) } });
 
-      if (esCeetps && !existingCeetps) {
+      if (generaCeetps && !existingCeetps) {
         const ceetpsPayload = BajaConsolidadaService.buildCeetpsPayload(updatedBaja);
         const ceetpsEntity  = this.seguimientoCeetpsRepository.create(ceetpsPayload);
         await this.seguimientoCeetpsRepository.save(ceetpsEntity);
         logger.info('[BajaConsolidadaService] Seguimiento CEETPS creado desde update()', { id_baja: id });
-      } else if (!esCeetps && existingCeetps) {
+      } else if (!generaCeetps && existingCeetps) {
         await this.seguimientoCeetpsRepository.delete({ id_baja: Number(id) });
         logger.info('[BajaConsolidadaService] Seguimiento CEETPS eliminado desde update()', { id_baja: id });
-      } else if (esCeetps && existingCeetps) {
+      } else if (generaCeetps && existingCeetps) {
         const syncFields = {};
         if (payload.usuario           !== undefined) syncFields.usuario           = payload.usuario;
         if (payload.sigla             !== undefined) { syncFields.sigla_efector   = payload.sigla; syncFields.sigla = payload.sigla; }
@@ -363,8 +378,7 @@ class BajaConsolidadaService {
         if (payload.doc_respaldatoria !== undefined) syncFields.doc_respaldatoria = payload.doc_respaldatoria;
         if (payload.codigo_registro   !== undefined) syncFields.codigo_registro   = payload.codigo_registro;
         if (payload.fecha_caratulacion !== undefined) syncFields.fecha_caratulacion = payload.fecha_caratulacion;
-        // expediente_concurso: no pisar el valor ya cargado en CEETPS si en la Baja todavía no se cargó nada
-        if (payload.expediente_concurso) syncFields.expediente_concurso = payload.expediente_concurso;
+        if (payload.expediente_concurso !== undefined) syncFields.expediente_concurso = payload.expediente_concurso;
         if (Object.keys(syncFields).length > 0) {
           await this.seguimientoCeetpsRepository.update({ id_baja: Number(id) }, syncFields);
         }

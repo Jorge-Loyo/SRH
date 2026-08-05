@@ -1,0 +1,12 @@
+{
+  "orden_columnas": [
+    "ID SIGLA",
+    "SIGLA",
+    "Tipo de Hospital / Sigla",
+    "UNIVERSO TOTALIZADOR",
+    "Monovalencia"
+  ],
+  "columnas_agregadas": {
+    "ID SIGLA": 1
+  }
+}

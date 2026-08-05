@@ -27,8 +27,10 @@ export function ProtectedRoute({ children, roles }) {
 
   if (roles && !roles.includes(user.role)) {
     // El usuario está autenticado pero no tiene el rol necesario.
-    // Director va a su dashboard propio para evitar loop infinito en "/"
-    const fallback = user.role === 'director' ? '/director' : '/'
+    // Director y Autoridades van a su página propia para evitar loop infinito en "/"
+    const fallback = user.role === 'director' ? '/director'
+      : user.role === 'autoridades' ? '/organigrama'
+      : '/'
     return <Navigate to={fallback} replace />
   }
 

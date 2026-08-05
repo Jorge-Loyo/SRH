@@ -1,92 +1,18 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChartBarSquareIcon, ArrowLeftIcon, UserIcon,
-  ChevronRightIcon, ChevronDownIcon, ArrowPathIcon,
+  ChartBarSquareIcon, ArrowLeftIcon,
+  ChevronDownIcon, ChevronUpIcon, ArrowPathIcon, ExclamationTriangleIcon,
+  MagnifyingGlassIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { apiGet } from '../../api/client';
 import Spinner from '../../components/ui/Spinner';
 import PeriodoSelect from '../../components/ui/PeriodoSelect';
 import OrganigramaFlowView from './OrganigramaFlowView';
-
-// Paleta de colores por tipo de nodo
-const TIPO_COLOR = {
-  Ministerio:           'bg-gray-700 text-white',
-  AREA:                 'bg-gray-600 text-white',
-  'SSEC/DIREJE':        'bg-gray-500 text-white',
-  GO:                   'bg-primary-700 text-white',
-  SGO:                  'bg-primary-600 text-white',
-  DG:                   'bg-primary-500 text-white',
-  DHOS:                 'bg-teal-600 text-white',
-  SDHOS:                'bg-teal-500 text-white',
-  REGIMEN:              'bg-amber-500 text-white',
-  DEPT:                 'bg-indigo-600 text-white',
-  'DEPT CA':            'bg-indigo-500 text-white',
-  DIV:                  'bg-purple-600 text-white',
-  'DIV CA':             'bg-purple-500 text-white',
-  UNID:                 'bg-sky-600 text-white',
-  SECCION:              'bg-sky-500 text-white',
-  SECC:                 'bg-sky-500 text-white',
-};
-function tipoColor(tipo) {
-  return TIPO_COLOR[tipo] || 'bg-gray-200 text-gray-700';
-}
-
-// Un nodo del árbol (recursivo)
-const TreeNode = memo(function TreeNode({ node, depth = 0 }) {
-  const [open, setOpen] = useState(depth < 3);
-  const hasChildren = node.children && node.children.length > 0;
-  const indent = depth * 20;
-
-  return (
-    <div>
-      <div
-        className={`flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 transition-colors
-          ${depth === 0 ? 'mb-1' : ''}`}
-        style={{ marginLeft: indent }}>
-        {/* Toggle / Spacer */}
-        <button
-          onClick={() => setOpen(o => !o)}
-          className={`flex-shrink-0 mt-0.5 w-5 h-5 flex items-center justify-center rounded ${hasChildren ? 'text-gray-500 hover:text-gray-800' : 'text-transparent cursor-default'}`}>
-          {hasChildren
-            ? (open ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />)
-            : null}
-        </button>
-
-        {/* Tipo badge */}
-        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 mt-0.5 ${tipoColor(node.title)}`}>
-          {node.title}
-        </span>
-
-        {/* Nombre + persona */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 leading-tight">{node.name}</p>
-          {node.persona ? (
-            <p className="text-xs text-primary-700 flex items-center gap-1 mt-0.5">
-              <UserIcon className="w-3 h-3 flex-shrink-0" />
-              {node.persona.nombre}
-              {node.persona.cargo && <span className="text-gray-400 ml-1">· {node.persona.cargo}</span>}
-            </p>
-          ) : (
-            <p className="text-xs text-gray-300 mt-0.5 italic">Vacante</p>
-          )}
-          {node.id && (
-            <p className="text-[10px] text-gray-300 font-mono mt-0.5">{node.id}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Hijos */}
-      {hasChildren && open && (
-        <div>
-          {node.children.map(child => (
-            <TreeNode key={child.id} node={child} depth={depth + 1} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
+import VacantesModal from './VacantesModal';
+import PersonaModal from './PersonaModal';
+import { searchOrgTree } from '../../utils/organigramaHelpers';
+import { TreeNode, collectVacantes } from './OrganigramaTreeNode';
 
 export default function OrganigramaDetallePage() {
   const { code } = useParams();
@@ -97,8 +23,56 @@ export default function OrganigramaDetallePage() {
   const [state, setState] = useState({ loading: true, data: null, error: null });
   const [viewMode, setViewMode] = useState('arbol'); // 'arbol' | 'diagrama'
   const [resetKey, setResetKey] = useState(0);
+  const [vacantesOpen, setVacantesOpen] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchIndex, setSearchIndex] = useState(-1);
+  const [jumpSignal, setJumpSignal] = useState(null); // { id, path, nonce }
+  const [highlightId, setHighlightId] = useState(null);
+  const jumpNonceRef = useRef(0);
 
   const sigla = code?.toUpperCase() || '';
+  const vacantes = useMemo(() => state.data ? collectVacantes(state.data) : [], [state.data]);
+
+  const searchMatches = useMemo(
+    () => state.data ? searchOrgTree(state.data, searchQuery) : [],
+    [state.data, searchQuery]
+  );
+
+  // Cada vez que cambian los resultados (nueva búsqueda) saltamos al primero
+  useEffect(() => {
+    setSearchIndex(searchMatches.length ? 0 : -1);
+  }, [searchMatches]);
+
+  // Cada cambio de índice dispara un "salto": expandir ancestros + resaltar
+  useEffect(() => {
+    const match = searchMatches[searchIndex];
+    if (!match) { setJumpSignal(null); return; }
+    jumpNonceRef.current += 1;
+    setJumpSignal({ ...match, nonce: jumpNonceRef.current });
+  }, [searchIndex, searchMatches]);
+
+  // El resaltado es un flash momentáneo, se apaga solo
+  useEffect(() => {
+    if (!jumpSignal) return;
+    setHighlightId(jumpSignal.id);
+    const t = setTimeout(() => setHighlightId(null), 1800);
+    return () => clearTimeout(t);
+  }, [jumpSignal]);
+
+  const forceOpenIds = useMemo(() => new Set(jumpSignal?.path || []), [jumpSignal]);
+
+  const jumpToVacante = useCallback((v) => {
+    jumpNonceRef.current += 1;
+    setJumpSignal({ id: v.id, path: v.idPath || [], nonce: jumpNonceRef.current });
+  }, []);
+
+  const goToMatch = useCallback((delta) => {
+    setSearchIndex(i => {
+      if (!searchMatches.length) return -1;
+      return (i + delta + searchMatches.length) % searchMatches.length;
+    });
+  }, [searchMatches.length]);
 
   // Cargar períodos disponibles (usando pou o periodos del hospital)
   useEffect(() => {
@@ -148,7 +122,56 @@ export default function OrganigramaDetallePage() {
             <ChartBarSquareIcon className="w-5 h-5 text-primary-700" />
             <h1 className="text-lg font-bold text-gray-900">Organigrama – {sigla}</h1>
           </div>
-          <div className="flex items-center gap-3">
+          {/* Buscador */}
+          <div className="flex items-center gap-1.5">
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar puesto, persona, código..."
+                className="pl-7 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg w-44 focus:w-64 transition-all focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : 'Sin resultados'}
+              </span>
+            )}
+            {searchMatches.length > 1 && (
+              <>
+                <button onClick={() => goToMatch(-1)} title="Anterior"
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                  <ChevronUpIcon className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => goToMatch(1)} title="Siguiente"
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                  <ChevronDownIcon className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Botón Vacantes */}
+            <button
+              onClick={() => setVacantesOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors">
+              <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+              Vacantes
+              {vacantes.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-600 text-white text-[10px] font-bold">
+                  {vacantes.length}
+                </span>
+              )}
+            </button>
             {/* Switcher de vistas */}
             <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
               {[{ key: 'arbol', label: 'Árbol' }, { key: 'diagrama', label: 'Diagrama' }].map(v => (
@@ -164,7 +187,7 @@ export default function OrganigramaDetallePage() {
             </div>
             {/* Botón Reiniciar */}
             <button
-              onClick={() => setResetKey(k => k + 1)}
+              onClick={() => { setResetKey(k => k + 1); setSearchQuery(''); }}
               className="flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors"
               title="Reiniciar vista">
               <ArrowPathIcon className="w-3.5 h-3.5" />
@@ -192,10 +215,16 @@ export default function OrganigramaDetallePage() {
           <div className="flex justify-center py-16"><Spinner size="lg" /></div>
         ) : state.data ? (
           viewMode === 'diagrama' ? (
-            <OrganigramaFlowView data={state.data} resetKey={resetKey} />
+            <OrganigramaFlowView
+              data={state.data} resetKey={resetKey} sigla={sigla} onPersonaClick={setSelectedPersona}
+              jumpSignal={jumpSignal} highlightId={highlightId}
+            />
           ) : (
             <div className="px-4 py-4 max-w-4xl">
-              <TreeNode key={resetKey} node={state.data} depth={0} />
+              <TreeNode
+                key={resetKey} node={state.data} depth={0} onPersonaClick={setSelectedPersona}
+                forceOpenIds={forceOpenIds} highlightId={highlightId}
+              />
             </div>
           )
         ) : (
@@ -205,6 +234,19 @@ export default function OrganigramaDetallePage() {
           </div>
         )}
       </div>
+
+      <VacantesModal
+        open={vacantesOpen}
+        onClose={() => setVacantesOpen(false)}
+        vacantes={vacantes}
+        sigla={sigla}
+        onSelect={jumpToVacante}
+      />
+      <PersonaModal
+        open={!!selectedPersona}
+        onClose={() => setSelectedPersona(null)}
+        data={selectedPersona}
+      />
     </div>
   );
 }

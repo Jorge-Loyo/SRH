@@ -56,7 +56,9 @@ export default function TokensPage() {
         await apiPatch(`/api/seguridad/tokens/user/${encodeURIComponent(username)}/revoke`);
       }
       fetchData({ page: stateRef.current.page });
-    } catch { /* silencioso */ } finally { setRevoking(null); }
+    } catch (e) {
+      setState((s) => ({ ...s, error: e.message || 'Error al revocar el token' }));
+    } finally { setRevoking(null); }
   };
 
   const totalPages = Math.max(1, Math.ceil(state.total / pageSize));

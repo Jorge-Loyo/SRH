@@ -17,6 +17,8 @@ export const ESTADOS_CPH = {
 
 export const COLORES_ESTADO_CPH = {
   'SUSPENDIDO':        { bg: '#ECEFF1', text: '#455a64', ring: '#90a4ae' },
+  'NO INICIADO':       { bg: '#FAFAFA', text: '#616161', ring: '#bdbdbd' },
+  'ACTIVO':            { bg: '#E8F5E9', text: '#1b5e20', ring: '#66bb6a' },
   'A-VALID. VCTE':     { bg: '#FFF8E1', text: '#f57f17', ring: '#ffca28' },
   'B-AUTORIZADO':      { bg: '#E8F5E9', text: '#2e7d32', ring: '#66bb6a' },
   'C-INSCRIPCION':     { bg: '#E3F2FD', text: '#1565c0', ring: '#42a5f5' },
@@ -56,16 +58,11 @@ export function boolLabel(val) {
   return '—'
 }
 
-/** Lista de opciones de estado para filtros */
+/** Opciones del campo "Estado" (los 4 valores reales de calcEstado) */
 export const OPCIONES_ESTADO = [
   'SUSPENDIDO',
-  'A-VALID. VCTE',
-  'B-AUTORIZADO',
-  'C-INSCRIPCION',
-  'D-ETAPA EVAL',
-  'E-ADJUDI',
-  'F-PROX. A DESIG',
-  'H-DESIERTO',
+  'ACTIVO',
+  'NO INICIADO',
   'FINALIZADO',
 ]
 
@@ -90,8 +87,22 @@ export const OPCIONES_ESCALAFON = [
   'Administrativo',
 ]
 
-export const OPCIONES_USUARIOS            = ['Nahila', 'Luka', 'Joe', 'Mariano', 'Lucía', 'Alexis']
+export const OPCIONES_USUARIOS            = ['Nahila', 'Luka', 'Joe', 'Mariano', 'Lucía', 'Alexis', 'Angelo']
 export const OPCIONES_USUARIOS_CEETPS     = ['Laura', 'Christian', 'Camila', 'Diego', 'Lorena', 'Mariela', 'Daiana', 'Fiorella']
+
+/**
+ * Siglas habilitadas por usuario en Bajas Consolidadas.
+ * null = todas las siglas disponibles (Mariano tiene asignados todos los hospitales).
+ */
+export const SIGLAS_POR_USUARIO_BAJAS = {
+  Nahila: ['CSMA', 'DGSCOM', 'EAIT', 'HGARM', 'HGAT', 'HGAVS', 'HGNRG', 'DGESAME', 'HIJCTG', 'HQ', 'HRR', 'DGSAM', 'DGHOSP', 'SSAH', 'URO', 'DGDIYDP', 'DGGECDSSP', 'TPRPS'],
+  'Lucía': ['DGATP', 'HMIRS', 'SSAPAC', 'HGAJAF', 'IRPS', 'HRRMF'],
+  Joe:     ['HGACD', 'HGNPE', 'HGAZ', 'HSL', 'HGAP', 'HMO', 'HO', 'HOI', 'IZLP'],
+  Angelo:  ['HNBM', 'HNJTB', 'HGAPP', 'HOPL', 'HBU', 'HEPTA', 'HGACA', 'HGAIP', 'HGATA'],
+  Luka:    ['HGACG', 'HMOMC', 'HBR', 'HGADS', 'HIFJM'],
+  Alexis:  null,
+  Mariano: null,
+}
 
 /**
  * Siglas habilitadas por usuario en Seguimiento CEETPS.
@@ -112,6 +123,270 @@ export const OPCIONES_ESCALAFON_BAJAS     = ['Médico', 'No Médico']
 export const OPCIONES_ESCALAFON_SEGUIMIENTO = ['POU', 'POF']
 export const OPCIONES_UNIFICADOR_PUESTOS  = ['CPH de Guardia', 'CPH de Planta', 'Jefaturas']
 export const OPCIONES_ORIGEN              = ['Alta por Baja', 'Ampliación', 'Cobertura Dotación', 'POU a POF']
+export const ORIGENES_MODULO = {
+  1: ['Ampliación', 'POU a POF'],
+  2: ['Alta por Baja', 'Cobertura Dotación'],
+}
+
+// ─── CEETPS — escalafón automático por código de registro ─────────────────────
+export const CEETPS_ESCALAFON_POR_CODIGO = {
+  87: 'Enfermería',
+  85: 'Técnicos',
+  83: 'Servicios',
+}
+
+// ─── CEETPS — "Unificador de puestos" automático por código de registro ───────
+export const CEETPS_UNIFICADOR_POR_CODIGO = {
+  87: 'Nueva Carrera de Enfermería',
+  85: 'CEETPS',
+  83: 'Escalafón General',
+}
+
+export const CEETPS_PUESTOS = {
+  'Técnicos': [
+    'Tec. en Laboratorio',
+    'Tec. en Citologia',
+    'Tec. en Esterilizacion',
+    'Tec. en Anestesiologia',
+    'Tec. en Instrumentacion quirurgica',
+    'Tec. en Radiologia',
+    'Tec. en Hemoterapia',
+    'Tec. en Practicas cardiologicas',
+    'Tec. en Laboratorio de patologia',
+    'Tec. en Mecanica dental',
+    'Tec. en Farmacia',
+    'Tec. en Neurofisiologia',
+    'Tec. en Hematologia',
+    'Tec. en Optica',
+    'Tec. en Dialisis',
+    'Tec. en Quimica',
+    'Tec. en Necropsia',
+    'Tec. en Medicina nuclear',
+    'Tec. en Perfusion',
+    'Tec. en Ortesis y Protesis',
+    'Tec. en Podologia',
+    'Tec. en Biotecnologia',
+    'Tec. en Densiometria',
+    'Tec. en Asistencia dental',
+    'Bioterio',
+    'Lic. en Produccion de bioimagenes',
+    'Lic. en Instrumentacion quirurgica',
+    'Lic. en Órtesis y Prótesis',
+    'Lic. en Biotecnología',
+  ],
+  'Enfermería': [
+    'Lic. en Enfermeria',
+    'Enfermero Profesional',
+    'Lic. en Enfermeria ATP',
+    'Enfermero/a ATP',
+    'Auxiliar de Enfermeria',
+  ],
+  'Servicios': [
+    'Asistente Administrativo',
+    'Asistente Contable',
+    'Asistente de Apoyo Informático',
+    'Asistente de Archivo y Digitalización',
+    'Asistente de Mantenimiento',
+    'Asistente de Mesa de Ayuda al Ciudadano',
+    'Asistente de Patrimonio',
+    'Asistente de Planeamiento y Administración de Recursos Humanos',
+    'Asistente Legal',
+    'Auxiliar Administrativo',
+    'Licenciado en Enfermería',
+    '1er. Año Básica',
+    '2do. Año Básica',
+    '3ro. y 4to. Año Básica',
+    'Instructor (con Otro Cargo) / Instructor (sin Otro Cargo)',
+    'Analista de Compras y Contrataciones',
+    'Auxiliar de Compras y Contrataciones',
+    'Analista Administrativo General',
+    'Asistente de Compras y Contrataciones',
+    'Asistente de Presupuesto',
+    'Analista de Presupuesto',
+    'Secretaria',
+    'Auxiliar de Presupuesto',
+    'Auxiliar Contable',
+    'Conductor de Vehículos',
+    'Asistente de Programas de Salud',
+    'Auxiliar de Mesa de Ayuda al Ciudadano',
+    'Administrativo de Facturación',
+    'Analista de Apoyo Informático',
+    'Asistente de Georreferenciación',
+    'Auxiliar de Apoyo Informático',
+    'Auxiliar de Archivo y Digitalización',
+    'Auxiliar de Control de Gestión y Calidad',
+    'Auxiliar de Programas de Salud',
+    'Capacitador al Ciudadano',
+    'Chofer de Funcionario',
+    'Curador / Museógrafo',
+    'Fonoaudiólogo',
+    'Analista de Planeamiento de Recursos Humanos',
+    'Analista de Administración de Recursos Humanos',
+    'Auxiliar de Planeamiento y Administración de Recursos Humanos',
+    'Analista de Selección de Personal',
+    'Analista de Control de Gestión Operativo Administrativa',
+    'Auxiliar de Eventos y Ceremonias',
+    'Analista Legal General',
+    'Operador de Logística de Eventos y Ceremonías',
+    'Auxiliar de Servicios de Información Institucional',
+    '1er. Año Post-Básica',
+    '2do. Año Post-Básica',
+    '3er. Año Post-Básica',
+    'Jefe de Residentes',
+    'Asistente de Biblioteca',
+    'Operador de Mesa de Ayuda Interna',
+    'Chofer de Ambulancia',
+    'Radio Operador',
+    'Auxiliar de Mesa de Entradas',
+    'Radio Operador de Emergencias',
+    'Asistente de Control de Gestión Operativo Administrativa',
+    'Asistente de Monitoreo de Operaciones',
+    'Auxiliar de Mantenimiento',
+    'Auxiliar Legal',
+    'Asistente de Mesa de Entradas',
+    'Oficial de Correo / Cadete',
+    'Administrador de Obra',
+    'Inspector de Obras Públicas',
+    'Proyectista',
+    'Colaborador de Fiscalización de Obras',
+    'Gasista',
+    'Verificador de Seguridad Edilicia',
+    'Asistente de Proyectista',
+    'Agente de Vigilancia sin Portación de Armas',
+    'Auxiliar de Limpieza',
+    'Electricista de Baja y Media Tensión',
+    'Operario de Mantenimiento',
+    'Pintor',
+    'Inspector de Fiscalización General',
+    'Verificador de Servicios, Obras y/o Prestaciones',
+    'Auxiliar de Patrimonio',
+    'Auxiliar de Proyectista',
+    'Especialista en Proyectos de Instalaciones y Estructuras',
+    'Carpintero / Colocador de Placas de Fibrocemento',
+    'Pañolero / Operario de Depósito',
+    'Plomero',
+    'Analista de Programas de Salud',
+    'Asistente de Administración de Documentos Electrónicos',
+    'Secretaria de Sala en Establecimientos de Atención a la Salud',
+    'Acompañante Terapéutico',
+    'Analista Contable',
+    'Auxiliar de Operador Social',
+    'Conductor de Vehículos en Operativos Sociales',
+    'Operador Auxiliar de Rehabilitación',
+    'Operador Social',
+    'Terapeuta Social',
+    'Administrativo de Depósito',
+    'Ayudante de Laboratorio, Hemoterapia, Farmacia y Droguería',
+    'Operador Asistente de Rehabilitación',
+    'Operador Principal de Rehabilitación',
+    'Analista de Proyectos',
+    'Analista de Soporte a Usuarios',
+    'Asistente de Proyectos y Gestión de Servicios',
+    'Asistente de Soporte 1er Nivel',
+    'Asistente Desarrollador',
+    'Asistente de Diseño y Experiencia del Usuario',
+    'Asistente Funcional y de Soporte',
+    'Auxiliar de Soporte 1er Nivel',
+    'Administrativo de Operativo de Trasplante',
+    'Ayudante Administrativo de Operativo de Trasplante',
+    'Analista de Relaciones Institucionales',
+    'Asistente de Relaciones Institucionales',
+    'Asistente de Estadísticas de Salud',
+    'Auxiliar Estadístico',
+    'Certificador de Documentación',
+    'Camillero',
+    'Asistente Social de Guardia',
+    'Lic. Kinesiología de Guardia',
+    'Analista Estadístico',
+    'Asistente de Reserva Patrimonial',
+    'Catalogador / Clasificador',
+    'Morguero',
+    'Operador Telefónico en Guardia de Hospitales',
+    'Operario de Carga y Descarga',
+    'Oxigenista',
+    'Herrero / Soldador',
+    'Operario de Lavandería',
+    'Promotor Social',
+    'Asistente Estadístico',
+    'Albañil',
+    'Capellán',
+    'Lic. en Psicología de Guardia',
+    'Nutricionista de Guardia',
+    'Analista de Asesoramiento al Ciudadano',
+    'Relevador',
+    'No Aplica',
+    'Recolector de Residuos',
+    'Recepcionista',
+    'Instrumentadora Quirúrgica',
+    'Enfermero/a',
+    'Nutricionista Dietista de Guardia',
+    'Técnico en Laboratorio de Análisis Clínicos',
+    'Oficial Notificador',
+    'Bibliotecario Referencista',
+    'Programador de Sistemas de Parcela Digital',
+    'Licenciado en Obstetricia - Obstétrica',
+    'Acopiador de Residuos Patogénicos y Líquidos Peligrosos',
+    'Conductor de Furgón',
+    'Auxiliar de Promoción Social',
+    'Técnico de Mantenimiento Electrónico',
+    'Especialista en Ingeniería Biomédica',
+    'Hermana de Caridad',
+    'Lic. en Psicopedagogía de Guardia',
+    'Costurero',
+    'Bibliotecaria',
+    'Kinesiólogo Fisiatra de Guardia',
+    'Psicopedagogo de Guardia',
+    'Ayudante de Fotografía',
+    'Tallerista',
+    'Instructor de Actividades Deportivas y Recreativas',
+    'Asistente de Gestión de Calidad',
+    'Auxiliar de Auditoría',
+    'Comunicador Visual',
+    'Cocinero',
+    'Mecánico de Vehículos Livianos',
+    'Operador Convivencial en Niñez y/o Adolescencia',
+    'Analista de Redeterminación de Precios',
+    'Maestro Celador Hospital Manuel Rocca',
+    'Maestro de Atípicos Hospital Manuel Rocca',
+    'Maestro Mat. Comp./Prof. Educ. Física (H/C) Htal. Rocca',
+    'Auxiliar de Portería',
+    'Camarero',
+    'Cuidador Enfermero de Animales',
+    'Verificador de Vacunación Animal',
+    'Director Inst. Sup. de Tecnicat. P/La Salud',
+    'Instructor Técnico Escuela Técnicos para la Salud',
+    'Profesor Hora-Cátedra (Transitorio) E.T. para la Salud',
+    'Profesor Hora-Cátedra Escuela Técnicos para la Salud',
+    'Vicedirector Escuela Técnicos para la Salud',
+    'Asistente de Prensa y Difusión',
+    'Colaborador de Comunicación y Desarrollo Audiovisual',
+    'Desarrollo de Front End',
+    'Organizador de Eventos y Ceremonias',
+    'Secretaria Ejecutiva',
+    'Planta Gabinete Transitorio',
+    'Técnico en Hemoterapia',
+    'Cuidador Gerontológico',
+    'Biólogo de Guardia',
+    'Bioquímico',
+    'Farmacéutico',
+    'Lic. Bioquímico de Guardia',
+    'Lic. en Nutrición de Guardia',
+    'Médico',
+    'Médico Veterinario de Guardia',
+    'Auditor',
+    'Auditor Principal',
+    'Auxiliar de Necropsia',
+  ],
+}
+
+/** Retorna las opciones de puesto para el escalafón CEETPS dado */
+export function getCeetpsPuestoOptions(escalafon) {
+  return CEETPS_PUESTOS[escalafon] ?? []
+}
+
+/** Todos los puestos CEETPS (Técnicos + Enfermería + Servicios), sin segmentar por escalafón */
+export const OPCIONES_PUESTO_CEETPS_TODOS = Object.values(CEETPS_PUESTOS).flat()
+
 export const OPCIONES_MOTIVO_BAJA         = [
   'Renuncia', 'Cese de Cargo', 'Defunción', 'Jubilación', 'Cesantía',
   'Jubilación Ordinaria', 'Ampliación', 'Exoneración', 'Reubicación', 'Cese',
@@ -264,7 +539,6 @@ const _PUESTO_ESP_MAP = {
     'OBSTETRICIA', 'DIAGNOSTICO POR IMAGENES (TOMOGRAFIA)', 'CIRUGIA TORAXICA', 'EMERGENTOLOGIA',
   ],
   'PROFESIONAL GUARDIA MEDICO': [
-    'CLINICA MEDICA',
     'SIN ESPECIALIDAD',
   ],
   // ── POU / CPH de Guardia — No Médico ─────────────────────────────────────
@@ -673,7 +947,7 @@ export function calcConteoConcurso(row) {
 
 export function calcSubEstadoPou(row) {
   if ((row.escalafon_2 || '').toUpperCase() !== 'POU') return ''
-  const sub3 = row.sub_estado_3 || calcSubEstado3(row)
+  const sub3 = calcSubEstado3(row)
   return sub3 !== 'G-RESOLUCION' ? sub3 : ''
 }
 
@@ -706,13 +980,54 @@ export function computeEstadoConcurso(form) {
 export function isoToDmy(v) {
   if (!v) return ''
   const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (m) return m[3] + '-' + m[2] + '-' + m[1]
+  if (m) return m[3] + '/' + m[2] + '/' + m[1]
   return v
 }
 
 export function dmyToIso(v) {
   if (!v) return null
-  const m = String(v).match(/^(\d{2})-(\d{2})-(\d{4})$/)
-  if (m) return m[3] + '-' + m[2] + '-' + m[1]
-  return v || null
+  const m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  // Si no matchea DD/MM/AAAA completo (fecha a medio tipear, formato inválido),
+  // no lo mandamos tal cual al backend — se guardaría un string no-ISO.
+  return m ? (m[3] + '-' + m[2] + '-' + m[1]) : null
+}
+
+// --- Date mask helper (DD/MM/AAAA, sin separadores mixtos, tope año actual + 1) --
+const FECHA_MASK_MAX = { dia: 31, mes: 12, get anio() { return new Date().getFullYear() + 1 } }
+
+/** A partir de cualquier texto (con o sin separadores), devuelve 'DD/MM/AAAA'
+ *  parcial o completo, recortando cada segmento a su máximo real
+ *  (día ≤ 31, mes ≤ 12, año ≤ año actual + 1) — nunca deja pasar un valor de más. */
+export function formatDateMask(raw) {
+  const digits = String(raw || '').replace(/\D/g, '').slice(0, 8)
+  let dia  = digits.slice(0, 2)
+  let mes  = digits.slice(2, 4)
+  let anio = digits.slice(4, 8)
+
+  if (dia.length === 2) {
+    const d = Math.min(Math.max(parseInt(dia, 10) || 0, 1), FECHA_MASK_MAX.dia)
+    dia = String(d).padStart(2, '0')
+  }
+  if (mes.length === 2) {
+    const m = Math.min(Math.max(parseInt(mes, 10) || 0, 1), FECHA_MASK_MAX.mes)
+    mes = String(m).padStart(2, '0')
+  }
+  if (anio.length === 4) {
+    const a = Math.min(parseInt(anio, 10) || 0, FECHA_MASK_MAX.anio)
+    anio = String(a)
+  }
+
+  // Recorta el día al máximo real del mes ya cargado (ej: no deja pasar 31/02).
+  // Mientras el año no esté completo, usa un año bisiesto de referencia para no
+  // cortar el 29/02 de más; al completarse el año se vuelve a ajustar si hace falta.
+  if (dia.length === 2 && mes.length === 2) {
+    const anioRef = anio.length === 4 ? parseInt(anio, 10) : 2000
+    const maxDia = new Date(anioRef, parseInt(mes, 10), 0).getDate()
+    if (parseInt(dia, 10) > maxDia) dia = String(maxDia).padStart(2, '0')
+  }
+
+  let out = dia
+  if (mes)  out += '/' + mes
+  if (anio) out += '/' + anio
+  return out
 }

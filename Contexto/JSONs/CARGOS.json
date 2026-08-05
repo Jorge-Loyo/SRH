@@ -1,0 +1,14 @@
+{
+  "orden_columnas": [
+      "ID_CARGO",
+      "ID CARGO",
+      "PERIODO",
+      "ESTADO CARGO"
+      
+  ],
+  "columnas_agregadas": {
+    "ID_CARGO": 1,
+    "PERIODO": "2026-07",
+    "ESTADO CARGO": "Activo"
+  }
+}

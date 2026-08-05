@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { XMarkIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import Pagination from './Pagination';
+import { formatCellValue } from '../../utils/formatValue';
 
 export default function TablaAmpliadaModal({ isOpen, onClose, columns, rows, state, toggleSort, totalPages, fetchData }) {
   const tableRef = useRef(null);
@@ -8,15 +9,15 @@ export default function TablaAmpliadaModal({ isOpen, onClose, columns, rows, sta
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-5"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-2 sm:p-5"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl w-[96%] max-w-[1900px] h-[92vh] flex flex-col shadow-2xl"
+        className="bg-white rounded-xl w-full sm:w-[96%] max-w-[1900px] h-[92vh] flex flex-col shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-2.5 rounded-t-xl bg-gradient-to-r from-primary-700 to-primary-600 border-b-2 border-primary-800">
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2.5 rounded-t-xl bg-gradient-to-r from-primary-700 to-primary-600 border-b-2 border-primary-800">
           <span className="text-white font-bold text-base tracking-wide">Tabla Ampliada</span>
           <button
             onClick={onClose}
@@ -28,7 +29,7 @@ export default function TablaAmpliadaModal({ isOpen, onClose, columns, rows, sta
         </div>
 
         {/* Table body */}
-        <div ref={tableRef} className="flex-1 overflow-auto p-5 bg-gray-50">
+        <div ref={tableRef} className="flex-1 overflow-auto p-2 sm:p-5 bg-gray-50">
           <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto overflow-y-auto" style={{ maxHeight: '100%' }}>
             <table className="min-w-max text-sm">
               <thead>
@@ -70,7 +71,7 @@ export default function TablaAmpliadaModal({ isOpen, onClose, columns, rows, sta
                     >
                       {columns.map(col => (
                         <td key={col} className="px-4 py-2.5 whitespace-nowrap text-xs text-gray-800 border-r border-gray-100">
-                          {row[col] != null ? String(row[col]) : ''}
+                          {formatCellValue(row[col], col)}
                         </td>
                       ))}
                     </tr>
@@ -82,7 +83,7 @@ export default function TablaAmpliadaModal({ isOpen, onClose, columns, rows, sta
         </div>
 
         {/* Footer */}
-        <div className="flex items-center px-6 py-2.5 border-t-2 border-gray-200 bg-white rounded-b-xl gap-6">
+        <div className="flex items-center flex-wrap px-3 sm:px-6 py-2.5 border-t-2 border-gray-200 bg-white rounded-b-xl gap-3 sm:gap-6">
           <span className="text-sm text-gray-600 font-medium">
             Mostrando {rows.length} de {state.total} registros
           </span>

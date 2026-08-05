@@ -314,7 +314,7 @@ export default function MinutaModal({ open, onClose, hospitalCode, editData = nu
   const subModals = (
     <>
       {expandedCell && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-6">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl p-6">
             <p className="text-sm font-bold text-gray-800 mb-1">Editar celda</p>
             <p className="text-xs text-gray-400 mb-3">
@@ -346,7 +346,7 @@ export default function MinutaModal({ open, onClose, hospitalCode, editData = nu
       )}
 
       {confirmDel && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-6">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
             <p className="text-base font-bold text-gray-900 mb-2">
               {confirmDel.type === 'col' ? '¿Eliminar columna?' : '¿Eliminar fila?'}
@@ -410,11 +410,11 @@ export default function MinutaModal({ open, onClose, hospitalCode, editData = nu
   // — Modo modal (overlay) ————————————————————————————————————————
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-6 pb-6 bg-black/50 overflow-y-auto px-2">
+      <div className="fixed inset-0 z-50 flex items-start justify-center pt-3 sm:pt-6 pb-3 sm:pb-6 bg-black/30 overflow-y-auto px-2 sm:px-4">
         <div className="bg-white rounded-xl shadow-2xl w-full" style={{ maxWidth: 1100 }}>
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <div>
+          <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-b border-gray-200">
+            <div className="min-w-0">
               <h2 className="text-base font-bold text-gray-900">
                 {isEdit ? 'Editar minuta' : 'Nueva minuta'}
               </h2>
@@ -422,18 +422,18 @@ export default function MinutaModal({ open, onClose, hospitalCode, editData = nu
                 <p className="text-xs text-gray-400 font-mono mt-0.5">Hospital: {hospitalCode}</p>
               )}
             </div>
-            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 shrink-0">
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="px-6 py-5 space-y-5">
+          <div className="px-3 sm:px-6 py-5 space-y-5">
             {editorBody}
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-end gap-3 px-3 sm:px-6 py-4 border-t border-gray-200">
             <button onClick={onClose} className="btn-secondary" disabled={saving}>Cancelar</button>
             <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
               {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}

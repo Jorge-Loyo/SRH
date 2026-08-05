@@ -5,7 +5,7 @@ import Spinner from '../../components/ui/Spinner';
 import RoleBadge from '../../components/ui/RoleBadge';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
-const ROLES = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales'];
+const ROLES = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales', 'autoridades'];
 
 const EMPTY_FORM = { username: '', email: '', password: '', role: 'viewer', hospital_code: '', role_alias: '', is_active: true };
 
@@ -47,7 +47,7 @@ function UserModal({ open, user, onClose, onSave }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-base font-bold text-gray-900">{isEdit ? 'Editar usuario' : 'Nuevo usuario'}</h2>
@@ -70,7 +70,7 @@ function UserModal({ open, user, onClose, onSave }) {
             <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               className="form-input w-full" minLength={isEdit ? 0 : 6} />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
               <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="form-input w-full">
@@ -174,7 +174,7 @@ export default function UsuariosPage() {
 
       <div className="flex flex-col h-full overflow-hidden">
         <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div className="flex items-center gap-2">
               <UsersIcon className="w-5 h-5 text-primary-700" />
               <h1 className="text-lg font-bold text-gray-900">Usuarios</h1>
@@ -185,7 +185,7 @@ export default function UsuariosPage() {
             </button>
           </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por usuario o email..." className="form-input text-sm w-72 py-1.5" />
+            placeholder="Buscar por usuario o email..." className="form-input text-sm w-full sm:w-72 py-1.5" />
         </div>
 
         <div className="flex-1 overflow-auto px-4 py-3">

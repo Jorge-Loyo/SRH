@@ -8,8 +8,8 @@ const { SiglaCreateSchema, SiglaUpdateSchema } = require('../schemas');
 
 const router = express.Router();
 
-router.get('/', validatePagination, controller.list);
-router.get('/:id', validateId, controller.getById);
+router.get('/', authenticateJWT, authorizeRoles('admin','editor'), validatePagination, controller.list);
+router.get('/:id', authenticateJWT, authorizeRoles('admin','editor'), validateId, controller.getById);
 router.post('/', authenticateJWT, authorizeRoles('admin','editor'), validateBody(SiglaCreateSchema), controller.create);
 router.put('/:id', authenticateJWT, authorizeRoles('admin','editor'), validateId, validateBody(SiglaUpdateSchema), controller.update);
 router.delete('/:id', authenticateJWT, authorizeRoles('admin'), validateId, controller.remove);

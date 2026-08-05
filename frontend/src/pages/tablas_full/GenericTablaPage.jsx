@@ -7,6 +7,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { apiGet, ApiError } from '../../api/client';
 import { getTableConfig, FILTER_TYPES } from '../../data/tables-config';
+import { formatCellValue } from '../../utils/formatValue';
 import MultiSelectDropdown from '../../components/ui/MultiSelectDropdown';
 import Pagination from '../../components/ui/Pagination';
 import Spinner from '../../components/ui/Spinner';
@@ -105,7 +106,7 @@ function FilterInput({ filter, value, onChange, distinctOptions, onFocus }) {
 
 // ─── tabla memoizada ──────────────────────────────────────────────────────────
 
-const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef }) => (
+const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef, dateColumns }) => (
   <div
     ref={tableRef}
     className="overflow-auto rounded-lg border border-gray-200 flex-1"
@@ -137,7 +138,7 @@ const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef }) =>
           <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
             {columns.map((col) => (
               <td key={col} className="px-3 py-1.5 whitespace-nowrap text-gray-800 border-b border-gray-100 text-sm">
-                {row[col] != null ? String(row[col]) : ''}
+                {formatCellValue(row[col], col, dateColumns)}
               </td>
             ))}
           </tr>
@@ -164,6 +165,15 @@ DataTable.displayName = 'DataTable';
  */
 export default function GenericTablaPage({ tableKey }) {
   const config = useMemo(() => getTableConfig(tableKey), [tableKey]);
+
+  const dateColumns = useMemo(() => {
+    if (!config) return new Set();
+    return new Set(
+      config.filters
+        .filter(f => f.type === FILTER_TYPES.DATE || f.type === FILTER_TYPES.DATE_RANGE)
+        .map(f => f.field)
+    );
+  }, [config]);
 
   const buildEmptyFilters = useCallback(() => {
     if (!config) return {};
@@ -432,7 +442,7 @@ export default function GenericTablaPage({ tableKey }) {
       {/* Panel de filtros */}
       {showFilters && (
         <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {config.filters.map((filter) => (
               <FilterInput
                 key={filter.field}
@@ -472,7 +482,7 @@ export default function GenericTablaPage({ tableKey }) {
                 <span className="text-gray-300">|</span>
                 <span>{tableState.columns.length} columnas</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <label className="flex items-center gap-1.5 text-sm text-gray-500">
                   Mostrar
                   <select value={tableState.perPage} onChange={handlePerPageChange} className="form-input text-sm py-1 w-20">
@@ -496,6 +506,7 @@ export default function GenericTablaPage({ tableKey }) {
               sortDir={tableState.sortDir}
               onSort={handleSort}
               tableRef={tableRef}
+              dateColumns={dateColumns}
             />
 
             <div className="flex-shrink-0">

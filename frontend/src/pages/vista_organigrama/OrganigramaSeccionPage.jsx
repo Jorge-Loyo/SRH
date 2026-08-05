@@ -1,0 +1,260 @@
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  ChartBarSquareIcon, ArrowLeftIcon, ArrowPathIcon, ExclamationTriangleIcon,
+  ChevronDownIcon, ChevronUpIcon, MagnifyingGlassIcon, XMarkIcon,
+} from '@heroicons/react/24/outline';
+import { apiGet } from '../../api/client';
+import Spinner from '../../components/ui/Spinner';
+import PeriodoSelect from '../../components/ui/PeriodoSelect';
+import OrganigramaFlowView from './OrganigramaFlowView';
+import VacantesModal from './VacantesModal';
+import PersonaModal from './PersonaModal';
+import { TreeNode, collectVacantes } from './OrganigramaTreeNode';
+import { searchOrgTree } from '../../utils/organigramaHelpers';
+
+const SECCION_LABELS = {
+  'nivel-central':     'Nivel Central',
+  'atencion-primaria': 'Atención Primaria',
+};
+
+export default function OrganigramaSeccionPage({ seccion }) {
+  const navigate = useNavigate();
+  const [periodos, setPeriodos] = useState([]);
+  const [periodosMetadata, setPeriodosMetadata] = useState([]);
+  const [periodo, setPeriodo] = useState('');
+  const [state, setState] = useState({ loading: true, data: null, error: null });
+  const [viewMode, setViewMode] = useState('arbol');
+  const [resetKey, setResetKey] = useState(0);
+  const [vacantesOpen, setVacantesOpen] = useState(false);
+  const [selectedPersona, setSelectedPersona] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchIndex, setSearchIndex] = useState(-1);
+  const [jumpSignal, setJumpSignal] = useState(null);
+  const [highlightId, setHighlightId] = useState(null);
+  const jumpNonceRef = useRef(0);
+
+  const label = SECCION_LABELS[seccion] || seccion;
+  const vacantes = useMemo(() => state.data ? collectVacantes(state.data) : [], [state.data]);
+
+  const searchMatches = useMemo(
+    () => state.data ? searchOrgTree(state.data, searchQuery) : [],
+    [state.data, searchQuery]
+  );
+
+  useEffect(() => {
+    setSearchIndex(searchMatches.length ? 0 : -1);
+  }, [searchMatches]);
+
+  useEffect(() => {
+    const match = searchMatches[searchIndex];
+    if (!match) { setJumpSignal(null); return; }
+    jumpNonceRef.current += 1;
+    setJumpSignal({ ...match, nonce: jumpNonceRef.current });
+  }, [searchIndex, searchMatches]);
+
+  useEffect(() => {
+    if (!jumpSignal) return;
+    setHighlightId(jumpSignal.id);
+    const t = setTimeout(() => setHighlightId(null), 1800);
+    return () => clearTimeout(t);
+  }, [jumpSignal]);
+
+  const forceOpenIds = useMemo(() => new Set(jumpSignal?.path || []), [jumpSignal]);
+
+  const jumpToVacante = useCallback((v) => {
+    jumpNonceRef.current += 1;
+    setJumpSignal({ id: v.id, path: v.idPath || [], nonce: jumpNonceRef.current });
+  }, []);
+
+  const goToMatch = useCallback((delta) => {
+    setSearchIndex(i => {
+      if (!searchMatches.length) return -1;
+      return (i + delta + searchMatches.length) % searchMatches.length;
+    });
+  }, [searchMatches.length]);
+
+  // Limpiar búsqueda al cambiar de sección (sin resetear el período)
+  useEffect(() => {
+    setState({ loading: true, data: null, error: null });
+    setSearchQuery('');
+  }, [seccion]);
+
+  // Cargar períodos globales (sin filtro de hospital) una sola vez
+  useEffect(() => {
+    apiGet('/api/periodos', { limit: 12 })
+      .then(d => {
+        const list = d?.items || [];
+        setPeriodos([...new Set(list)]);
+        setPeriodosMetadata(d?.periodsMetadata || []);
+        const initial = d?.recommended || (list.length > 0 ? list[0] : '');
+        if (initial) setPeriodo(initial);
+      })
+      .catch(() => {});
+  }, []);
+
+  const fetchData = useCallback(async () => {
+    setState(s => ({ ...s, loading: true, error: null }));
+    try {
+      const params = { seccion };
+      if (periodo) params.periodo = periodo;
+      const data = await apiGet('/api/organigrama', params);
+      if (data.error && !data.data) {
+        setState({ loading: false, data: null, error: data.error });
+      } else {
+        setState({ loading: false, data: data.data || data, error: null });
+      }
+    } catch (e) {
+      setState({ loading: false, data: null, error: e.message });
+    }
+  }, [seccion, periodo]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={() => navigate('/organigrama')}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+            <ArrowLeftIcon className="w-4 h-4" />Volver
+          </button>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <ChartBarSquareIcon className="w-5 h-5 text-primary-700" />
+          <h1 className="text-lg font-bold text-gray-900">Organigrama – {label}</h1>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Buscador */}
+          <div className="flex items-center gap-1.5">
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-3.5 h-3.5 text-gray-400 absolute left-2 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar puesto, persona, código..."
+                className="pl-7 pr-7 py-1.5 text-xs border border-gray-200 rounded-lg w-44 focus:w-64 transition-all focus:outline-none focus:ring-2 focus:ring-primary-300"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {searchMatches.length ? `${searchIndex + 1}/${searchMatches.length}` : 'Sin resultados'}
+              </span>
+            )}
+            {searchMatches.length > 1 && (
+              <>
+                <button onClick={() => goToMatch(-1)} title="Anterior"
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                  <ChevronUpIcon className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => goToMatch(1)} title="Siguiente"
+                  className="p-1 rounded hover:bg-gray-100 text-gray-500">
+                  <ChevronDownIcon className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Vacantes */}
+            <button
+              onClick={() => setVacantesOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 transition-colors">
+              <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+              Vacantes
+              {vacantes.length > 0 && (
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-600 text-white text-[10px] font-bold">
+                  {vacantes.length}
+                </span>
+              )}
+            </button>
+
+            {/* Switcher de vistas */}
+            <div className="flex items-center gap-0.5 bg-gray-100 rounded-lg p-0.5">
+              {[{ key: 'arbol', label: 'Árbol' }, { key: 'diagrama', label: 'Diagrama' }].map(v => (
+                <button key={v.key} onClick={() => setViewMode(v.key)}
+                  className={`px-3 py-1 text-xs rounded-md transition-all ${
+                    viewMode === v.key
+                      ? 'bg-white shadow font-semibold text-gray-900'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}>
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Reiniciar */}
+            <button
+              onClick={() => { setResetKey(k => k + 1); setSearchQuery(''); }}
+              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 transition-colors"
+              title="Reiniciar vista">
+              <ArrowPathIcon className="w-3.5 h-3.5" />
+              Reiniciar
+            </button>
+
+            <label className="text-sm font-medium text-gray-600">Período</label>
+            <PeriodoSelect
+              value={periodo}
+              onChange={setPeriodo}
+              items={periodos}
+              metadata={periodosMetadata}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Contenido */}
+      <div className={`flex-1 ${viewMode === 'diagrama' ? 'overflow-hidden' : 'overflow-auto'}`}>
+        {state.error && (
+          <div className="m-4 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{state.error}</div>
+        )}
+        {state.loading ? (
+          <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+        ) : state.data ? (
+          viewMode === 'diagrama' ? (
+            <OrganigramaFlowView
+              data={state.data} resetKey={resetKey} sigla={seccion} onPersonaClick={setSelectedPersona}
+              jumpSignal={jumpSignal} highlightId={highlightId}
+            />
+          ) : (
+            <div className="px-4 py-4 max-w-4xl">
+              <TreeNode
+                key={resetKey} node={state.data} depth={0} onPersonaClick={setSelectedPersona}
+                forceOpenIds={forceOpenIds} highlightId={highlightId}
+              />
+            </div>
+          )
+        ) : (
+          <div className="text-center py-16 text-gray-400">
+            <ChartBarSquareIcon className="w-12 h-12 mx-auto mb-3 text-gray-200" />
+            <p>No hay datos para <span className="font-semibold">{label}</span></p>
+            <p className="text-sm mt-1">Verificá que el archivo esté cargado en la BD con el régimen de empleo correcto</p>
+          </div>
+        )}
+      </div>
+
+      <VacantesModal
+        open={vacantesOpen}
+        onClose={() => setVacantesOpen(false)}
+        vacantes={vacantes}
+        sigla={label}
+        onSelect={jumpToVacante}
+      />
+      <PersonaModal
+        open={!!selectedPersona}
+        onClose={() => setSelectedPersona(null)}
+        data={selectedPersona}
+      />
+    </div>
+  );
+}

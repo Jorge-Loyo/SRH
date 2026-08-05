@@ -20,8 +20,6 @@ yarn-error.log*
 *.sqlite
 
 # Frameworks / Cache
-app/.adminjs/
-.adminjs/
 .DS_Store
 
 # Archivos temporales de Linux/Git

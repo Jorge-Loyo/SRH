@@ -39,7 +39,6 @@ export const CAMPOS_DISPONIBLES_CEETPS = [
   // ── Concurso ─────────────────────────────────────────────────────────────────
   { key: 'tipificador_origen',  label: 'Tipificador (Origen)', type: 'text',                    group: 'Concurso' },
   { key: 'expediente_concurso', label: 'Expediente concurso',  type: 'text',                    group: 'Concurso' },
-  { key: 'ee_concurso',         label: 'EE concurso',          type: 'text',                    group: 'Concurso' },
   { key: 'puesto_solicitado',   label: 'Puesto solicitado',    type: 'text',                    group: 'Concurso' },
   { key: 'dispo_llamado',       label: 'Dispo. llamado',       type: 'text',                    group: 'Concurso' },
   { key: 'fecha_caratulacion',  label: 'Fecha caratulación',   type: 'date',                    group: 'Concurso' },

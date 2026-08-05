@@ -18,7 +18,7 @@ import Spinner from '../../components/ui/Spinner'
 import {
   getColorEstadoCph,
   formatDate,
-  OPCIONES_ESTADO,
+  OPCIONES_SUB_ESTADO_3,
   OPCIONES_ESCALAFON,
   OPCIONES_ESCALAFON_BAJAS,
   OPCIONES_ESCALAFON_SEGUIMIENTO,
@@ -31,6 +31,7 @@ import {
   getPuestoOptions,
   getEspecialidadOptions,
   SIGLAS_DATA,
+  calcEstado,
   calcSubEstado3,
   calcSubEstado,
   calcCambioEspecialidad,
@@ -50,27 +51,70 @@ const EMPTY_FILTERS = {
   // 2 — Baja (con cascada)
   ee_baja:                 '',
   cuil_baja:               '',
-  escalafon_baja:          '',   // Médico / No Médico
-  escalafon_1:             '',   // POU / POF
+  escalafon_baja:          '',
+  escalafon_1:             '',
   unificador_puestos:      '',
-  puesto_1:                '',   // cascada de unificador + escalafon_baja
-  especialidad_baja:       '',   // cascada de puesto_1
+  puesto_1:                '',
+  especialidad_baja:       '',
   motivo_baja:             '',
+  fecha_baja_desde:        '',
+  fecha_baja_hasta:        '',
   // 3 — Estado
   sub_estado_3:            '',
-  suspendido:              '',   // 'true'|'false'
+  suspendido:              '',
   cambio_especialidad:     '',
   dispo_desierta:          '',
   tipo_baja:               '',
+  fecha_dispo_desierta_desde: '',
+  fecha_dispo_desierta_hasta: '',
   // 4 — Concurso
   escalafon_2:             '',
-  puesto_2:                '',   // cascada de unificador + escalafon_baja
-  especialidad_solicitada: '',   // cascada de puesto_2
-  // 5 — Evaluación y designación
-  examen_publicado:        '',   // 'true'|'false'
-  orden_merito:            '',   // 'true'|'false'
-  insal:                   '',   // 'true'|'false'
-  cargo_sial:              '',   // 'true'|'false'
+  puesto_2:                '',
+  especialidad_solicitada: '',
+  ee_concurso:             '',
+  fecha_ee_concurso_desde: '',
+  fecha_ee_concurso_hasta: '',
+  if_solicitante:          '',
+  fecha_autorizacion_desde: '',
+  fecha_autorizacion_hasta: '',
+  sorteo_jurado:           '',
+  disposicion:             '',
+  // 5 — Inscripción
+  insc_desde_desde:        '',
+  insc_desde_hasta:        '',
+  insc_hasta_desde:        '',
+  insc_hasta_hasta:        '',
+  // 6 — Evaluación
+  examen_publicado:        '',
+  fecha_examen_desde:      '',
+  fecha_examen_hasta:      '',
+  orden_merito:            '',
+  fecha_orden_merito_desde: '',
+  fecha_orden_merito_hasta: '',
+  fecha_ifacs_desde:       '',
+  fecha_ifacs_hasta:       '',
+  insal:                   '',
+  fecha_insal_desde:       '',
+  fecha_insal_hasta:       '',
+  cargo_sial:              '',
+  // 7 — Designación
+  ee_designacion:          '',
+  fecha_ee_designacion_desde: '',
+  fecha_ee_designacion_hasta: '',
+  nombre_designacion:      '',
+  cuil_designacion:        '',
+  carga_documentacion:     '',
+  fecha_apto_medico_desde: '',
+  fecha_apto_medico_hasta: '',
+  fecha_ite_desde:         '',
+  fecha_ite_hasta:         '',
+  reso_a_la_firma:         '',
+  resolucion_designacion:  '',
+  fecha_resolucion_desde:  '',
+  fecha_resolucion_hasta:  '',
+  fecha_cargo_desde:       '',
+  fecha_cargo_hasta:       '',
+  cargo_baja:              '',
 }
 
 export default function SeguimientoCphPage() {
@@ -146,21 +190,64 @@ export default function SeguimientoCphPage() {
       if (filters.puesto_1)                params.puesto_1                = filters.puesto_1
       if (filters.especialidad_baja)       params.especialidad_baja       = filters.especialidad_baja
       if (filters.motivo_baja)             params.motivo_baja             = filters.motivo_baja
+      if (filters.fecha_baja_desde)        params.fecha_baja_desde        = filters.fecha_baja_desde
+      if (filters.fecha_baja_hasta)        params.fecha_baja_hasta        = filters.fecha_baja_hasta
       // Estado
       if (filters.sub_estado_3)            params.sub_estado_3            = filters.sub_estado_3
       if (filters.suspendido)              params.suspendido              = filters.suspendido
       if (filters.cambio_especialidad)     params.cambio_especialidad     = filters.cambio_especialidad
       if (filters.dispo_desierta)          params.dispo_desierta          = filters.dispo_desierta
       if (filters.tipo_baja)               params.tipo_baja               = filters.tipo_baja
+      if (filters.fecha_dispo_desierta_desde) params.fecha_dispo_desierta_desde = filters.fecha_dispo_desierta_desde
+      if (filters.fecha_dispo_desierta_hasta) params.fecha_dispo_desierta_hasta = filters.fecha_dispo_desierta_hasta
       // Concurso
       if (filters.escalafon_2)             params.escalafon_2             = filters.escalafon_2
       if (filters.puesto_2)                params.puesto_2                = filters.puesto_2
       if (filters.especialidad_solicitada) params.especialidad_solicitada = filters.especialidad_solicitada
-      // Evaluación y designación
+      if (filters.ee_concurso)             params.ee_concurso             = filters.ee_concurso
+      if (filters.fecha_ee_concurso_desde) params.fecha_ee_concurso_desde = filters.fecha_ee_concurso_desde
+      if (filters.fecha_ee_concurso_hasta) params.fecha_ee_concurso_hasta = filters.fecha_ee_concurso_hasta
+      if (filters.if_solicitante)          params.if_solicitante          = filters.if_solicitante
+      if (filters.fecha_autorizacion_desde) params.fecha_autorizacion_desde = filters.fecha_autorizacion_desde
+      if (filters.fecha_autorizacion_hasta) params.fecha_autorizacion_hasta = filters.fecha_autorizacion_hasta
+      if (filters.sorteo_jurado)           params.sorteo_jurado           = filters.sorteo_jurado
+      if (filters.disposicion)             params.disposicion             = filters.disposicion
+      // Inscripción
+      if (filters.insc_desde_desde)        params.insc_desde_desde        = filters.insc_desde_desde
+      if (filters.insc_desde_hasta)        params.insc_desde_hasta        = filters.insc_desde_hasta
+      if (filters.insc_hasta_desde)        params.insc_hasta_desde        = filters.insc_hasta_desde
+      if (filters.insc_hasta_hasta)        params.insc_hasta_hasta        = filters.insc_hasta_hasta
+      // Evaluación
       if (filters.examen_publicado)        params.examen_publicado        = filters.examen_publicado
+      if (filters.fecha_examen_desde)      params.fecha_examen_desde      = filters.fecha_examen_desde
+      if (filters.fecha_examen_hasta)      params.fecha_examen_hasta      = filters.fecha_examen_hasta
       if (filters.orden_merito)            params.orden_merito            = filters.orden_merito
+      if (filters.fecha_orden_merito_desde) params.fecha_orden_merito_desde = filters.fecha_orden_merito_desde
+      if (filters.fecha_orden_merito_hasta) params.fecha_orden_merito_hasta = filters.fecha_orden_merito_hasta
+      if (filters.fecha_ifacs_desde)       params.fecha_ifacs_desde       = filters.fecha_ifacs_desde
+      if (filters.fecha_ifacs_hasta)       params.fecha_ifacs_hasta       = filters.fecha_ifacs_hasta
       if (filters.insal)                   params.insal                   = filters.insal
+      if (filters.fecha_insal_desde)       params.fecha_insal_desde       = filters.fecha_insal_desde
+      if (filters.fecha_insal_hasta)       params.fecha_insal_hasta       = filters.fecha_insal_hasta
       if (filters.cargo_sial)              params.cargo_sial              = filters.cargo_sial
+      // Designación
+      if (filters.ee_designacion)          params.ee_designacion          = filters.ee_designacion
+      if (filters.fecha_ee_designacion_desde) params.fecha_ee_designacion_desde = filters.fecha_ee_designacion_desde
+      if (filters.fecha_ee_designacion_hasta) params.fecha_ee_designacion_hasta = filters.fecha_ee_designacion_hasta
+      if (filters.nombre_designacion)      params.nombre_designacion      = filters.nombre_designacion
+      if (filters.cuil_designacion)        params.cuil_designacion        = filters.cuil_designacion
+      if (filters.carga_documentacion)     params.carga_documentacion     = filters.carga_documentacion
+      if (filters.fecha_apto_medico_desde) params.fecha_apto_medico_desde = filters.fecha_apto_medico_desde
+      if (filters.fecha_apto_medico_hasta) params.fecha_apto_medico_hasta = filters.fecha_apto_medico_hasta
+      if (filters.fecha_ite_desde)         params.fecha_ite_desde         = filters.fecha_ite_desde
+      if (filters.fecha_ite_hasta)         params.fecha_ite_hasta         = filters.fecha_ite_hasta
+      if (filters.reso_a_la_firma)         params.reso_a_la_firma         = filters.reso_a_la_firma
+      if (filters.resolucion_designacion)  params.resolucion_designacion  = filters.resolucion_designacion
+      if (filters.fecha_resolucion_desde)  params.fecha_resolucion_desde  = filters.fecha_resolucion_desde
+      if (filters.fecha_resolucion_hasta)  params.fecha_resolucion_hasta  = filters.fecha_resolucion_hasta
+      if (filters.fecha_cargo_desde)       params.fecha_cargo_desde       = filters.fecha_cargo_desde
+      if (filters.fecha_cargo_hasta)       params.fecha_cargo_hasta       = filters.fecha_cargo_hasta
+      if (filters.cargo_baja)              params.cargo_baja              = filters.cargo_baja
       if (idBajaParam)                     params.id_baja                 = idBajaParam
 
       const data = await seguimientoApi.list(params)
@@ -284,18 +371,59 @@ export default function SeguimientoCphPage() {
         if (filters.puesto_1)                params.puesto_1                = filters.puesto_1
         if (filters.especialidad_baja)       params.especialidad_baja       = filters.especialidad_baja
         if (filters.motivo_baja)             params.motivo_baja             = filters.motivo_baja
+        if (filters.fecha_baja_desde)        params.fecha_baja_desde        = filters.fecha_baja_desde
+        if (filters.fecha_baja_hasta)        params.fecha_baja_hasta        = filters.fecha_baja_hasta
         if (filters.sub_estado_3)            params.sub_estado_3            = filters.sub_estado_3
         if (filters.suspendido)              params.suspendido              = filters.suspendido
         if (filters.cambio_especialidad)     params.cambio_especialidad     = filters.cambio_especialidad
         if (filters.dispo_desierta)          params.dispo_desierta          = filters.dispo_desierta
         if (filters.tipo_baja)               params.tipo_baja               = filters.tipo_baja
+        if (filters.fecha_dispo_desierta_desde) params.fecha_dispo_desierta_desde = filters.fecha_dispo_desierta_desde
+        if (filters.fecha_dispo_desierta_hasta) params.fecha_dispo_desierta_hasta = filters.fecha_dispo_desierta_hasta
         if (filters.escalafon_2)             params.escalafon_2             = filters.escalafon_2
         if (filters.puesto_2)                params.puesto_2                = filters.puesto_2
         if (filters.especialidad_solicitada) params.especialidad_solicitada = filters.especialidad_solicitada
+        if (filters.ee_concurso)             params.ee_concurso             = filters.ee_concurso
+        if (filters.fecha_ee_concurso_desde) params.fecha_ee_concurso_desde = filters.fecha_ee_concurso_desde
+        if (filters.fecha_ee_concurso_hasta) params.fecha_ee_concurso_hasta = filters.fecha_ee_concurso_hasta
+        if (filters.if_solicitante)          params.if_solicitante          = filters.if_solicitante
+        if (filters.fecha_autorizacion_desde) params.fecha_autorizacion_desde = filters.fecha_autorizacion_desde
+        if (filters.fecha_autorizacion_hasta) params.fecha_autorizacion_hasta = filters.fecha_autorizacion_hasta
+        if (filters.sorteo_jurado)           params.sorteo_jurado           = filters.sorteo_jurado
+        if (filters.disposicion)             params.disposicion             = filters.disposicion
+        if (filters.insc_desde_desde)        params.insc_desde_desde        = filters.insc_desde_desde
+        if (filters.insc_desde_hasta)        params.insc_desde_hasta        = filters.insc_desde_hasta
+        if (filters.insc_hasta_desde)        params.insc_hasta_desde        = filters.insc_hasta_desde
+        if (filters.insc_hasta_hasta)        params.insc_hasta_hasta        = filters.insc_hasta_hasta
         if (filters.examen_publicado)        params.examen_publicado        = filters.examen_publicado
+        if (filters.fecha_examen_desde)      params.fecha_examen_desde      = filters.fecha_examen_desde
+        if (filters.fecha_examen_hasta)      params.fecha_examen_hasta      = filters.fecha_examen_hasta
         if (filters.orden_merito)            params.orden_merito            = filters.orden_merito
+        if (filters.fecha_orden_merito_desde) params.fecha_orden_merito_desde = filters.fecha_orden_merito_desde
+        if (filters.fecha_orden_merito_hasta) params.fecha_orden_merito_hasta = filters.fecha_orden_merito_hasta
+        if (filters.fecha_ifacs_desde)       params.fecha_ifacs_desde       = filters.fecha_ifacs_desde
+        if (filters.fecha_ifacs_hasta)       params.fecha_ifacs_hasta       = filters.fecha_ifacs_hasta
         if (filters.insal)                   params.insal                   = filters.insal
+        if (filters.fecha_insal_desde)       params.fecha_insal_desde       = filters.fecha_insal_desde
+        if (filters.fecha_insal_hasta)       params.fecha_insal_hasta       = filters.fecha_insal_hasta
         if (filters.cargo_sial)              params.cargo_sial              = filters.cargo_sial
+        if (filters.ee_designacion)          params.ee_designacion          = filters.ee_designacion
+        if (filters.fecha_ee_designacion_desde) params.fecha_ee_designacion_desde = filters.fecha_ee_designacion_desde
+        if (filters.fecha_ee_designacion_hasta) params.fecha_ee_designacion_hasta = filters.fecha_ee_designacion_hasta
+        if (filters.nombre_designacion)      params.nombre_designacion      = filters.nombre_designacion
+        if (filters.cuil_designacion)        params.cuil_designacion        = filters.cuil_designacion
+        if (filters.carga_documentacion)     params.carga_documentacion     = filters.carga_documentacion
+        if (filters.fecha_apto_medico_desde) params.fecha_apto_medico_desde = filters.fecha_apto_medico_desde
+        if (filters.fecha_apto_medico_hasta) params.fecha_apto_medico_hasta = filters.fecha_apto_medico_hasta
+        if (filters.fecha_ite_desde)         params.fecha_ite_desde         = filters.fecha_ite_desde
+        if (filters.fecha_ite_hasta)         params.fecha_ite_hasta         = filters.fecha_ite_hasta
+        if (filters.reso_a_la_firma)         params.reso_a_la_firma         = filters.reso_a_la_firma
+        if (filters.resolucion_designacion)  params.resolucion_designacion  = filters.resolucion_designacion
+        if (filters.fecha_resolucion_desde)  params.fecha_resolucion_desde  = filters.fecha_resolucion_desde
+        if (filters.fecha_resolucion_hasta)  params.fecha_resolucion_hasta  = filters.fecha_resolucion_hasta
+        if (filters.fecha_cargo_desde)       params.fecha_cargo_desde       = filters.fecha_cargo_desde
+        if (filters.fecha_cargo_hasta)       params.fecha_cargo_hasta       = filters.fecha_cargo_hasta
+        if (filters.cargo_baja)              params.cargo_baja              = filters.cargo_baja
         if (idBajaParam)                     params.id_baja                 = idBajaParam
       }
       const data = await seguimientoApi.list(params)
@@ -360,7 +488,7 @@ export default function SeguimientoCphPage() {
           </button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleExport(true)}
             disabled={exporting || !hasFilters}
@@ -414,7 +542,7 @@ export default function SeguimientoCphPage() {
           {/* 2 — Baja (con cascada) */}
           <FilterAccSection
             title="Baja"
-            activeCount={activeInSection(['ee_baja','cuil_baja','escalafon_baja','escalafon_1','unificador_puestos','puesto_1','especialidad_baja','motivo_baja'])}
+            activeCount={activeInSection(['ee_baja','cuil_baja','escalafon_baja','escalafon_1','unificador_puestos','puesto_1','especialidad_baja','motivo_baja','fecha_baja_desde','fecha_baja_hasta'])}
           >
             <FilterText label="EE baja" value={filters.ee_baja}
               onChange={v => { setFilters(f => ({ ...f, ee_baja: v })); setPage(1) }}
@@ -447,16 +575,20 @@ export default function SeguimientoCphPage() {
             <FilterSelect label="Motivo de baja" value={filters.motivo_baja}
               onChange={v => { setFilters(f => ({ ...f, motivo_baja: v })); setPage(1) }}
               options={OPCIONES_MOTIVO_BAJA} />
+            <FilterDate label="Fecha baja desde" value={filters.fecha_baja_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_baja_desde: v })); setPage(1) }} />
+            <FilterDate label="Fecha baja hasta" value={filters.fecha_baja_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_baja_hasta: v })); setPage(1) }} />
           </FilterAccSection>
 
           {/* 3 — Estado del proceso */}
           <FilterAccSection
             title="Estado del proceso"
-            activeCount={activeInSection(['sub_estado_3','suspendido','cambio_especialidad','dispo_desierta','tipo_baja'])}
+            activeCount={activeInSection(['sub_estado_3','suspendido','cambio_especialidad','dispo_desierta','tipo_baja','fecha_dispo_desierta_desde','fecha_dispo_desierta_hasta'])}
           >
             <FilterSelect label="Sub-estado (progreso)" value={filters.sub_estado_3}
               onChange={v => { setFilters(f => ({ ...f, sub_estado_3: v })); setPage(1) }}
-              options={OPCIONES_ESTADO} />
+              options={OPCIONES_SUB_ESTADO_3} />
             <FilterBoolSelect label="Suspendido" value={filters.suspendido}
               onChange={v => { setFilters(f => ({ ...f, suspendido: v })); setPage(1) }} />
             <FilterSelect label="Cambio especialidad" value={filters.cambio_especialidad}
@@ -465,6 +597,10 @@ export default function SeguimientoCphPage() {
             <FilterSelect label="Dispo. desierta" value={filters.dispo_desierta}
               onChange={v => { setFilters(f => ({ ...f, dispo_desierta: v })); setPage(1) }}
               options={OPCIONES_DISPO_DESIERTA} />
+            <FilterDate label="F. dispo. desierta desde" value={filters.fecha_dispo_desierta_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_dispo_desierta_desde: v })); setPage(1) }} />
+            <FilterDate label="F. dispo. desierta hasta" value={filters.fecha_dispo_desierta_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_dispo_desierta_hasta: v })); setPage(1) }} />
             <FilterText label="Tipo de baja" value={filters.tipo_baja}
               onChange={v => { setFilters(f => ({ ...f, tipo_baja: v })); setPage(1) }}
               placeholder="Ingresá tipo…" />
@@ -473,7 +609,7 @@ export default function SeguimientoCphPage() {
           {/* 4 — Concurso (con cascada puesto_2 → especialidad_solicitada) */}
           <FilterAccSection
             title="Concurso"
-            activeCount={activeInSection(['escalafon_2','puesto_2','especialidad_solicitada'])}
+            activeCount={activeInSection(['escalafon_2','puesto_2','especialidad_solicitada','ee_concurso','fecha_ee_concurso_desde','fecha_ee_concurso_hasta','if_solicitante','fecha_autorizacion_desde','fecha_autorizacion_hasta','sorteo_jurado','disposicion'])}
           >
             <FilterSelect label="Escalafón 2 (POU/POF)" value={filters.escalafon_2}
               onChange={v => { setFilters(f => ({ ...f, escalafon_2: v })); setPage(1) }}
@@ -493,21 +629,118 @@ export default function SeguimientoCphPage() {
               disabled={!filters.puesto_2}
               hint={!filters.puesto_2 ? 'Seleccioná Puesto 2 primero' : null}
             />
+            <FilterText label="EE concurso" value={filters.ee_concurso}
+              onChange={v => { setFilters(f => ({ ...f, ee_concurso: v })); setPage(1) }}
+              placeholder="EX-2024-…" />
+            <FilterDate label="F. EE concurso desde" value={filters.fecha_ee_concurso_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ee_concurso_desde: v })); setPage(1) }} />
+            <FilterDate label="F. EE concurso hasta" value={filters.fecha_ee_concurso_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ee_concurso_hasta: v })); setPage(1) }} />
+            <FilterText label="IF solicitante" value={filters.if_solicitante}
+              onChange={v => { setFilters(f => ({ ...f, if_solicitante: v })); setPage(1) }}
+              placeholder="IF-2024-…" />
+            <FilterDate label="F. autorización desde" value={filters.fecha_autorizacion_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_desde: v })); setPage(1) }} />
+            <FilterDate label="F. autorización hasta" value={filters.fecha_autorizacion_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_hasta: v })); setPage(1) }} />
+            <FilterBoolSelect label="Sorteo jurado" value={filters.sorteo_jurado}
+              onChange={v => { setFilters(f => ({ ...f, sorteo_jurado: v })); setPage(1) }} />
+            <FilterText label="Disposición" value={filters.disposicion}
+              onChange={v => { setFilters(f => ({ ...f, disposicion: v })); setPage(1) }}
+              placeholder="Ingresá disposición…" />
           </FilterAccSection>
 
-          {/* 5 — Evaluación y designación */}
+          {/* 5 — Inscripción */}
           <FilterAccSection
-            title="Evaluación y designación"
-            activeCount={activeInSection(['examen_publicado','orden_merito','insal','cargo_sial'])}
+            title="Inscripción"
+            activeCount={activeInSection(['insc_desde_desde','insc_desde_hasta','insc_hasta_desde','insc_hasta_hasta'])}
+          >
+            <FilterDate label="F. insc. desde — desde" value={filters.insc_desde_desde}
+              onChange={v => { setFilters(f => ({ ...f, insc_desde_desde: v })); setPage(1) }} />
+            <FilterDate label="F. insc. desde — hasta" value={filters.insc_desde_hasta}
+              onChange={v => { setFilters(f => ({ ...f, insc_desde_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. insc. hasta — desde" value={filters.insc_hasta_desde}
+              onChange={v => { setFilters(f => ({ ...f, insc_hasta_desde: v })); setPage(1) }} />
+            <FilterDate label="F. insc. hasta — hasta" value={filters.insc_hasta_hasta}
+              onChange={v => { setFilters(f => ({ ...f, insc_hasta_hasta: v })); setPage(1) }} />
+          </FilterAccSection>
+
+          {/* 6 — Evaluación */}
+          <FilterAccSection
+            title="Evaluación"
+            activeCount={activeInSection(['examen_publicado','fecha_examen_desde','fecha_examen_hasta','orden_merito','fecha_orden_merito_desde','fecha_orden_merito_hasta','fecha_ifacs_desde','fecha_ifacs_hasta','insal','fecha_insal_desde','fecha_insal_hasta'])}
           >
             <FilterBoolSelect label="Examen publicado" value={filters.examen_publicado}
               onChange={v => { setFilters(f => ({ ...f, examen_publicado: v })); setPage(1) }} />
+            <FilterDate label="F. examen desde" value={filters.fecha_examen_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_examen_desde: v })); setPage(1) }} />
+            <FilterDate label="F. examen hasta" value={filters.fecha_examen_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_examen_hasta: v })); setPage(1) }} />
             <FilterBoolSelect label="Orden de mérito" value={filters.orden_merito}
               onChange={v => { setFilters(f => ({ ...f, orden_merito: v })); setPage(1) }} />
+            <FilterDate label="F. orden mérito desde" value={filters.fecha_orden_merito_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_orden_merito_desde: v })); setPage(1) }} />
+            <FilterDate label="F. orden mérito hasta" value={filters.fecha_orden_merito_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_orden_merito_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. IFACS desde" value={filters.fecha_ifacs_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_desde: v })); setPage(1) }} />
+            <FilterDate label="F. IFACS hasta" value={filters.fecha_ifacs_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_hasta: v })); setPage(1) }} />
             <FilterBoolSelect label="INSAL" value={filters.insal}
               onChange={v => { setFilters(f => ({ ...f, insal: v })); setPage(1) }} />
-            <FilterBoolSelect label="Cargo SIAL" value={filters.cargo_sial}
-              onChange={v => { setFilters(f => ({ ...f, cargo_sial: v })); setPage(1) }} />
+            <FilterDate label="F. INSAL desde" value={filters.fecha_insal_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_insal_desde: v })); setPage(1) }} />
+            <FilterDate label="F. INSAL hasta" value={filters.fecha_insal_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_insal_hasta: v })); setPage(1) }} />
+          </FilterAccSection>
+
+          {/* 7 — Designación */}
+          <FilterAccSection
+            title="Designación"
+            activeCount={activeInSection(['ee_designacion','fecha_ee_designacion_desde','fecha_ee_designacion_hasta','nombre_designacion','cuil_designacion','carga_documentacion','fecha_apto_medico_desde','fecha_apto_medico_hasta','fecha_ite_desde','fecha_ite_hasta','reso_a_la_firma','resolucion_designacion','fecha_resolucion_desde','fecha_resolucion_hasta','fecha_cargo_desde','fecha_cargo_hasta','cargo_baja','cargo_sial'])}
+          >
+            <FilterText label="EE designación" value={filters.ee_designacion}
+              onChange={v => { setFilters(f => ({ ...f, ee_designacion: v })); setPage(1) }}
+              placeholder="EX-2024-…" />
+            <FilterDate label="F. EE desig. desde" value={filters.fecha_ee_designacion_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ee_designacion_desde: v })); setPage(1) }} />
+            <FilterDate label="F. EE desig. hasta" value={filters.fecha_ee_designacion_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ee_designacion_hasta: v })); setPage(1) }} />
+            <FilterText label="Nombre designado" value={filters.nombre_designacion}
+              onChange={v => { setFilters(f => ({ ...f, nombre_designacion: v })); setPage(1) }}
+              placeholder="Apellido…" />
+            <FilterText label="CUIL designado" value={filters.cuil_designacion}
+              onChange={v => { setFilters(f => ({ ...f, cuil_designacion: v })); setPage(1) }}
+              placeholder="20123456789" />
+            <FilterBoolSelect label="Carga documentación" value={filters.carga_documentacion}
+              onChange={v => { setFilters(f => ({ ...f, carga_documentacion: v })); setPage(1) }} />
+            <FilterDate label="F. apto médico desde" value={filters.fecha_apto_medico_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_apto_medico_desde: v })); setPage(1) }} />
+            <FilterDate label="F. apto médico hasta" value={filters.fecha_apto_medico_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_apto_medico_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. ITE desde" value={filters.fecha_ite_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ite_desde: v })); setPage(1) }} />
+            <FilterDate label="F. ITE hasta" value={filters.fecha_ite_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ite_hasta: v })); setPage(1) }} />
+            <FilterBoolSelect label="Reso. a la firma" value={filters.reso_a_la_firma}
+              onChange={v => { setFilters(f => ({ ...f, reso_a_la_firma: v })); setPage(1) }} />
+            <FilterText label="Resolución designación" value={filters.resolucion_designacion}
+              onChange={v => { setFilters(f => ({ ...f, resolucion_designacion: v })); setPage(1) }}
+              placeholder="N° resolución…" />
+            <FilterDate label="F. resolución desde" value={filters.fecha_resolucion_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_resolucion_desde: v })); setPage(1) }} />
+            <FilterDate label="F. resolución hasta" value={filters.fecha_resolucion_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_resolucion_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. cargo desde" value={filters.fecha_cargo_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_cargo_desde: v })); setPage(1) }} />
+            <FilterDate label="F. cargo hasta" value={filters.fecha_cargo_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_cargo_hasta: v })); setPage(1) }} />
+            <FilterText label="Cargo baja (POU)" value={filters.cargo_baja}
+              onChange={v => { setFilters(f => ({ ...f, cargo_baja: v })); setPage(1) }}
+              placeholder="Cargo…" />
+            <FilterText label="Cargo SIAL" value={filters.cargo_sial}
+              onChange={v => { setFilters(f => ({ ...f, cargo_sial: v })); setPage(1) }}
+              placeholder="Código SIAL…" />
           </FilterAccSection>
 
         </div>
@@ -570,7 +803,6 @@ export default function SeguimientoCphPage() {
                 <Th label="Escalafón 2" field="escalafon_2" sort={sort} onSort={handleSortToggle} />
                 <Th label="Puesto 2" field="puesto_2" sort={sort} onSort={handleSortToggle} />
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Especialidad sol.</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">CCOO esp.</th>
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">IF solicitante</th>
                 <Th label="F. autorización" field="fecha_autorizacion" sort={sort} onSort={handleSortToggle} />
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Sorteo jurado</th>
@@ -638,7 +870,7 @@ export default function SeguimientoCphPage() {
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.conjuntos ?? '—'}</td>
                   {/* Estado */}
                   <td className="px-3 py-2 whitespace-nowrap">
-                    <EstadoBadge estado={row.sub_estado_3 || calcSubEstado3(row)} />
+                    <EstadoBadge estado={calcEstado(row)} />
                   </td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{calcSubEstado(row) || '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{calcSubEstado3(row) || '—'}</td>
@@ -653,7 +885,6 @@ export default function SeguimientoCphPage() {
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.escalafon_2 ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_2 ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.especialidad_solicitada ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.ccoo_especialidad ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.if_solicitante ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_autorizacion)}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{bool(row.sorteo_jurado)}</td>
@@ -683,7 +914,7 @@ export default function SeguimientoCphPage() {
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.resolucion_designacion ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_resolucion)}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_cargo)}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{bool(row.cargo_sial)}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cargo_sial ?? '—'}</td>
                   {/* POU */}
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cargo_baja ?? '—'}</td>
                   {/* Observaciones */}
@@ -748,7 +979,7 @@ export default function SeguimientoCphPage() {
 
       {/* Confirm delete */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
             <h2 className="text-base font-semibold text-gray-900">Confirmar eliminación</h2>
             <p className="text-sm text-gray-600">
@@ -840,7 +1071,7 @@ function FilterAccSection({ title, activeCount = 0, children }) {
         )}
       </button>
       {open && (
-        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
           {children}
         </div>
       )}
@@ -1040,6 +1271,21 @@ function FilterSearchSelect({ label, value, onChange, options = [], disabled = f
       )}
 
       {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
+    </div>
+  )
+}
+
+// ─── FilterDate — input fecha ────────────────────────────────────────────────
+function FilterDate({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <input
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="form-input text-sm w-full"
+      />
     </div>
   )
 }

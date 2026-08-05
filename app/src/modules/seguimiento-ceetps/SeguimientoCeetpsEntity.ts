@@ -14,6 +14,8 @@ import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, Index } from 'typeo
 @Index(['codigo_registro'])
 @Index(['id_baja'])
 @Index(['cuil'])
+@Index(['expediente_concurso'])
+@Index(['estado_concurso'])
 export class SeguimientoCeetps extends BaseEntity {
   @PrimaryGeneratedColumn('increment')
   id!: number
@@ -52,6 +54,12 @@ export class SeguimientoCeetps extends BaseEntity {
 
   @Column({ type: 'varchar', length: 15, nullable: true })
   fecha_autorizacion?: string | null
+
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  cambio_especialidad?: string | null
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  doc_cambio_especialidad?: string | null
 
   @Column({ type: 'varchar', length: 150, nullable: true })
   puesto_solicitado?: string | null

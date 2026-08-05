@@ -30,8 +30,10 @@ export default function LoginPage() {
     setError(null)
     try {
       const user = await login(form.username.trim(), form.password)
-      // Director va directo a su página
-      const dest = user?.role === 'director' ? '/director' : from
+      // Director y Autoridades van directo a su página (no tienen acceso al Panel de inicio)
+      const dest = user?.role === 'director' ? '/director'
+        : user?.role === 'autoridades' ? '/organigrama'
+        : from
       navigate(dest, { replace: true })
     } catch (err) {
       setError(err.message ?? 'Error al iniciar sesión')
@@ -70,7 +72,7 @@ export default function LoginPage() {
                   autoComplete="username"
                   autoFocus
                   className="form-input"
-                  placeholder="Email de Gobierno"
+                  placeholder="Usuario o email"
                   value={form.username}
                   onChange={handleChange}
                   disabled={loading}

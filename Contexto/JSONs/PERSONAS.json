@@ -1,0 +1,46 @@
+{
+  "orden_columnas": [
+      "ID PERSONA",
+      "ID SIAL",
+      "CUIL",
+      "CUIL Y ROL",      
+      "AYN",
+      "FECHA NACIMIENTO",
+      "EDAD",
+      "SEXO",
+      "TIPO DOC",
+      "NUMERO DOC",
+      "ESPECIALIDAD",
+      "TELEFONO",
+      "MAIL_PERSONAL",
+      "MAIL_LABORAL",
+      "DOMICILIO",
+      "LOCALIDAD",
+      "ANTIGÜEDAD",
+      "PERIODO"
+  ],
+  "renombrar_columnas": {
+    "ID SIAL": "CODIGO PERSONA"
+  },
+  "columnas_agregadas": {
+    "ID PERSONA": 1,
+    "PERIODO": "2026-07"
+  },
+  "transformaciones": {
+    "ID SIAL": {
+      "tipo": "recorte",
+      "desde": 1,
+      "hasta": 9
+    },
+    "TELEFONO": {
+      "tipo": "eliminar_caracteres",
+      "caracteres": ["+", " "]
+      },
+    "ANTIGÜEDAD": {
+      "tipo": "formato_fecha"
+    },
+    "FECHA NACIMIENTO": {
+      "tipo": "formato_fecha"
+  }
+ }
+}

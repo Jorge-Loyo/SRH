@@ -33,7 +33,7 @@ function resolveTitle(pathname) {
   return 'Sistema RRHH'
 }
 
-export default function Header() {
+export default function Header({ onMenuClick = () => {} }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -52,9 +52,22 @@ export default function Header() {
   }
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between px-6 bg-white border-b border-gray-200">
-      {/* Título de la ruta actual */}
-      <h1 className="text-sm font-semibold text-gray-700">{title}</h1>
+    <header className="h-14 shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 bg-white border-b border-gray-200">
+      <div className="flex items-center gap-3 min-w-0">
+        {/* Botón de menú — solo visible por debajo de `lg`, donde el sidebar es un drawer */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden -ml-1 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg shrink-0"
+          aria-label="Abrir menú"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Título de la ruta actual */}
+        <h1 className="text-sm font-semibold text-gray-700 truncate">{title}</h1>
+      </div>
 
       {/* Usuario + cerrar sesión */}
       <div className="flex items-center gap-3">

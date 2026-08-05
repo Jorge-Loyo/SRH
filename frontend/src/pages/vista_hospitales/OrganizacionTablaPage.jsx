@@ -6,10 +6,10 @@ import {
   ArrowLeftIcon, ChevronUpIcon, ChevronDownIcon,
   ArrowDownTrayIcon, FunnelIcon, XMarkIcon,
   ChartBarSquareIcon, ClipboardDocumentListIcon,
-  DocumentTextIcon, TableCellsIcon, CheckIcon, TrashIcon,
+  TableCellsIcon, CheckIcon, TrashIcon,
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
-import { apiGet, apiPost, apiPut, apiDelete } from '../../api/client';
+import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../../api/client';
 import { hospitalsMap } from '../../data/hospitals-data';
 import { useAuth } from '../../auth/AuthContext';
 import Pagination from '../../components/ui/Pagination';
@@ -18,17 +18,18 @@ import Spinner from '../../components/ui/Spinner';
 import RichTextEditor from '../../components/ui/RichTextEditor';
 import TablaAmpliadaModal from '../../components/ui/TablaAmpliadaModal';
 import PeriodoSelect from '../../components/ui/PeriodoSelect';
+import { formatCellValue } from '../../utils/formatValue';
 
 // ─── constantes ─────────────────────────────────────────────────────────────
 
 const MULTI_FILTERS = [
   { key: 'unificador_puesto',        label: 'Unificador Puesto' },
   { key: 'especialidad',             label: 'Especialidad' },
-  { key: 'agrupador',                label: 'Agrupamiento',  hideOnConcursos: true },
+  { key: 'agrupador',                label: 'Agrupamiento' },
   { key: 'literal_puesto',           label: 'Puesto' },
-  { key: 'literal_codigo_registro',  label: 'Código de Registro', labelConcursos: 'Motivo de Baja' },
-  { key: 'escalafon',                label: 'Escalafón',       hideOnConcursos: true },
-  { key: 'sexo',                     label: 'Sexo',           hideOnConcursos: true },
+  { key: 'literal_codigo_registro',  label: 'Código de Registro' },
+  { key: 'escalafon',                label: 'Escalafón' },
+  { key: 'sexo',                     label: 'Sexo' },
 ];
 
 const QUICK_FIELDS = [
@@ -38,10 +39,6 @@ const QUICK_FIELDS = [
   { key: 'codigo_rol',      label: 'Cód. SIAL',         placeholder: 'Buscar...' },
 ];
 
-const QUICK_FIELDS_CONCURSOS = [
-  { key: 'ex_baja',     label: 'Ex Baja',     placeholder: 'Buscar...' },
-  { key: 'ex_concurso', label: 'Ex Concurso', placeholder: 'Buscar...' },
-];
 
 const KPI_DEFS = [
   { key: 'total',      label: 'Total',             color: 'bg-gray-100',    textColor: 'text-gray-800',   estadoValue: '' },
@@ -57,7 +54,6 @@ const EMPTY_MULTI = {
 };
 const EMPTY_QUICK = {
   codigo_cargo: '', nombre_apellido: '', cuil: '', codigo_rol: '',
-  ex_baja: '', ex_concurso: '',
 };
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -78,7 +74,7 @@ const KpiCard = memo(({ def, value, active, onClick }) => (
   <button
     onClick={() => def.estadoValue && onClick(def.estadoValue)}
     className={[
-      'flex flex-col items-center justify-center rounded-lg px-8 py-2.5 min-w-[170px] transition-all',
+      'flex flex-col items-center justify-center rounded-lg px-5 sm:px-8 py-2.5 min-w-[120px] sm:min-w-[170px] transition-all',
       def.color,
       def.estadoValue
         ? active
@@ -134,7 +130,7 @@ const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef }) =>
           >
             {columns.map((col) => (
               <td key={col} className="px-3 py-1.5 whitespace-nowrap text-gray-800 border-b border-gray-100">
-                {row[col] != null ? String(row[col]) : ''}
+                {formatCellValue(row[col], col)}
               </td>
             ))}
           </tr>
@@ -193,7 +189,7 @@ function RecorridaEditorModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
       onClick={onClose}
     >
       <div
@@ -319,7 +315,6 @@ export default function OrganizacionTablaPage() {
   const [quickSearch, setQuickSearch] = useState(EMPTY_QUICK);
   const [rangoEdad, setRangoEdad] = useState({ min: '', max: '' });
   const [antiguedad, setAntiguedad] = useState({ min: '', max: '' });
-  const [procesosConcursales, setProcesosConcursales] = useState(false);
   const [estadoFilter, setEstadoFilter] = useState('');
   const [distinctValues, setDistinctValues] = useState({ ...EMPTY_MULTI });
   const [showFilters, setShowFilters] = useState(true);
@@ -378,8 +373,6 @@ export default function OrganizacionTablaPage() {
   useEffect(() => { rangoEdadRef.current = rangoEdad; }, [rangoEdad]);
   const antiguedadRef = useRef(antiguedad);
   useEffect(() => { antiguedadRef.current = antiguedad; }, [antiguedad]);
-  const procesosConcursalesRef = useRef(procesosConcursales);
-  useEffect(() => { procesosConcursalesRef.current = procesosConcursales; }, [procesosConcursales]);
   const estadoFilterRef = useRef(estadoFilter);
   useEffect(() => { estadoFilterRef.current = estadoFilter; }, [estadoFilter]);
   const tableRef = useRef(null);
@@ -393,7 +386,6 @@ export default function OrganizacionTablaPage() {
     if (rangoEdadRef.current.max) active.edad_max = rangoEdadRef.current.max;
     if (antiguedadRef.current.min) active.antiguedad_min = antiguedadRef.current.min;
     if (antiguedadRef.current.max) active.antiguedad_max = antiguedadRef.current.max;
-    if (procesosConcursalesRef.current) active.procesos_concursales = 'true';
     if (estadoFilterRef.current) active.estado = estadoFilterRef.current;
     return active;
   }, []);
@@ -461,13 +453,7 @@ export default function OrganizacionTablaPage() {
     const t = setTimeout(() => fetchData({ page: 1 }), 300);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, quickSearch, rangoEdad, antiguedad, procesosConcursales, estadoFilter]);
-
-  // limpiar estado al activar modo concursal
-  useEffect(() => {
-    if (procesosConcursales && estadoFilter) setEstadoFilter('');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [procesosConcursales]);
+  }, [filters, quickSearch, rangoEdad, antiguedad, estadoFilter]);
 
   // callbacks de UI
   const handleSort = useCallback((col) => {
@@ -502,7 +488,6 @@ export default function OrganizacionTablaPage() {
     setQuickSearch(EMPTY_QUICK);
     setRangoEdad({ min: '', max: '' });
     setAntiguedad({ min: '', max: '' });
-    setProcesosConcursales(false);
     setEstadoFilter('');
   }, []);
 
@@ -524,7 +509,7 @@ export default function OrganizacionTablaPage() {
 
   const exportFull = useCallback(() => {
     const s = tableStateRef.current;
-    const tipo = procesosConcursalesRef.current ? 'bajas-concursos' : 'dotacion-total';
+    const tipo = 'dotacion-total';
     const params = new URLSearchParams({ periodo: periodoRef.current });
     if (s.sortBy) params.append('sortBy', s.sortBy);
     if (s.sortDir) params.append('sortDir', s.sortDir);
@@ -555,7 +540,7 @@ export default function OrganizacionTablaPage() {
       {/* Modal de Recorrida */}
       {recorridaOpen && (
         recorridaLoading ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
             <Spinner size="lg" />
           </div>
         ) : (
@@ -597,7 +582,7 @@ export default function OrganizacionTablaPage() {
           <div className="flex-1" />
 
           {/* Accesos rápidos */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Link
               to={`/organigrama/${code}`}
               className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700 transition-colors"
@@ -624,16 +609,6 @@ export default function OrganizacionTablaPage() {
               >
                 <BookOpenIcon className="w-3.5 h-3.5" />
                 Seguimiento
-              </Link>
-            )}
-            {!isDirector && (
-              <Link
-                to={`/concursos?sigla=${code}`}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700 transition-colors"
-                title="Ver concursos"
-              >
-                <DocumentTextIcon className="w-3.5 h-3.5" />
-                Concursos
               </Link>
             )}
             {!isDirector && (
@@ -678,24 +653,22 @@ export default function OrganizacionTablaPage() {
       {/* Panel de filtros */}
       {showFilters && (
         <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b border-gray-200">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
-            {MULTI_FILTERS.filter(f => !(procesosConcursales && f.hideOnConcursos)).map(({ key, label, labelConcursos }) => (
-              <MultiSelectDropdown key={key} label={procesosConcursales && labelConcursos ? labelConcursos : label}
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
+            {MULTI_FILTERS.map(({ key, label }) => (
+              <MultiSelectDropdown key={key} label={label}
                 value={filters[key]} options={distinctValues[key] || []}
                 onChange={(v) => setFilters((f) => ({ ...f, [key]: v }))} />
             ))}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-            {(procesosConcursales ? QUICK_FIELDS_CONCURSOS : QUICK_FIELDS).map(({ key, label, placeholder }) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
+            {QUICK_FIELDS.map(({ key, label, placeholder }) => (
               <div key={key}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
                 <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
                   onChange={(e) => setQuickSearch((q) => ({ ...q, [key]: e.target.value }))} />
               </div>
             ))}
-            {!procesosConcursales && (
-              <>
-                <div>
+            <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Edad</label>
                   <div className="flex items-center gap-2">
                     <input type="number" value={rangoEdad.min} min="0" max="120" placeholder="Mín."
@@ -719,8 +692,6 @@ export default function OrganizacionTablaPage() {
                       onChange={(e) => setAntiguedad((a) => ({ ...a, max: e.target.value }))} />
                   </div>
                 </div>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -728,35 +699,21 @@ export default function OrganizacionTablaPage() {
       {/* KPIs + Cargos Vacantes */}
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-100">
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Cargos Vacantes toggle - izquierda */}
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-            <div className="relative inline-block">
-              <input type="checkbox" className="sr-only peer" checked={procesosConcursales}
-                onChange={(e) => setProcesosConcursales(e.target.checked)} />
-              <div className="w-8 h-4 bg-gray-200 rounded-full peer peer-checked:bg-primary-600 transition-colors" />
-              <div className="absolute left-0.5 top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-            </div>
-            <span className={procesosConcursales ? 'text-primary-700 font-medium' : 'text-gray-600'}>
-              Cargos Vacantes
-            </span>
-          </label>
-          {/* KPIs - derecha */}
-          {!procesosConcursales && (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {KPI_DEFS.map((def) => (
-                <KpiCard key={def.key} def={def}
-                  value={tableState.kpis?.[def.key]}
-                  active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
-                  onClick={handleKpiClick} />
-              ))}
-              {estadoFilter && (
-                <button onClick={() => setEstadoFilter('')}
-                  className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
-                  <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
-                </button>
-              )}
-            </div>
-          )}
+          {/* KPIs */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {KPI_DEFS.map((def) => (
+              <KpiCard key={def.key} def={def}
+                value={tableState.kpis?.[def.key]}
+                active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
+                onClick={handleKpiClick} />
+            ))}
+            {estadoFilter && (
+              <button onClick={() => setEstadoFilter('')}
+                className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
+                <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -783,7 +740,7 @@ export default function OrganizacionTablaPage() {
                 {tableState.loading && <Spinner size="sm" />}
                 <span>{tableState.columns.length} columnas</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <label className="flex items-center gap-1.5 text-sm text-gray-500">
                   Mostrar
                   <select value={tableState.perPage} onChange={handlePerPageChange} className="form-input text-sm py-1 w-20">

@@ -112,21 +112,21 @@ export default function POUPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-700 transition-colors mr-1">
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div className="flex items-center gap-2 min-w-0">
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary-700 transition-colors mr-1 shrink-0">
               <ArrowLeftIcon className="w-4 h-4" />
             </button>
-            <TableCellsIcon className="w-5 h-5 text-primary-700" />
-            <h1 className="text-lg font-bold text-gray-900">POU – {sigla}</h1>
+            <TableCellsIcon className="w-5 h-5 text-primary-700 shrink-0" />
+            <h1 className="text-lg font-bold text-gray-900 truncate">POU – {sigla}</h1>
           </div>
           <button onClick={handleExport} disabled={exporting || state.rows.length === 0}
-            className="btn-secondary flex items-center gap-1.5 text-sm">
+            className="btn-secondary flex items-center gap-1.5 text-sm shrink-0">
             {exporting ? <Spinner size="sm" /> : <ArrowDownTrayIcon className="w-4 h-4" />}
             Exportar Excel
           </button>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <label className="text-sm font-medium text-gray-600">Período</label>
           <PeriodoSelect
             value={periodo}
@@ -171,16 +171,16 @@ export default function POUPage() {
         )}
       </div>
 
-      <div className="flex-1 overflow-auto px-4 py-3">
+      <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 min-h-0">
         {state.error && (
-          <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{state.error}</div>
+          <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700 flex-shrink-0">{state.error}</div>
         )}
         {state.loading ? (
-          <div className="flex justify-center py-16"><Spinner size="lg" /></div>
+          <div className="flex-1 flex justify-center items-center"><Spinner size="lg" /></div>
         ) : (
-          <div className="overflow-auto rounded-lg border border-gray-200">
+          <div className="overflow-auto rounded-lg border border-gray-200 flex-1 min-h-0">
             <table className="min-w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+              <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                 <tr>
                   {COLS.map(c => (
                     <th key={c.key} className={`px-3 py-2.5 text-xs font-semibold text-gray-600 whitespace-nowrap ${c.num ? 'text-right' : 'text-left'}`}>

@@ -13,7 +13,7 @@ import {
 import { seguimientoCeetpsApi } from '../../api/concursalesApi'
 import Pagination from '../../components/ui/Pagination'
 import Spinner from '../../components/ui/Spinner'
-import { formatDate, OPCIONES_USUARIOS, OPCIONES_MOTIVO_BAJA, SIGLAS_DATA } from '../../utils/concursalesHelpers'
+import { formatDate, OPCIONES_USUARIOS_CEETPS, OPCIONES_MOTIVO_BAJA, SIGLAS_DATA } from '../../utils/concursalesHelpers'
 import SeguimientoCeetpsDetail from './SeguimientoCeetpsDetail'
 import * as XLSX from 'xlsx'
 
@@ -33,18 +33,31 @@ const EMPTY_FILTERS = {
   sigla_efector:             '',
   // 2 — Concurso
   estado_concurso:           '',
-  ee_concurso:               '',
   expediente_concurso:       '',
   tipificador_obra_servicio: '',
   tipificador_origen:        '',
   puesto_solicitado:         '',
   dispo_llamado:             '',
+  fecha_caratulacion_desde:  '',
+  fecha_caratulacion_hasta:  '',
+  fecha_autorizacion_desde:  '',
+  fecha_autorizacion_hasta:  '',
+  fecha_ifacs_desde:         '',
+  fecha_ifacs_hasta:         '',
+  fecha_insal_desde:         '',
+  fecha_insal_hasta:         '',
   // 3 — Designación
   cuil_designado:            '',
   puesto_designado:          '',
   expediente_designacion:    '',
   estado_apto:               '',
   alta_sial:                 '',
+  numero_apto_medico:        '',
+  fecha_proyecto_dispo_desde: '',
+  fecha_proyecto_dispo_hasta: '',
+  dispo_designacion:         '',
+  resolucion_designacion:    '',
+  id_cargo:                  '',
   // 4 — Baja
   cuil:                      '',
   sigla_baja:                '',
@@ -53,6 +66,10 @@ const EMPTY_FILTERS = {
   especialidad_baja:         '',
   motivo_baja:               '',
   carga_horaria:             '',
+  cargo:                     '',
+  fecha_baja_desde:          '',
+  fecha_baja_hasta:          '',
+  doc_respaldatoria:         '',
 }
 
 export default function SeguimientoCeetpsPage() {
@@ -96,18 +113,31 @@ export default function SeguimientoCeetpsPage() {
     if (filters.sigla_efector)      p.sigla_efector      = filters.sigla_efector
     // Concurso
     if (filters.estado_concurso)           p.estado_concurso           = filters.estado_concurso
-    if (filters.ee_concurso)               p.ee_concurso               = filters.ee_concurso
     if (filters.expediente_concurso)       p.expediente_concurso       = filters.expediente_concurso
     if (filters.tipificador_obra_servicio) p.tipificador_obra_servicio = filters.tipificador_obra_servicio
     if (filters.tipificador_origen)        p.tipificador_origen        = filters.tipificador_origen
     if (filters.puesto_solicitado)         p.puesto_solicitado         = filters.puesto_solicitado
     if (filters.dispo_llamado)             p.dispo_llamado             = filters.dispo_llamado
+    if (filters.fecha_caratulacion_desde)  p.fecha_caratulacion_desde  = filters.fecha_caratulacion_desde
+    if (filters.fecha_caratulacion_hasta)  p.fecha_caratulacion_hasta  = filters.fecha_caratulacion_hasta
+    if (filters.fecha_autorizacion_desde)  p.fecha_autorizacion_desde  = filters.fecha_autorizacion_desde
+    if (filters.fecha_autorizacion_hasta)  p.fecha_autorizacion_hasta  = filters.fecha_autorizacion_hasta
+    if (filters.fecha_ifacs_desde)         p.fecha_ifacs_desde         = filters.fecha_ifacs_desde
+    if (filters.fecha_ifacs_hasta)         p.fecha_ifacs_hasta         = filters.fecha_ifacs_hasta
+    if (filters.fecha_insal_desde)         p.fecha_insal_desde         = filters.fecha_insal_desde
+    if (filters.fecha_insal_hasta)         p.fecha_insal_hasta         = filters.fecha_insal_hasta
     // Designación
     if (filters.cuil_designado)            p.cuil_designado            = filters.cuil_designado
     if (filters.puesto_designado)          p.puesto_designado          = filters.puesto_designado
     if (filters.expediente_designacion)    p.expediente_designacion    = filters.expediente_designacion
     if (filters.estado_apto)               p.estado_apto               = filters.estado_apto
     if (filters.alta_sial)                 p.alta_sial                 = filters.alta_sial
+    if (filters.numero_apto_medico)        p.numero_apto_medico        = filters.numero_apto_medico
+    if (filters.fecha_proyecto_dispo_desde) p.fecha_proyecto_dispo_desde = filters.fecha_proyecto_dispo_desde
+    if (filters.fecha_proyecto_dispo_hasta) p.fecha_proyecto_dispo_hasta = filters.fecha_proyecto_dispo_hasta
+    if (filters.dispo_designacion)         p.dispo_designacion         = filters.dispo_designacion
+    if (filters.resolucion_designacion)    p.resolucion_designacion    = filters.resolucion_designacion
+    if (filters.id_cargo)                  p.id_cargo                  = filters.id_cargo
     // Baja
     if (filters.cuil)                      p.cuil                      = filters.cuil
     if (filters.sigla_baja)                p.sigla_baja                = filters.sigla_baja
@@ -116,6 +146,10 @@ export default function SeguimientoCeetpsPage() {
     if (filters.especialidad_baja)         p.especialidad_baja         = filters.especialidad_baja
     if (filters.motivo_baja)               p.motivo_baja               = filters.motivo_baja
     if (filters.carga_horaria)             p.carga_horaria             = filters.carga_horaria
+    if (filters.cargo)                     p.cargo                     = filters.cargo
+    if (filters.fecha_baja_desde)          p.fecha_baja_desde          = filters.fecha_baja_desde
+    if (filters.fecha_baja_hasta)          p.fecha_baja_hasta          = filters.fecha_baja_hasta
+    if (filters.doc_respaldatoria)         p.doc_respaldatoria         = filters.doc_respaldatoria
     if (idBajaParam)                p.id_baja            = idBajaParam
     return p
   }, [currentCodigo, page, sort, filters, idBajaParam])
@@ -188,17 +222,30 @@ export default function SeguimientoCeetpsPage() {
         delete params.usuario
         delete params.sigla_efector
         delete params.estado_concurso
-        delete params.ee_concurso
         delete params.expediente_concurso
         delete params.tipificador_obra_servicio
         delete params.tipificador_origen
         delete params.puesto_solicitado
         delete params.dispo_llamado
+        delete params.fecha_caratulacion_desde
+        delete params.fecha_caratulacion_hasta
+        delete params.fecha_autorizacion_desde
+        delete params.fecha_autorizacion_hasta
+        delete params.fecha_ifacs_desde
+        delete params.fecha_ifacs_hasta
+        delete params.fecha_insal_desde
+        delete params.fecha_insal_hasta
         delete params.cuil_designado
         delete params.puesto_designado
         delete params.expediente_designacion
         delete params.estado_apto
         delete params.alta_sial
+        delete params.numero_apto_medico
+        delete params.fecha_proyecto_dispo_desde
+        delete params.fecha_proyecto_dispo_hasta
+        delete params.dispo_designacion
+        delete params.resolucion_designacion
+        delete params.id_cargo
         delete params.cuil
         delete params.sigla_baja
         delete params.ex_baja
@@ -206,6 +253,10 @@ export default function SeguimientoCeetpsPage() {
         delete params.especialidad_baja
         delete params.motivo_baja
         delete params.carga_horaria
+        delete params.cargo
+        delete params.fecha_baja_desde
+        delete params.fecha_baja_hasta
+        delete params.doc_respaldatoria
       }
       const data = await seguimientoCeetpsApi.list(params)
       const rows = data.data ?? []
@@ -290,7 +341,7 @@ export default function SeguimientoCeetpsPage() {
           </button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleExport(true)}
             disabled={exporting || !hasFilters}
@@ -322,7 +373,7 @@ export default function SeguimientoCeetpsPage() {
               label="Usuario"
               value={filters.usuario}
               onChange={v => { setFilters(f => ({ ...f, usuario: v })); setPage(1) }}
-              options={OPCIONES_USUARIOS}
+              options={OPCIONES_USUARIOS_CEETPS}
             />
             <FilterSearchSelect
               label="Sigla efector"
@@ -335,19 +386,13 @@ export default function SeguimientoCeetpsPage() {
           {/* 2 — Concurso */}
           <FilterAccSection
             title="Concurso"
-            activeCount={activeInSection(['estado_concurso', 'ee_concurso', 'expediente_concurso', 'tipificador_obra_servicio', 'tipificador_origen', 'puesto_solicitado', 'dispo_llamado'])}
+            activeCount={activeInSection(['estado_concurso', 'expediente_concurso', 'tipificador_obra_servicio', 'tipificador_origen', 'puesto_solicitado', 'dispo_llamado', 'fecha_caratulacion_desde', 'fecha_caratulacion_hasta', 'fecha_autorizacion_desde', 'fecha_autorizacion_hasta', 'fecha_ifacs_desde', 'fecha_ifacs_hasta', 'fecha_insal_desde', 'fecha_insal_hasta'])}
           >
             <FilterText
               label="Estado concurso"
               value={filters.estado_concurso}
               onChange={v => { setFilters(f => ({ ...f, estado_concurso: v })); setPage(1) }}
               placeholder="Filtrar estado..."
-            />
-            <FilterText
-              label="EE Concurso"
-              value={filters.ee_concurso}
-              onChange={v => { setFilters(f => ({ ...f, ee_concurso: v })); setPage(1) }}
-              placeholder="EX-2024-…"
             />
             <FilterText
               label="Expediente concurso"
@@ -379,12 +424,28 @@ export default function SeguimientoCeetpsPage() {
               onChange={v => { setFilters(f => ({ ...f, dispo_llamado: v })); setPage(1) }}
               placeholder="Filtrar disposición..."
             />
+            <FilterDate label="F. Caratulación — desde" value={filters.fecha_caratulacion_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_caratulacion_desde: v })); setPage(1) }} />
+            <FilterDate label="F. Caratulación — hasta" value={filters.fecha_caratulacion_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_caratulacion_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. Autorización — desde" value={filters.fecha_autorizacion_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_desde: v })); setPage(1) }} />
+            <FilterDate label="F. Autorización — hasta" value={filters.fecha_autorizacion_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. IFACS — desde" value={filters.fecha_ifacs_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_desde: v })); setPage(1) }} />
+            <FilterDate label="F. IFACS — hasta" value={filters.fecha_ifacs_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_hasta: v })); setPage(1) }} />
+            <FilterDate label="F. INSAL — desde" value={filters.fecha_insal_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_insal_desde: v })); setPage(1) }} />
+            <FilterDate label="F. INSAL — hasta" value={filters.fecha_insal_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_insal_hasta: v })); setPage(1) }} />
           </FilterAccSection>
 
           {/* 3 — Designación */}
           <FilterAccSection
             title="Designación"
-            activeCount={activeInSection(['cuil_designado', 'puesto_designado', 'expediente_designacion', 'estado_apto', 'alta_sial'])}
+            activeCount={activeInSection(['cuil_designado', 'puesto_designado', 'expediente_designacion', 'estado_apto', 'alta_sial', 'numero_apto_medico', 'fecha_proyecto_dispo_desde', 'fecha_proyecto_dispo_hasta', 'dispo_designacion', 'resolucion_designacion', 'id_cargo'])}
           >
             <FilterText
               label="CUIL designado"
@@ -415,12 +476,40 @@ export default function SeguimientoCeetpsPage() {
               value={filters.alta_sial}
               onChange={v => { setFilters(f => ({ ...f, alta_sial: v })); setPage(1) }}
             />
+            <FilterText
+              label="N° Apto Médico"
+              value={filters.numero_apto_medico}
+              onChange={v => { setFilters(f => ({ ...f, numero_apto_medico: v })); setPage(1) }}
+              placeholder="Filtrar número..."
+            />
+            <FilterDate label="F. Proy. Dispo — desde" value={filters.fecha_proyecto_dispo_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_proyecto_dispo_desde: v })); setPage(1) }} />
+            <FilterDate label="F. Proy. Dispo — hasta" value={filters.fecha_proyecto_dispo_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_proyecto_dispo_hasta: v })); setPage(1) }} />
+            <FilterText
+              label="Dispo. Designación"
+              value={filters.dispo_designacion}
+              onChange={v => { setFilters(f => ({ ...f, dispo_designacion: v })); setPage(1) }}
+              placeholder="Filtrar disposición..."
+            />
+            <FilterText
+              label="Resolución Desig."
+              value={filters.resolucion_designacion}
+              onChange={v => { setFilters(f => ({ ...f, resolucion_designacion: v })); setPage(1) }}
+              placeholder="Filtrar resolución..."
+            />
+            <FilterText
+              label="ID Cargo"
+              value={filters.id_cargo}
+              onChange={v => { setFilters(f => ({ ...f, id_cargo: v })); setPage(1) }}
+              placeholder="Filtrar ID cargo..."
+            />
           </FilterAccSection>
 
           {/* 4 — Baja */}
           <FilterAccSection
             title="Baja"
-            activeCount={activeInSection(['cuil', 'sigla_baja', 'ex_baja', 'puesto_baja', 'especialidad_baja', 'motivo_baja', 'carga_horaria'])}
+            activeCount={activeInSection(['cuil', 'sigla_baja', 'ex_baja', 'puesto_baja', 'especialidad_baja', 'motivo_baja', 'carga_horaria', 'cargo', 'fecha_baja_desde', 'fecha_baja_hasta', 'doc_respaldatoria'])}
           >
             <FilterText
               label="CUIL baja"
@@ -441,6 +530,12 @@ export default function SeguimientoCeetpsPage() {
               placeholder="EX-2024-…"
             />
             <FilterText
+              label="Cargo"
+              value={filters.cargo}
+              onChange={v => { setFilters(f => ({ ...f, cargo: v })); setPage(1) }}
+              placeholder="Filtrar cargo..."
+            />
+            <FilterText
               label="Puesto baja"
               value={filters.puesto_baja}
               onChange={v => { setFilters(f => ({ ...f, puesto_baja: v })); setPage(1) }}
@@ -452,6 +547,10 @@ export default function SeguimientoCeetpsPage() {
               onChange={v => { setFilters(f => ({ ...f, especialidad_baja: v })); setPage(1) }}
               placeholder="Filtrar especialidad..."
             />
+            <FilterDate label="F. Baja/Ampl. — desde" value={filters.fecha_baja_desde}
+              onChange={v => { setFilters(f => ({ ...f, fecha_baja_desde: v })); setPage(1) }} />
+            <FilterDate label="F. Baja/Ampl. — hasta" value={filters.fecha_baja_hasta}
+              onChange={v => { setFilters(f => ({ ...f, fecha_baja_hasta: v })); setPage(1) }} />
             <FilterSelect
               label="Motivo baja"
               value={filters.motivo_baja}
@@ -463,6 +562,12 @@ export default function SeguimientoCeetpsPage() {
               value={filters.carga_horaria}
               onChange={v => { setFilters(f => ({ ...f, carga_horaria: v })); setPage(1) }}
               placeholder="Ej: 6hs, 24hs..."
+            />
+            <FilterText
+              label="Doc. Respaldatoria"
+              value={filters.doc_respaldatoria}
+              onChange={v => { setFilters(f => ({ ...f, doc_respaldatoria: v })); setPage(1) }}
+              placeholder="Filtrar doc..."
             />
           </FilterAccSection>
 
@@ -500,7 +605,6 @@ export default function SeguimientoCeetpsPage() {
               <Th label="Expediente Concurso"   field="expediente_concurso"      sort={sort} onSort={handleSortToggle} />
               <Th label="Tipif. Origen"         field="tipificador_origen"       sort={sort} onSort={handleSortToggle} />
               <Th label="F. Caratulación"       field="fecha_caratulacion"       sort={sort} onSort={handleSortToggle} />
-              <Th label="EE Concurso"           field="ee_concurso"              sort={sort} onSort={handleSortToggle} />
               <Th label="F. Autorización"       field="fecha_autorizacion"       sort={sort} onSort={handleSortToggle} />
               <Th label="Puesto Solicitado"     field="puesto_solicitado"        sort={sort} onSort={handleSortToggle} />
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. Llamado</th>
@@ -538,9 +642,9 @@ export default function SeguimientoCeetpsPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {loading ? (
-              <tr><td colSpan={40} className="py-10 text-center"><Spinner /></td></tr>
+              <tr><td colSpan={38} className="py-10 text-center"><Spinner /></td></tr>
             ) : rows.length === 0 ? (
-              <tr><td colSpan={40} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
+              <tr><td colSpan={38} className="px-4 py-8 text-center text-gray-400">Sin resultados</td></tr>
             ) : rows.map(row => (
               <tr
                 key={row.id}
@@ -556,7 +660,6 @@ export default function SeguimientoCeetpsPage() {
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.expediente_concurso ?? '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipificador_origen ?? '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_caratulacion)}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.ee_concurso ?? '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_autorizacion)}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_solicitado ?? '—'}</td>
                 <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.dispo_llamado ?? ''}>{row.dispo_llamado ?? '—'}</td>
@@ -644,7 +747,7 @@ export default function SeguimientoCeetpsPage() {
 
       {/* Confirm delete */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
             <h2 className="text-base font-semibold text-gray-900">Confirmar eliminación</h2>
             <p className="text-sm text-gray-600">
@@ -712,7 +815,7 @@ function FilterAccSection({ title, activeCount = 0, children }) {
         )}
       </button>
       {open && (
-        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
           {children}
         </div>
       )}
@@ -759,6 +862,21 @@ function FilterText({ label, value, onChange, placeholder = '' }) {
     <div>
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="form-input text-sm w-full" />
+    </div>
+  )
+}
+
+// ─── FilterDate ───────────────────────────────────────────────────────────────
+function FilterDate({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      <input
+        type="date"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="form-input text-sm w-full"
+      />
     </div>
   )
 }

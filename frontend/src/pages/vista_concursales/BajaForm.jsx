@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, createContext, useContext } from 'react'
-import { XMarkIcon, InformationCircleIcon, ChevronDownIcon, ArrowDownTrayIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { useState, useRef, useEffect, useMemo, useContext } from 'react'
+import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
 import { bajasApi } from '../../api/concursalesApi'
 import { exportBajaToPdf, exportBajaToWord } from '../../utils/exportReport'
 import {
@@ -11,11 +11,27 @@ import {
   OPCIONES_TIPO_EFECTOR,
   OPCIONES_ORIGEN,
   SIGLAS_DATA,
+  SIGLAS_POR_USUARIO_BAJAS,
   getPuestoOptions,
   getEspecialidadOptions,
+  CEETPS_ESCALAFON_POR_CODIGO,
+  CEETPS_UNIFICADOR_POR_CODIGO,
+  getCeetpsPuestoOptions,
   isoToDmy,
   dmyToIso,
 } from '../../utils/concursalesHelpers'
+import {
+  OrigenContext,
+  getOrigenBgStyle,
+  Section,
+  Field,
+  StyledSelectField,
+  SearchSelectField,
+  SiglaSearchField,
+  DateMaskField,
+  CheckField,
+  ExportDropdown,
+} from '../../components/ui/ConcursalesFormFields'
 
 /**
  * BajaForm - Modal para crear o editar una Baja Consolidada.
@@ -24,25 +40,22 @@ import {
  *   onSaved   {Function}     Callback tras guardar exitosamente
  *   onClose   {Function}     Callback para cerrar el modal
  */
-const OrigenContext = createContext('')
 
-function getOrigenBgStyle(origen, hasValue = false) {
-  if (origen === 'Alta por Baja')      return { backgroundColor: '#dbeafe' }
-  if (origen === 'Ampliación')         return { backgroundColor: '#bbf7d0' }
-  if (origen === 'Cobertura Dotación') return { backgroundColor: '#fee2e2' }
-  if (origen === 'POU a POF')          return { backgroundColor: '#ede9fe' }
-  if (hasValue)                        return { backgroundColor: '#f0fdf4' }
-  return {}
-}
-
-export default function BajaForm({ initial, onSaved, onClose, readOnly = false }) {
+export default function BajaForm({ initial, onSaved, onClose, readOnly = false, lockedOrigen }) {
   const isEdit = !!initial
 
-  const OPCIONES_CODIGO = ['37', '87', '85', '83']
+  const opcionesOrigen = OPCIONES_ORIGEN
+
+  const OPCIONES_CODIGO = ['37', '23', '87', '85', '83']
+
+  // Para inicializar correctamente los campos CEETPS y código 23 al cargar un registro existente
+  const initCodigoNum  = Number(initial?.codigo_registro ?? 37)
+  const initEsCeetps   = [87, 85, 83].includes(initCodigoNum)
+  const initEsCodigo23 = initCodigoNum === 23
 
   const [form, setForm] = useState({
     usuario:               initial?.usuario               ?? '',
-    origen:                initial?.origen                ?? '',
+    origen:                initial?.origen                ?? lockedOrigen ?? '',
     ex_baja:               initial?.ex_baja               ?? '',
     sigla:                 initial?.sigla                 ?? '',
     efector:               initial?.efector               ?? '',
@@ -50,21 +63,23 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
     codigo_cargo:          initial?.codigo_cargo           ?? '',
     cuil:                  initial?.cuil                  ?? '',
     nombre_apellido:       initial?.nombre_apellido        ?? '',
-    codigo_registro:       initial?.codigo_registro ?? '37',
-    unificador_puestos:    initial?.unificador_puestos     ?? '',
-    escalafon:             initial?.escalafon             ?? '',
-    pou_pof:               initial?.pou_pof               ?? '',
+    codigo_registro:       initial?.codigo_registro ?? '',
+    unificador_puestos:    initEsCeetps ? (CEETPS_UNIFICADOR_POR_CODIGO[initCodigoNum] ?? '') : initEsCodigo23 ? 'Suplente de Guardia' : (initial?.unificador_puestos ?? ''),
+    escalafon:             initEsCeetps ? (CEETPS_ESCALAFON_POR_CODIGO[initCodigoNum] ?? '') : (initial?.escalafon ?? ''),
+    pou_pof:               initEsCodigo23 ? 'POU' : (initial?.pou_pof ?? ''),
     puesto_baja:           initial?.puesto_baja            ?? '',
-    especialidad_baja:     initial?.especialidad_baja      ?? '',
+    especialidad_baja:     initEsCeetps ? ''                                            : (initial?.especialidad_baja ?? ''),
     partida_presupuestaria:initial?.partida_presupuestaria ?? '',
     fecha_baja:            isoToDmy(initial?.fecha_baja)  ?? '',
     carga_horaria:         initial?.carga_horaria          ?? '',
-    motivo_baja:           initial?.motivo_baja            ?? '',
-    doc_respaldatoria:     initial?.doc_respaldatoria      ?? '',
+    motivo_baja:           (initial?.origen ?? lockedOrigen) === 'Cobertura Dotación' ? 'Cobertura Dotación' : (initial?.origen ?? lockedOrigen) === 'Ampliación' ? 'Ampliación' : (initial?.origen ?? lockedOrigen) === 'POU a POF' ? 'POU a POF' : (initial?.motivo_baja ?? ''),
+    doc_respaldatoria:     (initial?.origen ?? lockedOrigen) === 'Cobertura Dotación' ? '' : (initial?.doc_respaldatoria ?? ''),
     fecha_pase_paralelo:   isoToDmy(initial?.fecha_pase_paralelo) ?? '',
     genera_concurso:       initial?.genera_concurso        ?? '',
     cargo_baja:            initial?.cargo_baja             ?? '',
     obra:                  initial?.obra                   ?? false,
+    expediente_concurso:   initial?.expediente_concurso    ?? '',
+    fecha_caratulacion:    isoToDmy(initial?.fecha_caratulacion) ?? '',
   })
 
   const [saving, setSaving]             = useState(false)
@@ -86,8 +101,10 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
         nombre_apellido:        '',
         cuil:                   '',
         cargo_baja:             '',
+        codigo_cargo:           '',
         partida_presupuestaria: '',
         pou_pof:                'POF',
+        motivo_baja:            'Ampliación',
       }),
       ...(origen === 'Cobertura Dotación' && {
         nombre_apellido:        '',
@@ -95,6 +112,21 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
         cargo_baja:             '',
         partida_presupuestaria: '',
         pou_pof:                'POU',
+        motivo_baja:            'Cobertura Dotación',
+        doc_respaldatoria:      '',
+        ...([87, 85, 83].includes(Number(prev.codigo_registro)) && {
+          codigo_registro:    '',
+          unificador_puestos: '',
+          escalafon:          '',
+          puesto_baja:        '',
+          especialidad_baja:  '',
+        }),
+        ...(Number(prev.codigo_registro) === 37 && {
+          unificador_puestos: 'CPH de Guardia',
+        }),
+      }),
+      ...(origen === 'POU a POF' && {
+        motivo_baja: 'POU a POF',
       }),
     }))
   }
@@ -110,13 +142,29 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
     }))
   }
 
+  // Siglas habilitadas según el usuario que hace la carga (null = todas)
+  const allowedSiglas = useMemo(() => {
+    const allowed = SIGLAS_POR_USUARIO_BAJAS[form.usuario]
+    if (!allowed) return SIGLAS_DATA
+    return SIGLAS_DATA.filter(s => allowed.includes(s.sigla))
+  }, [form.usuario])
+
+  useEffect(() => {
+    const allowed = SIGLAS_POR_USUARIO_BAJAS[form.usuario]
+    if (!allowed) return
+    if (form.sigla && !allowed.includes(form.sigla)) {
+      setForm(prev => ({ ...prev, sigla: '', efector: '', tipo_efector: '' }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.usuario])
+
   // ── Cascade: Unificador → Escalafón → POU/POF → Puesto → Especialidad ──────
   const handleUnificadorChange = (e) => {
     const unificador = e.target.value
     // Si el origen ya fuerza un valor en POU/POF, respetarlo; sino, auto-setear
+    // (excepto "Jefaturas" en Cobertura Dotación, que se comporta como en Alta por Baja)
     const origenLockedPouPof =
-      form.origen === 'Ampliación'         ? 'POF' :
-      form.origen === 'Cobertura Dotación' ? 'POU' :
+      form.origen === 'Cobertura Dotación' && unificador !== 'Jefaturas' ? 'POU' :
       null
     const autoPouPof =
       origenLockedPouPof !== null      ? origenLockedPouPof :
@@ -152,15 +200,74 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
   }
 
   const handlePuestoBajaChange = (e) => {
+    const puesto_baja = e.target.value
+    const esProfesionalGuardiaMedico = puesto_baja.trim().toUpperCase() === 'PROFESIONAL GUARDIA MEDICO'
     setForm(prev => ({
       ...prev,
-      puesto_baja:       e.target.value,
-      especialidad_baja: '',
+      puesto_baja,
+      especialidad_baja: esProfesionalGuardiaMedico ? 'SIN ESPECIALIDAD' : '',
     }))
   }
 
-  const codigoNum = Number(form.codigo_registro)
-  const esCeetps  = [87, 85, 83].includes(codigoNum)
+  // Ref para detectar cambios REALES en codigo_registro (evita ejecutarse en mount)
+  const prevCodigoRef = useRef(form.codigo_registro)
+
+  useEffect(() => {
+    const prevCodigo = Number(prevCodigoRef.current)
+    const currCodigo = Number(form.codigo_registro)
+    prevCodigoRef.current = form.codigo_registro
+
+    if (prevCodigo === currCodigo) return // sin cambio real
+
+    const esCeetpsCode   = [87, 85, 83].includes(currCodigo)
+    const esCodigo23Code = currCodigo === 23
+    const esCodigo37CoberturaCode = currCodigo === 37 && form.origen === 'Cobertura Dotación'
+    if (esCeetpsCode) {
+      setForm(f => ({
+        ...f,
+        unificador_puestos: CEETPS_UNIFICADOR_POR_CODIGO[currCodigo] ?? '',
+        escalafon:          CEETPS_ESCALAFON_POR_CODIGO[currCodigo] ?? '',
+        pou_pof:            'POF',
+        puesto_baja:        '',
+        especialidad_baja:  '',
+      }))
+    } else if (esCodigo23Code) {
+      setForm(f => ({
+        ...f,
+        unificador_puestos: 'Suplente de Guardia',
+        pou_pof:            'POU',
+        escalafon:          '',
+        puesto_baja:        '',
+        especialidad_baja:  '',
+      }))
+    } else if (esCodigo37CoberturaCode) {
+      setForm(f => ({
+        ...f,
+        unificador_puestos: 'CPH de Guardia',
+        pou_pof:            'POU',
+        escalafon:          '',
+        puesto_baja:        '',
+        especialidad_baja:  '',
+      }))
+    } else if ([87, 85, 83, 23].includes(prevCodigo)) {
+      // Vuelve a otro código desde CEETPS o código 23 → resetear
+      setForm(f => ({
+        ...f,
+        unificador_puestos: '',
+        escalafon:          '',
+        pou_pof:            '',
+        puesto_baja:        '',
+        especialidad_baja:  '',
+      }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.codigo_registro])
+
+  const codigoNum   = Number(form.codigo_registro)
+  const esCeetps    = [87, 85, 83].includes(codigoNum)
+  const esCodigo23  = codigoNum === 23
+  const esCod37Cobertura = codigoNum === 37 && form.origen === 'Cobertura Dotación'
+  const esProfesionalGuardiaMedico = (form.puesto_baja || '').trim().toUpperCase() === 'PROFESIONAL GUARDIA MEDICO'
 
   const previewEsCph = (() => {
     if (esCeetps) return false
@@ -192,12 +299,13 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
     { key: 'efector',                label: 'Efector (descripción)' },
     { key: 'tipo_efector',           label: 'Tipo de efector' },
     { key: 'codigo_cargo',           label: 'Código cargo' },
+    { key: 'cargo_baja',             label: 'ID SIAL' },
     { key: 'cuil',                   label: 'CUIL' },
     { key: 'nombre_apellido',        label: 'Nombre y Apellido' },
     { key: 'unificador_puestos',     label: 'Unificador de puestos' },
     { key: 'escalafon',              label: 'Escalafón' },
     { key: 'pou_pof',                label: 'POU/POF' },
-    { key: 'puesto_baja',            label: 'Puesto baja' },
+    { key: 'puesto_baja',            label: form.origen === 'Ampliación' ? 'Puesto Ampliación' : 'Puesto baja' },
     { key: 'especialidad_baja',      label: 'Especialidad baja' },
     { key: 'partida_presupuestaria', label: 'Partida presupuestaria' },
     { key: 'fecha_baja',             label: 'Fecha de baja' },
@@ -205,8 +313,9 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
     { key: 'motivo_baja',            label: 'Motivo de baja' },
     { key: 'doc_respaldatoria',      label: 'Doc. respaldatoria' },
     { key: 'fecha_pase_paralelo',    label: 'Fecha pase paralelo/GT' },
-    { key: 'cargo_baja',             label: 'ID SIAL' },
     { key: 'genera_concurso',        label: 'Genera concurso' },
+    { key: 'fecha_caratulacion',     label: 'Fecha Caratulación' },
+    { key: 'expediente_concurso',    label: 'Expediente Concurso' },
   ]
 
   const buildPayload = () => {
@@ -216,7 +325,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
         payload[k] = v
       } else if (v === '') {
         payload[k] = null
-      } else if (k === 'fecha_baja' || k === 'fecha_pase_paralelo') {
+      } else if (k === 'fecha_baja' || k === 'fecha_pase_paralelo' || k === 'fecha_caratulacion') {
         payload[k] = dmyToIso(v)
       } else {
         payload[k] = v
@@ -248,7 +357,25 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const emptyFields = CAMPOS_VALIDACION
+    let validationFields = esCeetps
+      ? CAMPOS_VALIDACION.filter(f => f.key !== 'pou_pof' && f.key !== 'especialidad_baja')
+      : CAMPOS_VALIDACION
+    // Campos bloqueados (sin valor posible) según el origen: no tiene sentido pedirlos
+    if (form.origen === 'Ampliación') {
+      const bloqueados = ['codigo_cargo', 'cargo_baja', 'cuil', 'nombre_apellido', 'partida_presupuestaria']
+      validationFields = validationFields.filter(f => !bloqueados.includes(f.key))
+    }
+    if (form.origen === 'Cobertura Dotación') {
+      const bloqueados = ['cargo_baja', 'cuil', 'nombre_apellido', 'partida_presupuestaria', 'doc_respaldatoria']
+      validationFields = validationFields.filter(f => !bloqueados.includes(f.key))
+    }
+    if (form.origen !== 'Ampliación' || form.genera_concurso !== 'SI') {
+      validationFields = validationFields.filter(f => f.key !== 'fecha_caratulacion')
+    }
+    if (form.genera_concurso !== 'SI') {
+      validationFields = validationFields.filter(f => f.key !== 'expediente_concurso')
+    }
+    const emptyFields = validationFields
       .filter(({ key }) => !form[key])
       .map(({ label }) => label)
 
@@ -266,7 +393,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
     <>
     {/* Modal de confirmación: campos vacíos */}
     {confirmModal && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
           <h3 className="text-base font-semibold text-gray-900 mb-2">Campos sin completar</h3>
           <p className="text-sm text-gray-600 mb-3">
@@ -299,7 +426,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
         </div>
       </div>
     )}
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
       <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8${origenBorderColor ? ` border-t-4 ${origenBorderColor}` : ''}`}>
 
         {/* Header */}
@@ -308,11 +435,6 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
             <h2 className="text-base font-semibold text-gray-900">
               {isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
             </h2>
-            {!isEdit && (
-              <p className="text-xs text-gray-500 mt-0.5">
-                Si genera concurso y no es Técnico/Enfermería, se creará el seguimiento CPH automáticamente.
-              </p>
-            )}
           </div>
           <div className="flex items-center gap-2">
             {isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
@@ -327,35 +449,35 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
           {/* 1 — Identificacion */}
           <Section title="Identificacion">
             <div className="grid grid-cols-4 gap-3">
-              <SelectField label="Usuario" value={form.usuario} onChange={set('usuario')} options={OPCIONES_USUARIOS} cols={1} />
-              <SelectField label="Origen"  value={form.origen}  onChange={handleOrigenChange} options={OPCIONES_ORIGEN} cols={1} />
-              <ExBajaField value={form.ex_baja} onChange={set('ex_baja')} cols={4} />
+              <StyledSelectField label="Usuario" value={form.usuario} onChange={set('usuario')} options={OPCIONES_USUARIOS} cols={1} />
+              <StyledSelectField label="Origen"  value={form.origen}  onChange={handleOrigenChange} options={opcionesOrigen} cols={1} disabled={!!lockedOrigen} />
+              <ExBajaField value={form.ex_baja} onChange={set('ex_baja')} onSiglaMatch={sigla => handleSiglaChange({ target: { value: sigla } })} cols={2} />
             </div>
           </Section>
 
           {/* 2 — Efector */}
           <Section title="Efector">
             <div className="grid grid-cols-4 gap-3">
-              <SiglaSearchField value={form.sigla} onChange={handleSiglaChange} />
+              <SiglaSearchField value={form.sigla} onChange={handleSiglaChange} options={allowedSiglas} />
               <Field       label="Efector"           value={form.efector}      onChange={set('efector')}       disabled={!!form.sigla}          cols={2} />
-              <SelectField label="Tipo de efector"   value={form.tipo_efector} onChange={set('tipo_efector')}  options={OPCIONES_TIPO_EFECTOR}  cols={1} disabled={!!form.sigla} />
+              <StyledSelectField label="Tipo de efector"   value={form.tipo_efector} onChange={set('tipo_efector')}  options={OPCIONES_TIPO_EFECTOR}  cols={1} disabled={!!form.sigla} />
             </div>
           </Section>
 
           {/* 3 — Datos funcionales */}
           <Section title="Datos funcionales">
             <div className="grid grid-cols-4 gap-3">
-              <Field        label="Codigo cargo"           value={form.codigo_cargo}           onChange={set('codigo_cargo')}           cols={1} />
+              <Field        label="Codigo cargo"           value={form.codigo_cargo}           onChange={set('codigo_cargo')}           cols={1} disabled={form.origen === 'Ampliación'} />
+              <Field        label="ID SIAL"                value={form.cargo_baja}              onChange={set('cargo_baja')}             cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
               <Field        label="CUIL"                   value={form.cuil}                   onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
               <Field        label="Nombre y Apellido"      value={form.nombre_apellido}         onChange={set('nombre_apellido')}        cols={2} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
-              <SelectField  label="Código de registro"     value={String(form.codigo_registro ?? codigoDefault)} onChange={set('codigo_registro')} options={OPCIONES_CODIGO} cols={1} />
-              <SelectField  label="Unificador de puestos"  value={form.unificador_puestos}     onChange={handleUnificadorChange}        options={OPCIONES_UNIFICADOR_PUESTOS} cols={1} />
-              <SelectField  label="Escalafon"              value={form.escalafon}              onChange={handleEscalafonBajaChange}     options={OPCIONES_ESCALAFON_BAJAS}   cols={1} disabled={!form.unificador_puestos} />
-              <SelectField  label="POU/POF"                value={form.pou_pof}                onChange={handlePouPofChange}             options={OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación' || form.unificador_puestos === 'CPH de Guardia' || form.unificador_puestos === 'CPH de Planta' || !form.escalafon} />
-              <SelectField  label="Puesto baja"            value={form.puesto_baja}            onChange={handlePuestoBajaChange}        options={getPuestoOptions(form.unificador_puestos, form.escalafon)}    cols={1} disabled={!form.pou_pof} />
-              <SelectField  label="Especialidad baja"      value={form.especialidad_baja}      onChange={set('especialidad_baja')}      options={getEspecialidadOptions(form.puesto_baja, form.escalafon)}    cols={1} disabled={!form.puesto_baja} />
+              <StyledSelectField  label="Código de registro"     value={String(form.codigo_registro)} onChange={set('codigo_registro')} options={form.origen === 'Cobertura Dotación' ? ['37', '23'] : OPCIONES_CODIGO} cols={1} />
+              <StyledSelectField  label="Unificador de puestos"  value={form.unificador_puestos}     onChange={handleUnificadorChange}        options={esCeetps ? [CEETPS_UNIFICADOR_POR_CODIGO[codigoNum]].filter(Boolean) : esCodigo23 ? ['Suplente de Guardia'] : esCod37Cobertura ? ['CPH de Guardia', 'Jefaturas'] : OPCIONES_UNIFICADOR_PUESTOS} cols={1} disabled={esCeetps || esCodigo23} />
+              <StyledSelectField  label="Escalafon"              value={form.escalafon}              onChange={handleEscalafonBajaChange}     options={esCeetps ? [form.escalafon].filter(Boolean) : OPCIONES_ESCALAFON_BAJAS} cols={1} disabled={esCeetps || !form.unificador_puestos} />
+              <StyledSelectField  label="POU/POF"                value={form.pou_pof}                onChange={handlePouPofChange}             options={(esCodigo23 || (esCod37Cobertura && form.unificador_puestos !== 'Jefaturas')) ? ['POU'] : OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={esCeetps || esCodigo23 || (form.origen === 'Cobertura Dotación' && form.unificador_puestos !== 'Jefaturas') || form.unificador_puestos === 'CPH de Guardia' || form.unificador_puestos === 'CPH de Planta' || !form.escalafon} />
+              <SearchSelectField  label={form.origen === 'Ampliación' ? 'Puesto Ampliación' : 'Puesto baja'} value={form.puesto_baja}            onChange={handlePuestoBajaChange}        options={esCeetps ? getCeetpsPuestoOptions(form.escalafon) : getPuestoOptions(form.unificador_puestos, form.escalafon)} cols={1} disabled={!esCeetps && !form.pou_pof} />
+              <SearchSelectField label="Especialidad baja" value={form.especialidad_baja}      onChange={set('especialidad_baja')}      options={getEspecialidadOptions(form.puesto_baja, form.escalafon)}    cols={1} disabled={esCeetps || !form.puesto_baja || esProfesionalGuardiaMedico} />
               <Field        label="Partida presupuestaria" value={form.partida_presupuestaria} onChange={set('partida_presupuestaria')} cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
-              <div className="col-span-1" />
             </div>
           </Section>
 
@@ -364,17 +486,20 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
             <div className="grid grid-cols-4 gap-3">
               <DateMaskField label="Fecha de baja"            value={form.fecha_baja}          onChange={set('fecha_baja')}          cols={1} />
               <Field         label="Carga horaria"            value={form.carga_horaria}       onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setForm(prev => ({ ...prev, carga_horaria: v })) }}       cols={1} />
-              <SelectField   label="Motivo de baja"           value={form.motivo_baja}         onChange={set('motivo_baja')}         options={OPCIONES_MOTIVO_BAJA} cols={1} />
-              <Field         label="Doc. respaldatoria"       value={form.doc_respaldatoria}   onChange={set('doc_respaldatoria')}                               cols={1} />
+              <StyledSelectField   label="Motivo de baja"           value={form.motivo_baja}         onChange={set('motivo_baja')}         options={form.origen === 'Cobertura Dotación' ? ['Cobertura Dotación'] : form.origen === 'Ampliación' ? ['Ampliación'] : form.origen === 'POU a POF' ? ['POU a POF'] : OPCIONES_MOTIVO_BAJA} cols={1} disabled={form.origen === 'Cobertura Dotación' || form.origen === 'Ampliación' || form.origen === 'POU a POF'} />
+              {form.origen !== 'Cobertura Dotación' ? (
+                <Field label="Doc. respaldatoria" value={form.doc_respaldatoria} onChange={set('doc_respaldatoria')} cols={1} />
+              ) : (
+                <div className="col-span-1" />
+              )}
               <DateMaskField label="Fecha pase paralelo / GT" value={form.fecha_pase_paralelo} onChange={set('fecha_pase_paralelo')} cols={1} />
-              <Field         label="ID SIAL"                  value={form.cargo_baja}          onChange={set('cargo_baja')}          cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
             </div>
           </Section>
 
           {/* 5 — Concurso */}
           <Section title="Concurso">
             <div className="grid grid-cols-4 gap-3">
-              <CheckField label="Genera concurso" value={form.genera_concurso === 'SI'}
+              <CheckField label="Genera concurso" value={form.genera_concurso === 'SI'} staticLabel="Sí"
                 onChange={e => setForm(prev => ({ ...prev, genera_concurso: e.target.value ? 'SI' : 'NO' }))} cols={1} />
               {form.origen === 'Ampliación' ? (
                 <CheckField label="Obra" value={!!form.obra}
@@ -382,19 +507,27 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
               ) : (
                 <div className="col-span-1" />
               )}
+              {form.genera_concurso === 'SI' && form.origen === 'Ampliación' && (
+                <DateMaskField label="Fecha Caratulación" value={form.fecha_caratulacion} onChange={set('fecha_caratulacion')} cols={1} />
+              )}
+              {form.genera_concurso === 'SI' && (
+                <Field label="Expediente Concurso" value={form.expediente_concurso} onChange={set('expediente_concurso')} cols={form.origen === 'Ampliación' ? 1 : 2} />
+              )}
               {(form.genera_concurso === 'SI' || esCeetps) ? (
-                <div className="col-span-2">
+                <div className={form.genera_concurso === 'SI' ? 'col-span-4' : 'col-span-2'}>
                   <label className="block text-xs font-medium text-gray-600 mb-1 invisible">.</label>
                   <div className={`flex items-start gap-2 rounded-lg px-3 py-2 text-xs border ${
                     esCeetps
-                      ? 'bg-teal-50 border-teal-200 text-teal-800'
+                      ? (form.genera_concurso === 'SI' ? 'bg-teal-50 border-teal-200 text-teal-800' : 'bg-amber-50 border-amber-200 text-amber-800')
                       : previewEsCph
                         ? 'bg-blue-50 border-blue-200 text-blue-800'
                         : 'bg-gray-50 border-gray-200 text-gray-600'
                   }`}>
                     <InformationCircleIcon className="w-4 h-4 flex-shrink-0 mt-0.5" />
                     {esCeetps
-                      ? `Código ${codigoNum} (${ceetpsLabel}): esta baja se dirigirá automáticamente a Seguimiento CEETPS.`
+                      ? (form.genera_concurso === 'SI'
+                          ? `Código ${codigoNum} (${ceetpsLabel}): esta baja se dirigirá automáticamente a Seguimiento CEETPS.`
+                          : `Código ${codigoNum} (${ceetpsLabel}): tildá "Genera concurso" para generar el seguimiento CEETPS.`)
                       : previewEsCph
                         ? 'Esta baja cumple la regla CPH, se creará automáticamente un registro de seguimiento.'
                         : 'El puesto es Técnico o Enfermería, la baja se archivará sin generar seguimiento CPH.'}
@@ -429,289 +562,19 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false }
   )
 }
 
-// ─── SiglaSearchField ─────────────────────────────────────────────────────────
-function SiglaSearchField({ value, onChange }) {
-  const [query, setQuery]   = useState('')
-  const [open, setOpen]     = useState(false)
-  const wrapRef             = useRef(null)
-  const inputRef            = useRef(null)
-  const origen              = useContext(OrigenContext)
-
-  const selected = SIGLAS_DATA.find(s => s.sigla === value)
-
-  const filtered = query.trim()
-    ? SIGLAS_DATA.filter(s =>
-        s.sigla.toLowerCase().includes(query.toLowerCase()) ||
-        s.descr.toLowerCase().includes(query.toLowerCase())
-      )
-    : SIGLAS_DATA
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false)
-        setQuery('')
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleSelect = (sigla) => {
-    onChange({ target: { value: sigla } })
-    setOpen(false)
-    setQuery('')
-  }
-
-  const handleClear = (e) => {
-    e.stopPropagation()
-    onChange({ target: { value: '' } })
-    setQuery('')
-  }
-
-  const openDropdown = () => {
-    setOpen(true)
-    setTimeout(() => inputRef.current?.focus(), 30)
-  }
-
-  return (
-    <div className="col-span-1" ref={wrapRef}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">Sigla</label>
-      <div className="relative">
-        {/* Trigger */}
-        {!open ? (
-          <button
-            type="button"
-            onClick={openDropdown}
-            style={getOrigenBgStyle(origen, !!value)}
-            className="form-input text-sm w-full text-left flex items-center justify-between gap-1 pr-7"
-          >
-            {selected ? (
-              <span className="font-mono font-semibold text-primary-700">{selected.sigla}</span>
-            ) : (
-              <span className="text-gray-400">Seleccionar...</span>
-            )}
-            <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2" />
-          </button>
-        ) : (
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar sigla o efector..."
-              className="form-input text-sm w-full pl-8"
-            />
-          </div>
-        )}
-
-        {/* Botón limpiar */}
-        {value && !open && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-gray-300 hover:text-red-500 transition-colors z-10"
-            title="Limpiar sigla"
-          >
-            <XMarkIcon className="w-3 h-3" />
-          </button>
-        )}
-
-        {/* Dropdown */}
-        {open && (
-          <div className="absolute z-40 left-0 top-full mt-1 w-[380px] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin resultados</div>
-              ) : filtered.map(s => (
-                <button
-                  key={s.sigla}
-                  type="button"
-                  onClick={() => handleSelect(s.sigla)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    s.sigla === value ? 'bg-primary-50' : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="font-mono text-xs font-bold text-primary-700 w-24 flex-shrink-0">{s.sigla}</span>
-                  <span className="text-xs text-gray-700 truncate flex-1">{s.descr}</span>
-                  <span className="text-[10px] text-gray-400 flex-shrink-0 hidden sm:block max-w-[100px] truncate">{s.tipo}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function ExportDropdown({ onExport }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-      >
-        <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-        Exportar informe
-        <ChevronDownIcon className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-[55]" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-[56] overflow-hidden min-w-[140px]">
-            <button
-              type="button"
-              onClick={() => { onExport('pdf'); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 transition-colors"
-            >
-              <span className="w-5 h-5 rounded bg-red-100 flex items-center justify-center text-red-600 text-[10px] font-bold flex-shrink-0">PDF</span>
-              PDF
-            </button>
-            <div className="h-px bg-gray-100" />
-            <button
-              type="button"
-              onClick={() => { onExport('word'); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-            >
-              <span className="w-5 h-5 rounded bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-bold flex-shrink-0">DOC</span>
-              Word
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function Section({ title, children, defaultOpen = true }) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <div className="space-y-3">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-3 w-full group"
-      >
-        <div className="flex items-center gap-1.5 whitespace-nowrap">
-          <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-200${open ? '' : ' -rotate-90'}`} />
-          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest group-hover:text-gray-700 transition-colors">{title}</h3>
-        </div>
-        <div className="flex-1 h-px bg-gray-200" />
-      </button>
-      {open && children}
-    </div>
-  )
-}
-
-function SelectField({ label, value, onChange, options = [], cols = 1, disabled = false }) {
-  const origen = useContext(OrigenContext)
-  return (
-    <div className={`col-span-${cols}`}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={onChange}
-        disabled={disabled}
-        style={getOrigenBgStyle(origen, !!value)}
-        className={`form-input text-sm w-full${disabled ? ' cursor-default' : ''}`}
-      >
-        <option value="">Seleccionar...</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-    </div>
-  )
-}
-
-function Field({ label, value, onChange, placeholder = '', type = 'text', cols = 1, disabled = false }) {
-  const origen = useContext(OrigenContext)
-  const displayValue = disabled && !value ? '—' : (value ?? '')
-  return (
-    <div className={`col-span-${cols}`}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type={type}
-        value={displayValue}
-        onChange={onChange}
-        placeholder={placeholder}
-        disabled={disabled}
-        style={getOrigenBgStyle(origen, !!value)}
-        className={`form-input text-sm w-full${disabled ? ' cursor-default' : ''}`}
-      />
-    </div>
-  )
-}
-
-function DateMaskField({ label, value, onChange, cols = 1 }) {
-  const origen = useContext(OrigenContext)
-  const handleChange = (e) => {
-    let raw = e.target.value.replace(/[^\d]/g, '')
-    if (raw.length > 8) raw = raw.slice(0, 8)
-    let formatted = ''
-    for (let i = 0; i < raw.length; i++) {
-      if (i === 2 || i === 4) formatted += '-'
-      formatted += raw[i]
-    }
-    onChange({ target: { value: formatted } })
-  }
-  return (
-    <div className={`col-span-${cols}`}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value ?? ''}
-        onChange={handleChange}
-        placeholder="dd-mm-yyyy"
-        maxLength={10}
-        style={getOrigenBgStyle(origen, value?.length === 10)}
-        className="form-input text-sm w-full font-mono"
-      />
-    </div>
-  )
-}
-
-function CheckField({ label, value, onChange, cols = 1, disabled = false }) {
-  return (
-    <div className={`col-span-${cols}`}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <label
-        className={`flex items-center gap-2 form-input text-sm w-full select-none ${
-          disabled ? 'cursor-default bg-gray-50' : 'cursor-pointer hover:bg-gray-50'
-        }`}
-      >
-        <input
-          type="checkbox"
-          checked={!!value}
-          onChange={e => onChange({ target: { value: e.target.checked } })}
-          disabled={disabled}
-          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 pointer-events-none"
-        />
-        <span className={`text-sm ${!!value ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
-          {!!value ? 'Sí' : 'No'}
-        </span>
-      </label>
-    </div>
-  )
-}
-
-function ExBajaField({ value, onChange, cols = 3 }) {
+function ExBajaField({ value, onChange, onSiglaMatch, cols = 3 }) {
   const origen = useContext(OrigenContext)
   const currentYear = String(new Date().getFullYear())
 
   const detectMode = (v) => (v && v.startsWith('RESOL/')) ? 'RESOL' : 'EX'
 
   const parseEX = (v) => {
-    const m = (v || '').match(/^EX-(\d{4})-(\d*)- -GCABA-(.{0,5})$/)
+    const m = (v || '').match(/^EX-(\d{4})-(\d*)- -GCABA-(.{0,10})$/)
     return m ? { year: m[1], num: m[2], sigla: m[3] } : { year: currentYear, num: '', sigla: '' }
   }
 
   const parseRESOL = (v) => {
-    const m = (v || '').match(/^RESOL\/(\d{0,4})\/([A-Z0-9]{0,5})\/(.{0,5})$/)
+    const m = (v || '').match(/^RESOL\/(\d{0,4})\/([A-Z0-9]{0,5})\/(.{0,10})$/)
     return m ? { num: m[1], msgc: m[2], last: m[3] } : { num: '', msgc: 'MSGC', last: '' }
   }
 
@@ -725,7 +588,14 @@ function ExBajaField({ value, onChange, cols = 3 }) {
   const emitEX    = (p) => onChange({ target: { value: buildEX(p) } })
   const emitRESOL = (p) => onChange({ target: { value: buildRESOL(p) } })
 
-  const updEX = (field, v) => { const p = { ...exP, [field]: v };    setExP(p);    emitEX(p) }
+  const updEX = (field, v) => {
+    const p = { ...exP, [field]: v }
+    setExP(p)
+    emitEX(p)
+    if (field === 'sigla' && onSiglaMatch && SIGLAS_DATA.some(s => s.sigla === v)) {
+      onSiglaMatch(v)
+    }
+  }
   const updRE = (field, v) => { const p = { ...resolP, [field]: v }; setResolP(p); emitRESOL(p) }
 
   const toggle = () => {
@@ -749,22 +619,22 @@ function ExBajaField({ value, onChange, cols = 3 }) {
       </div>
 
       {mode === 'EX' ? (
-        <div className="flex items-center gap-1.5 font-mono text-sm flex-nowrap">
-          <span className="text-gray-400 select-none">EX-</span>
-          <input value={exP.year}  onChange={e => updEX('year',  e.target.value.replace(/\D/g,'').slice(0,4))} style={{ ...iBgStyle, width: '3.5rem' }} className={iCls} maxLength={4} placeholder="AAAA" />
-          <span className="text-gray-400 select-none">-</span>
-          <input value={exP.num}   onChange={e => updEX('num',   e.target.value.replace(/\D/g,'').slice(0,8))} style={{ ...iBgStyle, width: '7.5rem' }} className={iCls} maxLength={8} placeholder="00000000" />
-          <span className="text-gray-400 select-none">-&nbsp;-GCABA-</span>
-          <input value={exP.sigla} onChange={e => updEX('sigla', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5))} style={{ ...iBgStyle, width: '4rem' }} className={iCls} maxLength={5} placeholder="XXXXX" />
+        <div className="flex items-center gap-1 font-mono text-sm flex-nowrap overflow-x-auto">
+          <span className="text-gray-400 select-none shrink-0">EX-</span>
+          <input value={exP.year}  onChange={e => updEX('year',  e.target.value.replace(/\D/g,'').slice(0,4))} style={{ ...iBgStyle, width: '3rem' }} className={iCls} maxLength={4} placeholder="AAAA" />
+          <span className="text-gray-400 select-none shrink-0">-</span>
+          <input value={exP.num}   onChange={e => updEX('num',   e.target.value.replace(/\D/g,'').slice(0,8))} style={{ ...iBgStyle, width: '6.5rem' }} className={iCls} maxLength={8} placeholder="00000000" />
+          <span className="text-gray-400 select-none shrink-0">- -GCABA-</span>
+          <input value={exP.sigla} onChange={e => updEX('sigla', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10))} style={{ ...iBgStyle, width: '6rem' }} className={iCls} maxLength={10} placeholder="XXXXXXXXXX" />
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 font-mono text-sm flex-nowrap">
-          <span className="text-gray-400 select-none">RESOL/</span>
-          <input value={resolP.num}  onChange={e => updRE('num',  e.target.value.replace(/\D/g,'').slice(0,4))}                        style={{ ...iBgStyle, width: '4rem' }}  className={iCls} maxLength={4} placeholder="0000" />
-          <span className="text-gray-400 select-none">/</span>
-          <input value={resolP.msgc} onChange={e => updRE('msgc', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5))}  style={{ ...iBgStyle, width: '4rem' }}  className={iCls} maxLength={5} placeholder="MSGC" />
-          <span className="text-gray-400 select-none">/</span>
-          <input value={resolP.last} onChange={e => updRE('last', e.target.value.toUpperCase().slice(0,5))}                            style={{ ...iBgStyle, width: '4rem' }}  className={iCls} maxLength={5} placeholder="XXXXX" />
+        <div className="flex items-center gap-1 font-mono text-sm flex-nowrap overflow-x-auto">
+          <span className="text-gray-400 select-none shrink-0">RESOL/</span>
+          <input value={resolP.num}  onChange={e => updRE('num',  e.target.value.replace(/\D/g,'').slice(0,4))}                        style={{ ...iBgStyle, width: '3.5rem' }} className={iCls} maxLength={4} placeholder="0000" />
+          <span className="text-gray-400 select-none shrink-0">/</span>
+          <input value={resolP.msgc} onChange={e => updRE('msgc', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,5))}  style={{ ...iBgStyle, width: '3.5rem' }} className={iCls} maxLength={5} placeholder="MSGC" />
+          <span className="text-gray-400 select-none shrink-0">/</span>
+          <input value={resolP.last} onChange={e => updRE('last', e.target.value.toUpperCase().slice(0,10))}                           style={{ ...iBgStyle, width: '6rem' }}  className={iCls} maxLength={10} placeholder="XXXXXXXXXX" />
         </div>
       )}
 
@@ -803,14 +673,14 @@ function PipelineViewBaja({ initial, onClose }) {
       title: 'Datos funcionales', bg: 'bg-purple-700',
       fields: [
         ['Codigo cargo',      initial?.codigo_cargo],
+        ['ID SIAL',           initial?.cargo_baja],
         ['CUIL',              initial?.cuil],
         ['Nombre y Apellido', initial?.nombre_apellido],
-        ['ID SIAL',           initial?.cargo_baja],
         ['Cod. registro',     initial?.codigo_registro],
         ['Unificador puestos', initial?.unificador_puestos],
         ['POU/POF',           initial?.pou_pof],
         ['Escalafon',         initial?.escalafon],
-        ['Puesto baja',       initial?.puesto_baja],
+        [initial?.origen === 'Ampliación' ? 'Puesto Ampliación' : 'Puesto baja', initial?.puesto_baja],
         ['Especialidad baja', initial?.especialidad_baja],
         ['Partida presup.',   initial?.partida_presupuestaria],
       ]
@@ -829,13 +699,19 @@ function PipelineViewBaja({ initial, onClose }) {
       title: 'Concurso', bg: 'bg-emerald-700',
       fields: [
         ['Genera concurso', initial?.genera_concurso === 'SI' ? 'Sí' : initial?.genera_concurso === 'NO' ? 'No' : '—'],
+        ...(initial?.genera_concurso === 'SI' && initial?.origen === 'Ampliación' ? [
+          ['Fecha Caratulación', initial?.fecha_caratulacion],
+        ] : []),
+        ...(initial?.genera_concurso === 'SI' ? [
+          ['Expediente Concurso', initial?.expediente_concurso],
+        ] : []),
         ...(initial?.obra ? [['Obra', 'Sí']] : []),
       ]
     },
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
       <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 border-t-4 ${origenColor}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">

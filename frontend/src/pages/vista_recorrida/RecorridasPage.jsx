@@ -54,7 +54,7 @@ function RecorridaModal({ open, item, hospitalCode, onClose, onSave }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/40 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/30 overflow-y-auto">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 mb-10">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-base font-bold text-gray-900">{isEdit ? 'Editar recorrida' : 'Nueva recorrida'}</h2>
@@ -62,7 +62,7 @@ function RecorridaModal({ open, item, hospitalCode, onClose, onSave }) {
         </div>
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           {error && <div className="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hospital *</label>
               <select value={form.hospital_code}
@@ -329,7 +329,7 @@ function MinutaTable({ datos }) {
 function MinutaFullscreen({ minuta, onClose }) {
   if (!minuta) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6 md:p-12">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-6 md:p-12">
       <div className="bg-white rounded-xl shadow-2xl flex flex-col w-full h-full max-w-7xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-3 bg-primary-800 text-white flex-shrink-0">
           <div>
@@ -468,7 +468,7 @@ export default function RecorridasPage() {
 
       {/* Confirmación eliminar recorrida */}
       {recDel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
             <p className="font-bold text-gray-900 mb-2">¿Eliminar recorrida?</p>
             <p className="text-sm text-gray-500 mb-5">"{recDel.titulo}" — esta acción no se puede deshacer.</p>
@@ -482,7 +482,7 @@ export default function RecorridasPage() {
 
       {/* Confirmación eliminar minuta */}
       {minDel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
             <p className="font-bold text-gray-900 mb-2">¿Eliminar minuta?</p>
             <p className="text-sm text-gray-500 mb-5">"{minDel.titulo}" — esta acción no se puede deshacer.</p>
@@ -526,7 +526,7 @@ export default function RecorridasPage() {
             <select
               value={hospitalFilter}
               onChange={e => setHospitalFilter(e.target.value)}
-              className="form-input text-sm w-64 py-1.5"
+              className="form-input text-sm w-full sm:w-64 py-1.5"
             >
               <option value="">Todos los hospitales</option>
               {hospitals.map(h => <option key={h.id} value={h.id}>{h.id} – {h.name}</option>)}
