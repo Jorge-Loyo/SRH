@@ -440,7 +440,7 @@ export default function SeguimientoCphPage() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col gap-4">
 
       {/* Cabecera */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -770,7 +770,7 @@ export default function SeguimientoCphPage() {
       <div
         ref={tableRef}
         className="overflow-auto rounded-lg border border-gray-200 flex-1"
-        style={{ maxHeight: 'calc(100vh - 360px)', minHeight: '280px' }}
+        
       >
         <table className="text-sm border-collapse" style={{ minWidth: '6000px' }}>
             <thead className="sticky top-0 z-10 bg-gray-50">
@@ -1009,5 +1009,7 @@ function EstadoBadge({ estado }) {
     </span>
   )
 }
+
+
 
 

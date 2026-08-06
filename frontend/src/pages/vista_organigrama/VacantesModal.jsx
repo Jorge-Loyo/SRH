@@ -42,8 +42,8 @@ export default function VacantesModal({ open, onClose, vacantes, sigla, onSelect
         </button>
       </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-auto p-4 sm:p-5 bg-gray-50">
+      {/* Body */}
+        <div className="bg-gray-50 -mx-4 -mb-4 px-4 py-4">
           {vacantes.length === 0 ? (
             <p className="text-center text-gray-400 py-12">No hay vacantes para este hospital.</p>
           ) : (
@@ -86,7 +86,6 @@ export default function VacantesModal({ open, onClose, vacantes, sigla, onSelect
             </div>
           )}
         </div>
-      </div>
     </BaseModal>
   );
 }

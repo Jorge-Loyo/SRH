@@ -1,5 +1,5 @@
 import { ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
-import Spinner from '../../../components/ui/Spinner'
+import Spinner from '../../components/ui/Spinner'
 
 function StatCard({ label, value, tone = 'default' }) {
   const tones = {

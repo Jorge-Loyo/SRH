@@ -1,5 +1,5 @@
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
-import Spinner from '../../../components/ui/Spinner'
+import Spinner from '../../components/ui/Spinner'
 
 export default function CargaMasivaUploader({ periodo, onPeriodoChange, onFileChange, onAnalizar, loading, fileInputRef }) {
   return (

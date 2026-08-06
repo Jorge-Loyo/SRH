@@ -41,6 +41,10 @@ const ConfiguracionPage        = lazy(() => import('./pages/vista_concursales/Co
 // Director
 const DirectorHomePage = lazy(() => import('./pages/vista_director/DirectorHomePage.jsx'))
 
+// Alta de Cargo
+const CargosPage    = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
+const AltaCargoPage = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
+
 // Seguridad (solo admin)
 const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.jsx'))
 const TokensPage    = lazy(() => import('./pages/vista_seguridad/TokensPage.jsx'))
@@ -162,6 +166,18 @@ export default function App() {
                 <Route path="director" element={
                   <ProtectedRoute roles={DIRECTOR_ONLY}><DirectorHomePage /></ProtectedRoute>
                 } />
+
+                {/* Cargo (Alta + Lista) */}
+                <Route path="cargos" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/lista" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/subir" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
 
                 {/* Seguridad */}
                 <Route path="seguridad/auditoria" element={

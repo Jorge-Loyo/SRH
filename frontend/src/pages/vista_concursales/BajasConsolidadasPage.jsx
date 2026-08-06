@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import {
@@ -35,13 +35,13 @@ const PAGE_SIZE = 50
 // Metadatos visuales por origen (colores y etiquetas)
 const ORIGEN_META = {
   'Alta por Baja':      { bg: 'bg-blue-50',   activeBg: 'bg-blue-100',   border: 'border-blue-200',   activeBorder: 'border-blue-500',   text: 'text-blue-800',   rowBorder: 'border-l-blue-400',   btnLabel: 'Nueva Alta por Baja'      },
-  'AmpliaciÃ³n':         { bg: 'bg-green-50',  activeBg: 'bg-green-100',  border: 'border-green-200',  activeBorder: 'border-green-500',  text: 'text-green-800',  rowBorder: 'border-l-green-400',  btnLabel: 'Nueva AmpliaciÃ³n'         },
-  'Cobertura DotaciÃ³n': { bg: 'bg-red-50',    activeBg: 'bg-red-100',    border: 'border-red-200',    activeBorder: 'border-red-500',    text: 'text-red-800',    rowBorder: 'border-l-red-400',    btnLabel: 'Nueva Cobertura DotaciÃ³n' },
+  'Ampliación':         { bg: 'bg-green-50',  activeBg: 'bg-green-100',  border: 'border-green-200',  activeBorder: 'border-green-500',  text: 'text-green-800',  rowBorder: 'border-l-green-400',  btnLabel: 'Nueva Ampliación'         },
+  'Cobertura Dotación': { bg: 'bg-red-50',    activeBg: 'bg-red-100',    border: 'border-red-200',    activeBorder: 'border-red-500',    text: 'text-red-800',    rowBorder: 'border-l-red-400',    btnLabel: 'Nueva Cobertura Dotación' },
   'POU a POF':          { bg: 'bg-violet-50', activeBg: 'bg-violet-100', border: 'border-violet-200', activeBorder: 'border-violet-500', text: 'text-violet-800', rowBorder: 'border-l-violet-400', btnLabel: 'Nueva POU a POF'          },
 }
 
 const EMPTY_FILTERS = {
-  // IdentificaciÃ³n
+  // Identificación
   usuario:            '',
   // Efector
   sigla:              '',
@@ -71,14 +71,14 @@ const EMPTY_FILTERS = {
 }
 
 function GeneraBadge({ val }) {
-  if (!val) return <span className="text-gray-400">â€”</span>
+  if (!val) return <span className="text-gray-400">—</span>
   const isYes = val === true || String(val).toUpperCase() === 'SI'
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
       isYes ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
     }`}>
       <span className={`inline-block w-2 h-2 rounded-sm ${isYes ? 'bg-green-500' : 'bg-gray-400'}`} />
-      {isYes ? 'SÃ­' : 'No'}
+      {isYes ? 'Sí' : 'No'}
     </span>
   )
 }
@@ -91,7 +91,7 @@ export default function BajasConsolidadasPage() {
   const { user } = useAuth()
   const canEdit = BAJAS_WRITE_ROLES.includes(user?.role)
 
-  // â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── State ─────────────────────────────────────────────────────────────────
   const [rows, setRows]                 = useState([])
   const [count, setCount]               = useState(0)
   const [loading, setLoading]           = useState(false)
@@ -115,7 +115,7 @@ export default function BajasConsolidadasPage() {
 
   const tableRef = useRef(null)
 
-  // â”€â”€â”€ Opciones dinÃ¡micas (cascada) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Opciones dinámicas (cascada) ──────────────────────────────────────────
   const puestoOptions = useMemo(
     () => getPuestoOptions(filters.unificador_puestos, filters.escalafon),
     [filters.unificador_puestos, filters.escalafon]
@@ -125,7 +125,7 @@ export default function BajasConsolidadasPage() {
     [filters.puesto_baja, filters.escalafon]
   )
 
-  // â”€â”€â”€ Carga de datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Carga de datos ────────────────────────────────────────────────────────
   const buildParams = useCallback((extras = {}) => {
     const p = { sort: sortBy, order: sortDir, ...extras }
     if (selectedOrigen)                    p.origenes                  = selectedOrigen
@@ -188,7 +188,7 @@ export default function BajasConsolidadasPage() {
   useEffect(() => { fetchData() }, [fetchData])
   useEffect(() => { fetchKpiCounts() }, [fetchKpiCounts])
 
-  // â”€â”€â”€ Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleSort = (col) => {
     if (sortBy === col) setSortDir(d => d === 'ASC' ? 'DESC' : 'ASC')
     else { setSortBy(col); setSortDir('ASC') }
@@ -271,7 +271,7 @@ export default function BajasConsolidadasPage() {
   }
 
   const SortIcon = ({ col }) => {
-    if (sortBy !== col) return <span className="text-gray-300 ml-1">â†•</span>
+    if (sortBy !== col) return <span className="text-gray-300 ml-1">↕</span>
     return sortDir === 'ASC'
       ? <ChevronUpIcon className="w-3 h-3 inline ml-1 text-primary-600" />
       : <ChevronDownIcon className="w-3 h-3 inline ml-1 text-primary-600" />
@@ -279,7 +279,7 @@ export default function BajasConsolidadasPage() {
 
   const totalPages = Math.ceil(count / PAGE_SIZE)
 
-  // â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── Render ────────────────────────────────────────────────────────────────
   const goBack = () => {
     setSelectedOrigen(null)
     setSearch('')
@@ -289,13 +289,13 @@ export default function BajasConsolidadasPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          PANTALLA 1 â€” Selector de origen (2Ã—2 KPI)
-      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════════════════════════════════════════
+          PANTALLA 1 — Selector de origen (2×2 KPI)
+      ══════════════════════════════════════════════ */}
       {!selectedOrigen && (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col">
           <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Bajas Consolidadas</h1>
@@ -303,7 +303,7 @@ export default function BajasConsolidadasPage() {
             </div>
           </div>
 
-          {/* Grid 2Ã—2 centrado */}
+          {/* Grid 2×2 centrado */}
           <div className="flex-1 flex items-center justify-center">
             <div className="grid grid-cols-2 gap-6 w-full max-w-lg">
               {OPCIONES_ORIGEN.map(origen => {
@@ -317,7 +317,7 @@ export default function BajasConsolidadasPage() {
                   >
                     <div className={`text-xs font-bold uppercase tracking-widest mb-3 ${meta.text} opacity-70`}>{origen}</div>
                     <div className={`text-4xl font-bold mb-1 ${meta.text}`}>
-                      {cnt !== undefined ? cnt.toLocaleString('es-AR') : 'â€”'}
+                      {cnt !== undefined ? cnt.toLocaleString('es-AR') : '—'}
                     </div>
                     <div className={`text-xs ${meta.text} opacity-50`}>registros</div>
                   </button>
@@ -328,13 +328,13 @@ export default function BajasConsolidadasPage() {
         </div>
       )}
 
-      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-          PANTALLA 2 â€” Detalle del origen seleccionado
-      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+      {/* ══════════════════════════════════════════════
+          PANTALLA 2 — Detalle del origen seleccionado
+      ══════════════════════════════════════════════ */}
       {selectedOrigen && (
-        <div className="flex flex-col h-full gap-4">
+        <div className="flex flex-col gap-4">
 
-          {/* BotÃ³n volver */}
+          {/* Botón volver */}
           <button
             onClick={goBack}
             className="self-start flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
@@ -359,7 +359,7 @@ export default function BajasConsolidadasPage() {
             )}
           </div>
 
-          {/* Barra de bÃºsqueda + botÃ³n filtros */}
+          {/* Barra de búsqueda + botón filtros */}
           <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -397,7 +397,7 @@ export default function BajasConsolidadasPage() {
           <button
             onClick={() => handleExport(true)}
             disabled={exporting || !hasFilters}
-            title={hasFilters ? 'Exportar registros filtrados' : 'AplicÃ¡ filtros primero'}
+            title={hasFilters ? 'Exportar registros filtrados' : 'Aplicá filtros primero'}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-green-50 hover:border-green-400 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowDownTrayIcon className="w-4 h-4" /> Excel filtrado
@@ -412,36 +412,36 @@ export default function BajasConsolidadasPage() {
         </div>
       </div>
 
-      {/* â”€â”€ Panel de filtros â€” acordeÃ³n por secciÃ³n â”€â”€ */}
+      {/* ── Panel de filtros — acordeón por sección ── */}
       {showFilters && (
         <div className="space-y-1.5 rounded-xl border border-gray-200 bg-gray-50/60 p-3">
 
-          {/* 1 â€” IdentificaciÃ³n */}
-          <FilterAccSection title="IdentificaciÃ³n" activeCount={activeInSection(['usuario'])}>
+          {/* 1 — Identificación */}
+          <FilterAccSection title="Identificación" activeCount={activeInSection(['usuario'])}>
             <FilterSelect label="Usuario" value={filters.usuario}
               onChange={v => setFilter('usuario', v)} options={OPCIONES_USUARIOS} />
           </FilterAccSection>
 
-          {/* 2 â€” Efector */}
+          {/* 2 — Efector */}
           <FilterAccSection title="Efector" activeCount={activeInSection(['sigla', 'tipo_efector'])}>
             <FilterSearchSelect
               label="Sigla"
               value={filters.sigla}
               onChange={v => setFilter('sigla', v)}
-              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} â€” ${s.descr}` }))}
+              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} — ${s.descr}` }))}
             />
             <FilterSelect label="Tipo de efector" value={filters.tipo_efector}
               onChange={v => setFilter('tipo_efector', v)} options={OPCIONES_TIPO_EFECTOR} />
           </FilterAccSection>
 
-          {/* 3 â€” Cargo */}
+          {/* 3 — Cargo */}
           <FilterAccSection
             title="Cargo"
             activeCount={activeInSection(['ex_baja', 'codigo_cargo', 'cargo_baja', 'carga_horaria', 'partida_presupuestaria'])}
           >
-            <FilterText label="EX Baja / AmpliaciÃ³n" value={filters.ex_baja}
+            <FilterText label="EX Baja / Ampliación" value={filters.ex_baja}
               onChange={v => setFilter('ex_baja', v)} />
-            <FilterText label="CÃ³digo cargo" value={filters.codigo_cargo}
+            <FilterText label="Código cargo" value={filters.codigo_cargo}
               onChange={v => setFilter('codigo_cargo', v)} />
             <FilterText label="ID SIAL" value={filters.cargo_baja}
               onChange={v => setFilter('cargo_baja', v)} />
@@ -451,7 +451,7 @@ export default function BajasConsolidadasPage() {
               onChange={v => setFilter('partida_presupuestaria', v)} />
           </FilterAccSection>
 
-          {/* 4 â€” Datos funcionales (con cascada) */}
+          {/* 4 — Datos funcionales (con cascada) */}
           <FilterAccSection
             title="Datos funcionales"
             activeCount={activeInSection(['unificador_puestos', 'escalafon', 'pou_pof', 'puesto_baja', 'especialidad_baja'])}
@@ -459,7 +459,7 @@ export default function BajasConsolidadasPage() {
             <FilterSelect label="Unificador de puestos" value={filters.unificador_puestos}
               onChange={v => setFilterCascade('unificador_puestos', v)} options={OPCIONES_UNIFICADOR_PUESTOS} />
 
-            <FilterSelect label="EscalafÃ³n" value={filters.escalafon}
+            <FilterSelect label="Escalafón" value={filters.escalafon}
               onChange={v => setFilterCascade('escalafon', v)} options={OPCIONES_ESCALAFON_BAJAS} />
 
             <FilterSelect label="POU / POF" value={filters.pou_pof}
@@ -470,7 +470,7 @@ export default function BajasConsolidadasPage() {
               value={filters.puesto_baja}
               onChange={v => setFilterCascade('puesto_baja', v)}
               options={puestoOptions}
-              hint={!filters.unificador_puestos && !filters.escalafon ? 'FiltrÃ¡ por Unificador o EscalafÃ³n para acotar opciones' : null}
+              hint={!filters.unificador_puestos && !filters.escalafon ? 'Filtrá por Unificador o Escalafón para acotar opciones' : null}
             />
 
             <FilterSearchSelect
@@ -479,41 +479,41 @@ export default function BajasConsolidadasPage() {
               onChange={v => setFilter('especialidad_baja', v)}
               options={especialidadOptions}
               disabled={!filters.puesto_baja}
-              hint={!filters.puesto_baja ? 'SeleccionÃ¡ un puesto primero' : null}
+              hint={!filters.puesto_baja ? 'Seleccioná un puesto primero' : null}
             />
           </FilterAccSection>
 
-          {/* 5 â€” Fechas y expediente */}
+          {/* 5 — Fechas y expediente */}
           <FilterAccSection
             title="Fechas y expediente"
             activeCount={activeInSection(['fecha_baja_desde', 'fecha_baja_hasta', 'motivo_baja', 'fecha_pase_paralelo_desde', 'fecha_pase_paralelo_hasta', 'doc_respaldatoria'])}
           >
-            <FilterDate label="Fecha baja â€” desde" value={filters.fecha_baja_desde}
+            <FilterDate label="Fecha baja — desde" value={filters.fecha_baja_desde}
               onChange={v => setFilter('fecha_baja_desde', v)} />
-            <FilterDate label="Fecha baja â€” hasta" value={filters.fecha_baja_hasta}
+            <FilterDate label="Fecha baja — hasta" value={filters.fecha_baja_hasta}
               onChange={v => setFilter('fecha_baja_hasta', v)} />
             <FilterSelect label="Motivo de baja" value={filters.motivo_baja}
               onChange={v => setFilter('motivo_baja', v)} options={OPCIONES_MOTIVO_BAJA} />
-            <FilterDate label="F. pase paralelo â€” desde" value={filters.fecha_pase_paralelo_desde}
+            <FilterDate label="F. pase paralelo — desde" value={filters.fecha_pase_paralelo_desde}
               onChange={v => setFilter('fecha_pase_paralelo_desde', v)} />
-            <FilterDate label="F. pase paralelo â€” hasta" value={filters.fecha_pase_paralelo_hasta}
+            <FilterDate label="F. pase paralelo — hasta" value={filters.fecha_pase_paralelo_hasta}
               onChange={v => setFilter('fecha_pase_paralelo_hasta', v)} />
             <FilterText label="Doc. respaldatoria" value={filters.doc_respaldatoria}
               onChange={v => setFilter('doc_respaldatoria', v)} />
           </FilterAccSection>
 
-          {/* 6 â€” Concurso */}
+          {/* 6 — Concurso */}
           <FilterAccSection title="Concurso" activeCount={activeInSection(['genera_concurso', 'codigo_registro'])}>
             <FilterSelect label="Genera concurso" value={filters.genera_concurso}
               onChange={v => setFilter('genera_concurso', v)} options={['SI', 'NO']} />
-            <FilterSelect label="CÃ³d. registro" value={filters.codigo_registro}
+            <FilterSelect label="Cód. registro" value={filters.codigo_registro}
               onChange={v => setFilter('codigo_registro', v)}
               options={[
-                { value: '23',  label: '23 â€” CPH'      },
-                { value: '37',  label: '37 â€” CPH'      },
-                { value: '83',  label: '83 â€” CEETPS'   },
-                { value: '85',  label: '85 â€” CEETPS'   },
-                { value: '87',  label: '87 â€” CEETPS'   },
+                { value: '23',  label: '23 — CPH'      },
+                { value: '37',  label: '37 — CPH'      },
+                { value: '83',  label: '83 — CEETPS'   },
+                { value: '85',  label: '85 — CEETPS'   },
+                { value: '87',  label: '87 — CEETPS'   },
               ]} />
           </FilterAccSection>
 
@@ -527,11 +527,11 @@ export default function BajasConsolidadasPage() {
 
       {/* Stats */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-        <span>22 columnas Â· {selectedOrigen}</span>
+        <span>22 columnas · {selectedOrigen}</span>
         <span>
           {loading
             ? 'Cargando...'
-            : `${count.toLocaleString('es-AR')} registro${count !== 1 ? 's' : ''}${totalPages > 1 ? ` Â· pÃ¡g. ${page} de ${totalPages}` : ''}`}
+            : `${count.toLocaleString('es-AR')} registro${count !== 1 ? 's' : ''}${totalPages > 1 ? ` · pág. ${page} de ${totalPages}` : ''}`}
         </span>
       </div>
 
@@ -539,25 +539,25 @@ export default function BajasConsolidadasPage() {
       <div
         ref={tableRef}
         className="overflow-auto rounded-lg border border-gray-200 flex-1"
-        style={{ maxHeight: 'calc(100vh - 360px)', minHeight: '280px' }}
+        
       >
         <table className="text-sm border-collapse" style={{ minWidth: '2900px' }}>
           <thead className="sticky top-0 z-10 bg-gray-50">
             <tr>
               {[
                 { col: 'usuario',                label: 'Usuario'               },
-                { col: 'ex_baja',                label: 'EX Baja / AmpliaciÃ³n'  },
+                { col: 'ex_baja',                label: 'EX Baja / Ampliación'  },
                 { col: 'sigla',                  label: 'Sigla'                 },
                 { col: 'efector',                label: 'Efector'               },
                 { col: 'tipo_efector',           label: 'Tipo efector'          },
-                { col: 'codigo_cargo',           label: 'CÃ³digo cargo'          },
+                { col: 'codigo_cargo',           label: 'Código cargo'          },
                 { col: 'cargo_baja',             label: 'ID SIAL'               },
                 { col: 'cuil',                   label: 'CUIL'                  },
                 { col: 'nombre_apellido',        label: 'Nombre y Apellido'     },
-                { col: 'codigo_registro',        label: 'CÃ³d. registro'         },
+                { col: 'codigo_registro',        label: 'Cód. registro'         },
                 { col: 'unificador_puestos',     label: 'Unificador puestos'    },
                 { col: 'pou_pof',                label: 'POU/POF'               },
-                { col: 'escalafon',              label: 'EscalafÃ³n'             },
+                { col: 'escalafon',              label: 'Escalafón'             },
                 { col: 'puesto_baja',            label: 'Puesto baja'           },
                 { col: 'especialidad_baja',      label: 'Especialidad baja'     },
                 { col: 'partida_presupuestaria', label: 'Partida presup.'       },
@@ -592,32 +592,32 @@ export default function BajasConsolidadasPage() {
                 onClick={() => openView(row)}
                 className={`hover:bg-blue-50 cursor-pointer transition-colors border-l-4 ${ORIGEN_META[row.origen]?.rowBorder ?? 'border-l-gray-200'}`}
               >
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.usuario || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.ex_baja || 'â€”'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.usuario || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.ex_baja || '—'}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap">
                   {row.sigla ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-50 text-primary-700 font-mono">
                       {row.sigla}
                     </span>
-                  ) : 'â€”'}
+                  ) : '—'}
                 </td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.efector || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.tipo_efector || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.codigo_cargo || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.cargo_baja || 'â€”'}</td>
-                <td className="px-3 py-2.5 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil || 'â€”'}</td>
-                <td className="px-3 py-2.5 font-medium text-gray-900 whitespace-nowrap">{row.nombre_apellido || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.codigo_registro ?? 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.unificador_puestos || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.pou_pof || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.escalafon || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.puesto_baja || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.especialidad_baja || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.partida_presupuestaria || 'â€”'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.efector || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.tipo_efector || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.codigo_cargo || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.cargo_baja || '—'}</td>
+                <td className="px-3 py-2.5 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil || '—'}</td>
+                <td className="px-3 py-2.5 font-medium text-gray-900 whitespace-nowrap">{row.nombre_apellido || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.codigo_registro ?? '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.unificador_puestos || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.pou_pof || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.escalafon || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.puesto_baja || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.especialidad_baja || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.partida_presupuestaria || '—'}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_baja)}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.carga_horaria || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.motivo_baja || 'â€”'}</td>
-                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.doc_respaldatoria || 'â€”'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.carga_horaria || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.motivo_baja || '—'}</td>
+                <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{row.doc_respaldatoria || '—'}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_pase_paralelo)}</td>
                 <td className="px-3 py-2.5 whitespace-nowrap"><GeneraBadge val={row.genera_concurso} /></td>
                 <td className="px-3 py-2.5 sticky right-0 bg-white" onClick={e => e.stopPropagation()}>
@@ -659,7 +659,7 @@ export default function BajasConsolidadasPage() {
         </table>
       </div>
 
-      {/* PaginaciÃ³n */}
+      {/* Paginación */}
       <Pagination currentPage={page} totalPages={totalPages} totalRecords={count}
         onPageChange={setPage} loading={loading} tableRef={tableRef} />
 
@@ -672,7 +672,7 @@ export default function BajasConsolidadasPage() {
       <ConfirmModal
         open={!!confirmDel}
         title="Eliminar baja"
-        message={`Â¿ConfirmÃ¡s la eliminaciÃ³n de "${confirmDel?.nombre}"? Esta acciÃ³n no se puede deshacer.`}
+        message={`¿Confirmás la eliminación de "${confirmDel?.nombre}"? Esta acción no se puede deshacer.`}
         confirmLabel="Eliminar" danger
         onConfirm={handleDeleteConfirm}
         onCancel={() => setConfirmDel(null)}
@@ -680,4 +680,6 @@ export default function BajasConsolidadasPage() {
     </div>
   )
 }
+
+
 

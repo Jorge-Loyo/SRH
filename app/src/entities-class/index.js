@@ -19,7 +19,11 @@ const { SeguimientoCph }     = require('../modules/seguimiento-cph/SeguimientoCp
 const { ConjuntosConfig }    = require('../modules/conjuntos-config/ConjuntosConfigEntity')
 const { SeguimientoCeetps }  = require('../modules/seguimiento-ceetps/SeguimientoCeetpsEntity')
 
-const entities = [Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps]
+// ─── Módulo Alta de Cargo ──────────────────────────────────────────────────────
+const { CargosAlta }     = require('../modules/alta-cargo/AltaCargoEntity')
+const { RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof } = require('../modules/alta-cargo/AltaCargoSubEntities')
 
-module.exports = { Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, entities }
+const entities = [Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof]
+
+module.exports = { Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof, entities }
 
