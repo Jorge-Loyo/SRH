@@ -1,12 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
   PencilSquareIcon,
   TrashIcon,
-  ChevronUpDownIcon,
-  ChevronDownIcon,
   XMarkIcon,
   ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
@@ -16,22 +14,26 @@ import Spinner from '../../components/ui/Spinner'
 import { formatDate, OPCIONES_USUARIOS_CEETPS, OPCIONES_MOTIVO_BAJA, SIGLAS_DATA } from '../../utils/concursalesHelpers'
 import SeguimientoCeetpsDetail from './SeguimientoCeetpsDetail'
 import * as XLSX from 'xlsx'
+import {
+  Th, FilterAccSection, FilterSelect, FilterBoolSelect,
+  FilterText, FilterDate, FilterSearchSelect, ConfirmDeleteModal,
+} from './ConcursalesFilterWidgets'
 
 const PAGE_SIZE = 50
 
-// Solapas: código de registro → label
+// Solapas: cÃ³digo de registro â†’ label
 const TABS = [
   { label: 'Enfermeros',      codigo: 87 },
-  { label: 'Técnicos',        codigo: 85 },
+  { label: 'TÃ©cnicos',        codigo: 85 },
   { label: 'Administrativos', codigo: 83 },
 ]
 
 const EMPTY_FILTERS = {
   search:                    '',
-  // 1 — Datos generales
+  // 1 â€” Datos generales
   usuario:                   '',
   sigla_efector:             '',
-  // 2 — Concurso
+  // 2 â€” Concurso
   estado_concurso:           '',
   expediente_concurso:       '',
   tipificador_obra_servicio: '',
@@ -46,7 +48,7 @@ const EMPTY_FILTERS = {
   fecha_ifacs_hasta:         '',
   fecha_insal_desde:         '',
   fecha_insal_hasta:         '',
-  // 3 — Designación
+  // 3 â€” DesignaciÃ³n
   cuil_designado:            '',
   puesto_designado:          '',
   expediente_designacion:    '',
@@ -58,7 +60,7 @@ const EMPTY_FILTERS = {
   dispo_designacion:         '',
   resolucion_designacion:    '',
   id_cargo:                  '',
-  // 4 — Baja
+  // 4 â€” Baja
   cuil:                      '',
   sigla_baja:                '',
   ex_baja:                   '',
@@ -76,7 +78,7 @@ export default function SeguimientoCeetpsPage() {
   const [searchParams] = useSearchParams()
   const idBajaParam    = searchParams.get('id_baja')
 
-  const [activeTab, setActiveTab] = useState(0) // índice en TABS
+  const [activeTab, setActiveTab] = useState(0) // Ã­ndice en TABS
 
   const [rows, setRows]           = useState([])
   const [total, setTotal]         = useState(0)
@@ -126,7 +128,7 @@ export default function SeguimientoCeetpsPage() {
     if (filters.fecha_ifacs_hasta)         p.fecha_ifacs_hasta         = filters.fecha_ifacs_hasta
     if (filters.fecha_insal_desde)         p.fecha_insal_desde         = filters.fecha_insal_desde
     if (filters.fecha_insal_hasta)         p.fecha_insal_hasta         = filters.fecha_insal_hasta
-    // Designación
+    // DesignaciÃ³n
     if (filters.cuil_designado)            p.cuil_designado            = filters.cuil_designado
     if (filters.puesto_designado)          p.puesto_designado          = filters.puesto_designado
     if (filters.expediente_designacion)    p.expediente_designacion    = filters.expediente_designacion
@@ -170,7 +172,7 @@ export default function SeguimientoCeetpsPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  // Al cambiar de tab, resetear página
+  // Al cambiar de tab, resetear pÃ¡gina
   const handleTabChange = (idx) => {
     setActiveTab(idx)
     setPage(1)
@@ -307,7 +309,7 @@ export default function SeguimientoCeetpsPage() {
         ))}
       </div>
 
-      {/* Barra de búsqueda + filtros */}
+      {/* Barra de bÃºsqueda + filtros */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -345,7 +347,7 @@ export default function SeguimientoCeetpsPage() {
           <button
             onClick={() => handleExport(true)}
             disabled={exporting || !hasFilters}
-            title={hasFilters ? 'Exportar registros filtrados' : 'Aplicá filtros primero'}
+            title={hasFilters ? 'Exportar registros filtrados' : 'AplicÃ¡ filtros primero'}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-green-50 hover:border-green-400 hover:text-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowDownTrayIcon className="w-4 h-4" /> Excel filtrado
@@ -360,11 +362,11 @@ export default function SeguimientoCeetpsPage() {
         </div>
       </div>
 
-      {/* Panel de filtros — acordeón por sección */}
+      {/* Panel de filtros â€” acordeÃ³n por secciÃ³n */}
       {showFilters && (
         <div className="space-y-1.5 rounded-xl border border-gray-200 bg-gray-50/60 p-3">
 
-          {/* 1 — Datos generales */}
+          {/* 1 â€” Datos generales */}
           <FilterAccSection
             title="Datos generales"
             activeCount={activeInSection(['usuario', 'sigla_efector'])}
@@ -379,11 +381,11 @@ export default function SeguimientoCeetpsPage() {
               label="Sigla efector"
               value={filters.sigla_efector}
               onChange={v => { setFilters(f => ({ ...f, sigla_efector: v })); setPage(1) }}
-              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} — ${s.descr}` }))}
+              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} â€” ${s.descr}` }))}
             />
           </FilterAccSection>
 
-          {/* 2 — Concurso */}
+          {/* 2 â€” Concurso */}
           <FilterAccSection
             title="Concurso"
             activeCount={activeInSection(['estado_concurso', 'expediente_concurso', 'tipificador_obra_servicio', 'tipificador_origen', 'puesto_solicitado', 'dispo_llamado', 'fecha_caratulacion_desde', 'fecha_caratulacion_hasta', 'fecha_autorizacion_desde', 'fecha_autorizacion_hasta', 'fecha_ifacs_desde', 'fecha_ifacs_hasta', 'fecha_insal_desde', 'fecha_insal_hasta'])}
@@ -422,29 +424,29 @@ export default function SeguimientoCeetpsPage() {
               label="Dispo. llamado"
               value={filters.dispo_llamado}
               onChange={v => { setFilters(f => ({ ...f, dispo_llamado: v })); setPage(1) }}
-              placeholder="Filtrar disposición..."
+              placeholder="Filtrar disposiciÃ³n..."
             />
-            <FilterDate label="F. Caratulación — desde" value={filters.fecha_caratulacion_desde}
+            <FilterDate label="F. CaratulaciÃ³n â€” desde" value={filters.fecha_caratulacion_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_caratulacion_desde: v })); setPage(1) }} />
-            <FilterDate label="F. Caratulación — hasta" value={filters.fecha_caratulacion_hasta}
+            <FilterDate label="F. CaratulaciÃ³n â€” hasta" value={filters.fecha_caratulacion_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_caratulacion_hasta: v })); setPage(1) }} />
-            <FilterDate label="F. Autorización — desde" value={filters.fecha_autorizacion_desde}
+            <FilterDate label="F. AutorizaciÃ³n â€” desde" value={filters.fecha_autorizacion_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_desde: v })); setPage(1) }} />
-            <FilterDate label="F. Autorización — hasta" value={filters.fecha_autorizacion_hasta}
+            <FilterDate label="F. AutorizaciÃ³n â€” hasta" value={filters.fecha_autorizacion_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_autorizacion_hasta: v })); setPage(1) }} />
-            <FilterDate label="F. IFACS — desde" value={filters.fecha_ifacs_desde}
+            <FilterDate label="F. IFACS â€” desde" value={filters.fecha_ifacs_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_desde: v })); setPage(1) }} />
-            <FilterDate label="F. IFACS — hasta" value={filters.fecha_ifacs_hasta}
+            <FilterDate label="F. IFACS â€” hasta" value={filters.fecha_ifacs_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_ifacs_hasta: v })); setPage(1) }} />
-            <FilterDate label="F. INSAL — desde" value={filters.fecha_insal_desde}
+            <FilterDate label="F. INSAL â€” desde" value={filters.fecha_insal_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_insal_desde: v })); setPage(1) }} />
-            <FilterDate label="F. INSAL — hasta" value={filters.fecha_insal_hasta}
+            <FilterDate label="F. INSAL â€” hasta" value={filters.fecha_insal_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_insal_hasta: v })); setPage(1) }} />
           </FilterAccSection>
 
-          {/* 3 — Designación */}
+          {/* 3 â€” DesignaciÃ³n */}
           <FilterAccSection
-            title="Designación"
+            title="DesignaciÃ³n"
             activeCount={activeInSection(['cuil_designado', 'puesto_designado', 'expediente_designacion', 'estado_apto', 'alta_sial', 'numero_apto_medico', 'fecha_proyecto_dispo_desde', 'fecha_proyecto_dispo_hasta', 'dispo_designacion', 'resolucion_designacion', 'id_cargo'])}
           >
             <FilterText
@@ -460,7 +462,7 @@ export default function SeguimientoCeetpsPage() {
               placeholder="Filtrar puesto..."
             />
             <FilterText
-              label="Expediente designación"
+              label="Expediente designaciÃ³n"
               value={filters.expediente_designacion}
               onChange={v => { setFilters(f => ({ ...f, expediente_designacion: v })); setPage(1) }}
               placeholder="Filtrar expediente..."
@@ -477,26 +479,26 @@ export default function SeguimientoCeetpsPage() {
               onChange={v => { setFilters(f => ({ ...f, alta_sial: v })); setPage(1) }}
             />
             <FilterText
-              label="N° Apto Médico"
+              label="NÂ° Apto MÃ©dico"
               value={filters.numero_apto_medico}
               onChange={v => { setFilters(f => ({ ...f, numero_apto_medico: v })); setPage(1) }}
-              placeholder="Filtrar número..."
+              placeholder="Filtrar nÃºmero..."
             />
-            <FilterDate label="F. Proy. Dispo — desde" value={filters.fecha_proyecto_dispo_desde}
+            <FilterDate label="F. Proy. Dispo â€” desde" value={filters.fecha_proyecto_dispo_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_proyecto_dispo_desde: v })); setPage(1) }} />
-            <FilterDate label="F. Proy. Dispo — hasta" value={filters.fecha_proyecto_dispo_hasta}
+            <FilterDate label="F. Proy. Dispo â€” hasta" value={filters.fecha_proyecto_dispo_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_proyecto_dispo_hasta: v })); setPage(1) }} />
             <FilterText
-              label="Dispo. Designación"
+              label="Dispo. DesignaciÃ³n"
               value={filters.dispo_designacion}
               onChange={v => { setFilters(f => ({ ...f, dispo_designacion: v })); setPage(1) }}
-              placeholder="Filtrar disposición..."
+              placeholder="Filtrar disposiciÃ³n..."
             />
             <FilterText
-              label="Resolución Desig."
+              label="ResoluciÃ³n Desig."
               value={filters.resolucion_designacion}
               onChange={v => { setFilters(f => ({ ...f, resolucion_designacion: v })); setPage(1) }}
-              placeholder="Filtrar resolución..."
+              placeholder="Filtrar resoluciÃ³n..."
             />
             <FilterText
               label="ID Cargo"
@@ -506,7 +508,7 @@ export default function SeguimientoCeetpsPage() {
             />
           </FilterAccSection>
 
-          {/* 4 — Baja */}
+          {/* 4 â€” Baja */}
           <FilterAccSection
             title="Baja"
             activeCount={activeInSection(['cuil', 'sigla_baja', 'ex_baja', 'puesto_baja', 'especialidad_baja', 'motivo_baja', 'carga_horaria', 'cargo', 'fecha_baja_desde', 'fecha_baja_hasta', 'doc_respaldatoria'])}
@@ -521,13 +523,13 @@ export default function SeguimientoCeetpsPage() {
               label="Sigla (baja)"
               value={filters.sigla_baja}
               onChange={v => { setFilters(f => ({ ...f, sigla_baja: v })); setPage(1) }}
-              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} — ${s.descr}` }))}
+              options={SIGLAS_DATA.map(s => ({ value: s.sigla, label: `${s.sigla} â€” ${s.descr}` }))}
             />
             <FilterText
               label="EX baja/ampl."
               value={filters.ex_baja}
               onChange={v => { setFilters(f => ({ ...f, ex_baja: v })); setPage(1) }}
-              placeholder="EX-2024-…"
+              placeholder="EX-2024-â€¦"
             />
             <FilterText
               label="Cargo"
@@ -547,9 +549,9 @@ export default function SeguimientoCeetpsPage() {
               onChange={v => { setFilters(f => ({ ...f, especialidad_baja: v })); setPage(1) }}
               placeholder="Filtrar especialidad..."
             />
-            <FilterDate label="F. Baja/Ampl. — desde" value={filters.fecha_baja_desde}
+            <FilterDate label="F. Baja/Ampl. â€” desde" value={filters.fecha_baja_desde}
               onChange={v => { setFilters(f => ({ ...f, fecha_baja_desde: v })); setPage(1) }} />
-            <FilterDate label="F. Baja/Ampl. — hasta" value={filters.fecha_baja_hasta}
+            <FilterDate label="F. Baja/Ampl. â€” hasta" value={filters.fecha_baja_hasta}
               onChange={v => { setFilters(f => ({ ...f, fecha_baja_hasta: v })); setPage(1) }} />
             <FilterSelect
               label="Motivo baja"
@@ -581,9 +583,9 @@ export default function SeguimientoCeetpsPage() {
 
       {/* Stats */}
       <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-        <span>{TABS[activeTab].label} — {total.toLocaleString('es-AR')} registro{total !== 1 ? 's' : ''}</span>
+        <span>{TABS[activeTab].label} â€” {total.toLocaleString('es-AR')} registro{total !== 1 ? 's' : ''}</span>
         <span>
-          {loading ? 'Cargando...' : totalPages > 1 ? `pág. ${page} de ${totalPages}` : ''}
+          {loading ? 'Cargando...' : totalPages > 1 ? `pÃ¡g. ${page} de ${totalPages}` : ''}
         </span>
       </div>
 
@@ -600,26 +602,26 @@ export default function SeguimientoCeetpsPage() {
               <Th label="Estado Concurso"       field="estado_concurso"          sort={sort} onSort={handleSortToggle} />
               <Th label="Usuario"               field="usuario"                  sort={sort} onSort={handleSortToggle} />
               <Th label="Sigla Efector"         field="sigla_efector"            sort={sort} onSort={handleSortToggle} />
-              <Th label="Descripción Efector"   field="descr_efector"            sort={sort} onSort={handleSortToggle} />
+              <Th label="DescripciÃ³n Efector"   field="descr_efector"            sort={sort} onSort={handleSortToggle} />
               <Th label="Conjuntos"             field="tipificador_obra_servicio" sort={sort} onSort={handleSortToggle} />
               <Th label="Expediente Concurso"   field="expediente_concurso"      sort={sort} onSort={handleSortToggle} />
               <Th label="Tipif. Origen"         field="tipificador_origen"       sort={sort} onSort={handleSortToggle} />
-              <Th label="F. Caratulación"       field="fecha_caratulacion"       sort={sort} onSort={handleSortToggle} />
-              <Th label="F. Autorización"       field="fecha_autorizacion"       sort={sort} onSort={handleSortToggle} />
+              <Th label="F. CaratulaciÃ³n"       field="fecha_caratulacion"       sort={sort} onSort={handleSortToggle} />
+              <Th label="F. AutorizaciÃ³n"       field="fecha_autorizacion"       sort={sort} onSort={handleSortToggle} />
               <Th label="Puesto Solicitado"     field="puesto_solicitado"        sort={sort} onSort={handleSortToggle} />
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. Llamado</th>
               <Th label="F. IFACS"              field="fecha_ifacs"              sort={sort} onSort={handleSortToggle} />
               <Th label="F. INSAL"              field="fecha_insal"              sort={sort} onSort={handleSortToggle} />
-              {/* Designación */}
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Exp. Designación</th>
+              {/* DesignaciÃ³n */}
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Exp. DesignaciÃ³n</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Puesto Designado</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">CUIL Designado</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Nombre y Apellido</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Estado Apto</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">N° Apto Médico</th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">NÂ° Apto MÃ©dico</th>
               <Th label="F. Proy. Dispo"        field="fecha_proyecto_dispo"     sort={sort} onSort={handleSortToggle} />
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. Designación</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Resolución Desig.</th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. DesignaciÃ³n</th>
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">ResoluciÃ³n Desig.</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Alta SIAL</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Observaciones</th>
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">ID Cargo</th>
@@ -652,45 +654,45 @@ export default function SeguimientoCeetpsPage() {
                 className="hover:bg-blue-50 cursor-pointer transition-colors"
               >
                 {/* Concurso */}
-                <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap font-medium">{row.estado_concurso ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.usuario ?? '—'}</td>
-                <td className="px-3 py-2 text-xs font-medium text-primary-700 whitespace-nowrap">{row.sigla_efector ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.descr_efector ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipificador_obra_servicio ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.expediente_concurso ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipificador_origen ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-gray-700 whitespace-nowrap font-medium">{row.estado_concurso ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.usuario ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs font-medium text-primary-700 whitespace-nowrap">{row.sigla_efector ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.descr_efector ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipificador_obra_servicio ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.expediente_concurso ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipificador_origen ?? 'â€”'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_caratulacion)}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_autorizacion)}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_solicitado ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.dispo_llamado ?? ''}>{row.dispo_llamado ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_solicitado ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.dispo_llamado ?? ''}>{row.dispo_llamado ?? 'â€”'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_ifacs)}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_insal)}</td>
-                {/* Designación */}
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.expediente_designacion ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_designado ?? '—'}</td>
-                <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil_designado ?? '—'}</td>
-                <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{row.nombre_apellido_designado ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.estado_apto ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.numero_apto_medico ?? '—'}</td>
+                {/* DesignaciÃ³n */}
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.expediente_designacion ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_designado ?? 'â€”'}</td>
+                <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil_designado ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{row.nombre_apellido_designado ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.estado_apto ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.numero_apto_medico ?? 'â€”'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_proyecto_dispo)}</td>
-                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.dispo_designacion ?? ''}>{row.dispo_designacion ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.resolucion_designacion ?? ''}>{row.resolucion_designacion ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.alta_sial ? 'Sí' : row.alta_sial === false ? 'No' : '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[160px] truncate" title={row.observaciones ?? ''}>{row.observaciones ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.id_cargo ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.dispo_designacion ?? ''}>{row.dispo_designacion ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[180px] truncate" title={row.resolucion_designacion ?? ''}>{row.resolucion_designacion ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.alta_sial ? 'SÃ­' : row.alta_sial === false ? 'No' : 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[160px] truncate" title={row.observaciones ?? ''}>{row.observaciones ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.id_cargo ?? 'â€”'}</td>
                 {/* Baja */}
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.ex_baja ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.sigla ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.efector ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.cargo ?? '—'}</td>
-                <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.cuil ?? '—'}</td>
-                <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap bg-blue-50/40">{row.nombre_apellido_baja ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.puesto_baja ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.especialidad_baja ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.ex_baja ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.sigla ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.efector ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.cargo ?? 'â€”'}</td>
+                <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.cuil ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap bg-blue-50/40">{row.nombre_apellido_baja ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.puesto_baja ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.especialidad_baja ?? 'â€”'}</td>
                 <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{formatDate(row.fecha_baja)}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.carga_horaria ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.motivo_baja ?? '—'}</td>
-                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.doc_respaldatoria ?? '—'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.carga_horaria ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.motivo_baja ?? 'â€”'}</td>
+                <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap bg-blue-50/40">{row.doc_respaldatoria ?? 'â€”'}</td>
                 {/* Acciones */}
                 <td className="px-3 py-2.5 sticky right-0 bg-white" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-1.5">
@@ -716,7 +718,7 @@ export default function SeguimientoCeetpsPage() {
         </table>
       </div>
 
-      {/* Paginación */}
+      {/* PaginaciÃ³n */}
       <Pagination
         currentPage={page}
         totalPages={totalPages}
@@ -736,7 +738,7 @@ export default function SeguimientoCeetpsPage() {
         />
       )}
 
-      {/* Modal edición */}
+      {/* Modal ediciÃ³n */}
       {detailRecord && (
         <SeguimientoCeetpsDetail
           initial={detailRecord}
@@ -745,235 +747,17 @@ export default function SeguimientoCeetpsPage() {
         />
       )}
 
-      {/* Confirm delete */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">Confirmar eliminación</h2>
-            <p className="text-sm text-gray-600">
-              ¿Eliminar el seguimiento CEETPS <strong>#{deleteTarget.id}</strong>
-              {deleteTarget.nombre_apellido_baja ? ` (${deleteTarget.nombre_apellido_baja})` : ''}?
-              Esta acción no se puede deshacer.
-            </p>
-            {error && <p className="text-xs text-red-600">{error}</p>}
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setDeleteTarget(null)} className="btn-secondary" disabled={deleting}>Cancelar</button>
-              <button
-                onClick={confirmDelete}
-                className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-                disabled={deleting}
-              >
-                {deleting ? 'Eliminando...' : 'Eliminar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Th sorteable ─────────────────────────────────────────────────────────────
-function Th({ label, field, sort, onSort }) {
-  const active = sort.field === field
-  return (
-    <th
-      className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer select-none whitespace-nowrap hover:bg-gray-100"
-      onClick={() => onSort(field)}
-    >
-      <span className="flex items-center gap-1">
-        {label}
-        <ChevronUpDownIcon className={`w-3.5 h-3.5 ${active ? 'text-primary-600' : 'text-gray-300'}`} />
-        {active && <span className="text-primary-600">{sort.order === 'ASC' ? '↑' : '↓'}</span>}
-      </span>
-    </th>
-  )
-}
-
-// ─── FilterAccSection — sección acordeón para agrupar filtros ────────────────
-function FilterAccSection({ title, activeCount = 0, children }) {
-  const [open, setOpen] = useState(true)
-  return (
-    <div className="border border-gray-200 rounded-lg">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center justify-between w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-widest transition-colors ${
-          open
-            ? 'bg-primary-50 text-primary-700 rounded-t-lg'
-            : 'bg-white text-gray-500 hover:bg-gray-50 rounded-lg'
-        }`}
-      >
-        <span className="flex items-center gap-2">
-          <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
-          {title}
-        </span>
-        {activeCount > 0 && (
-          <span className="bg-primary-600 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-            {activeCount}
-          </span>
-        )}
-      </button>
-      {open && (
-        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── FilterSelect ─────────────────────────────────────────────────────────────
-function FilterSelect({ label, value, onChange, options = [], disabled = false, hint = null }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        disabled={disabled}
-        className={`form-input text-sm w-full ${disabled ? 'opacity-50 cursor-default' : ''}`}
-      >
-        <option value="">Todos</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
-    </div>
-  )
-}
-
-// ─── FilterBoolSelect — select Sí / No / Todos para campos booleanos ──────────
-function FilterBoolSelect({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select value={value} onChange={e => onChange(e.target.value)} className="form-input text-sm w-full">
-        <option value="">Todos</option>
-        <option value="true">Sí</option>
-        <option value="false">No</option>
-      </select>
-    </div>
-  )
-}
-
-// ─── FilterText ───────────────────────────────────────────────────────────────
-function FilterText({ label, value, onChange, placeholder = '' }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="form-input text-sm w-full" />
-    </div>
-  )
-}
-
-// ─── FilterDate ───────────────────────────────────────────────────────────────
-function FilterDate({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="form-input text-sm w-full"
+      <ConfirmDeleteModal
+        target={deleteTarget}
+        entityLabel="el seguimiento CEETPS"
+        nameOf={r => r?.nombre_apellido_baja}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+        deleting={deleting}
+        error={error}
       />
     </div>
   )
 }
 
-// ─── FilterSearchSelect ───────────────────────────────────────────────────────
-function FilterSearchSelect({ label, value, onChange, options = [], disabled = false, hint = null }) {
-  const [query, setQuery]       = useState('')
-  const [open, setOpen]         = useState(false)
-  const [dropStyle, setDropStyle] = useState({})
-  const wrapRef    = useRef(null)
-  const dropRef    = useRef(null)
-  const triggerRef = useRef(null)
-  const inputRef   = useRef(null)
-
-  const normalized = useMemo(
-    () => options.map(o => typeof o === 'string' ? { value: o, label: o } : o),
-    [options]
-  )
-  const filteredOpts = useMemo(() => {
-    if (!query.trim()) return normalized
-    const q = query.toLowerCase()
-    return normalized.filter(o => o.label.toLowerCase().includes(q))
-  }, [normalized, query])
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (
-        wrapRef.current && !wrapRef.current.contains(e.target) &&
-        dropRef.current  && !dropRef.current.contains(e.target)
-      ) { setOpen(false); setQuery('') }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => {
-      if (dropRef.current && dropRef.current.contains(e.target)) return
-      setOpen(false); setQuery('')
-    }
-    document.addEventListener('scroll', handler, true)
-    return () => document.removeEventListener('scroll', handler, true)
-  }, [open])
-
-  const handleSelect = (val) => { onChange(val); setOpen(false); setQuery('') }
-  const openDropdown = () => {
-    if (disabled) return
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (rect) setDropStyle({ position: 'fixed', zIndex: 9999, top: rect.bottom + 4, left: rect.left, width: Math.max(rect.width, 260) })
-    setOpen(true)
-    setTimeout(() => inputRef.current?.focus(), 30)
-  }
-  const selectedLabel = normalized.find(o => o.value === value)?.label ?? value
-
-  return (
-    <div ref={wrapRef}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <div className="relative" ref={triggerRef}>
-        {!open ? (
-          <button
-            type="button"
-            onClick={openDropdown}
-            disabled={disabled}
-            className={`form-input text-sm w-full text-left flex items-center pr-7 ${disabled ? 'opacity-50 cursor-default' : ''}`}
-          >
-            {value
-              ? <span className="text-gray-900 truncate block flex-1 min-w-0">{selectedLabel}</span>
-              : <span className="text-gray-400">Todos</span>
-            }
-            <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2" />
-          </button>
-        ) : (
-          <>
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none z-10" />
-            <input ref={inputRef} type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Buscar..." className="form-input text-sm w-full pl-8" />
-          </>
-        )}
-        {value && !open && (
-          <button type="button" onClick={e => { e.stopPropagation(); onChange(''); setQuery('') }} className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-gray-300 hover:text-red-500 transition-colors z-10">
-            <XMarkIcon className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-      {open && (
-        <div ref={dropRef} style={dropStyle} className="bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden">
-          <div className="max-h-64 overflow-y-auto">
-            <button type="button" onClick={() => handleSelect('')} className={`w-full text-left px-3 py-2.5 text-sm border-b border-gray-100 ${!value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}>Todos</button>
-            {filteredOpts.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin resultados</div>
-            ) : filteredOpts.map(o => (
-              <button key={o.value} type="button" onClick={() => handleSelect(o.value)} className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${o.value === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>{o.label}</button>
-            ))}
-          </div>
-        </div>
-      )}
-      {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
-    </div>
-  )
-}
+// â”€â”€â”€ Th sorteable â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
