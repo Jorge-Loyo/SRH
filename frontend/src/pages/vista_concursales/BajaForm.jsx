@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useContext } from 'react'
-import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { InformationCircleIcon } from '@heroicons/react/24/outline'
 import { bajasApi } from '../../api/concursalesApi'
 import { exportBajaToPdf, exportBajaToWord } from '../../utils/exportReport'
 import BaseModal from '../../components/ui/modals/BaseModal'
@@ -421,25 +421,15 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
       </ul>
     </BaseModal>
 
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-0 sm:p-4 overflow-y-auto">
-      <div className={`bg-white rounded-none sm:rounded-xl shadow-2xl w-full max-w-4xl sm:my-8${origenBorderColor ? ` border-t-4 ${origenBorderColor}` : ''}`}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              {isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className={`px-4 sm:px-6 py-6 space-y-7 ${origenFormClass}`}>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
+      size="xl"
+      headerExtra={isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
+      borderTop={origenBorderColor}
+    >
+        <form id="baja-form" onSubmit={handleSubmit} className={`px-4 sm:px-6 py-6 space-y-7 ${origenFormClass}`}>
 
           {/* 1 — Identificacion */}
           <Section title="Identificacion">
@@ -550,8 +540,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
           </div>
 
         </form>
-      </div>
-    </div>
+    </BaseModal>
     </>
     </OrigenContext.Provider>
   )
@@ -706,18 +695,15 @@ function PipelineViewBaja({ initial, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 border-t-4 ${origenColor}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Baja #{initial?.id}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{initial?.nombre_apellido || '—'} · CUIL {initial?.cuil || '—'} · <span className="font-medium">{initial?.origen || '—'}</span></p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={`Baja #${initial?.id}`}
+      size="xl"
+      borderTop={origenColor}
+      subtitle={`${initial?.nombre_apellido || '—'} · CUIL ${initial?.cuil || '—'} · ${initial?.origen || '—'}`}
+      footer={<button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>}
+    >
         {/* Secciones */}
         <div className="flex flex-col gap-2 px-5 py-5">
           {sections.map((sec) => (
@@ -738,11 +724,6 @@ function PipelineViewBaja({ initial, onClose }) {
             </div>
           ))}
         </div>
-        {/* Footer */}
-        <div className="flex justify-end px-6 py-3 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>
-        </div>
-      </div>
-    </div>
+    </BaseModal>
   )
 }

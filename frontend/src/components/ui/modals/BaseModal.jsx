@@ -5,7 +5,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
  * BaseModal — wrapper responsivo para todos los modales.
  * En mobile ocupa pantalla completa, en desktop es centrado con max-w configurable.
  */
-export default function BaseModal({ open, onClose, title, children, size = 'md', footer }) {
+export default function BaseModal({ open, onClose, title, subtitle, children, size = 'md', footer, headerExtra, borderTop }) {
   // Bloquear scroll del body mientras el modal está abierto
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden'
@@ -38,18 +38,25 @@ export default function BaseModal({ open, onClose, title, children, size = 'md',
         bg-white rounded-t-2xl sm:rounded-xl shadow-xl
         flex flex-col max-h-[95vh] sm:max-h-[90vh]
         animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200
+        ${borderTop ? `border-t-4 ${borderTop}` : ''}
       `}>
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-              aria-label="Cerrar"
-            >
-              <XMarkIcon className="w-5 h-5" />
-            </button>
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+              {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              {headerExtra}
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                aria-label="Cerrar"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         )}
 
