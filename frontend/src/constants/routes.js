@@ -15,6 +15,7 @@ export const ROUTES = {
   CARGOS:         '/tablas/cargos',
   ROLES:          '/tablas/roles',
   SIGLAS:         '/tablas/siglas',
+  ALTA_CARGO:     '/cargos/alta',
 
   // Gestión
   RECORRIDAS:     '/recorridas',
