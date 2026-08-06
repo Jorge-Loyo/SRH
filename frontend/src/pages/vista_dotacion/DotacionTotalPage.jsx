@@ -7,6 +7,7 @@ import {
   ArrowDownTrayIcon, FunnelIcon, XMarkIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
+import KpiCard, { KPI_DEFS_DOTACION } from '../../components/ui/tables/KpiCard';
 import { apiGet, ApiError } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext.jsx';
 import Pagination from '../../components/ui/Pagination';
@@ -46,13 +47,6 @@ const QUICK_FIELDS = [
 ];
 
 
-const KPI_DEFS = [
-  { key: 'total',      label: 'Total',             color: 'bg-gray-100',    textColor: 'text-gray-800',   estadoValue: '' },
-  { key: 'activos',    label: 'Activos',            color: 'bg-teal-100',    textColor: 'text-teal-800',   estadoValue: 'activo' },
-  { key: 'comision',   label: 'Comisión',           color: 'bg-yellow-100',  textColor: 'text-yellow-800', estadoValue: 'comision' },
-  { key: 'retencion',  label: 'Retención de Cargo', color: 'bg-indigo-100',  textColor: 'text-indigo-800', estadoValue: 'retencion de cargo' },
-  { key: 'bloqueados', label: 'Bloqueo de Haberes', color: 'bg-gray-800',    textColor: 'text-white',      estadoValue: 'bloqueado' },
-];
 
 const EMPTY_MULTI = {
   unificador_puesto: [], especialidad: [], agrupador: [],
@@ -72,23 +66,6 @@ function downloadBlob(base64, filename) {
 }
 
 // ─── sub-componentes ─────────────────────────────────────────────────────────
-
-const KpiCard = memo(({ def, value, active, onClick }) => (
-  <button
-    onClick={() => def.estadoValue && onClick(def.estadoValue)}
-    className={[
-      'flex flex-col items-center justify-center rounded-lg px-5 sm:px-8 py-2.5 min-w-[120px] sm:min-w-[170px] transition-all',
-      def.color,
-      def.estadoValue
-        ? active ? 'ring-2 ring-primary-600 shadow-md cursor-pointer scale-105' : 'hover:shadow cursor-pointer'
-        : 'cursor-default',
-    ].join(' ')}
-  >
-    <span className={`text-2xl font-bold ${def.textColor}`}>{(value ?? 0).toLocaleString('es-AR')}</span>
-    <span className={`text-xs mt-0.5 ${def.key === 'bloqueados' ? 'text-gray-300' : 'text-gray-500'}`}>{def.label}</span>
-  </button>
-));
-KpiCard.displayName = 'KpiCard';
 
 const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef }) => (
   <div
@@ -360,7 +337,7 @@ export default function DotacionTotalPage() {
   ), [filters, siglasFilters, quickSearch, rangoEdad, antiguedad, estadoFilter, codigoRegistroFilter]);
 
   return (
-    <div className={`flex flex-col h-full ${showFilters ? 'overflow-y-auto' : 'overflow-hidden'}`}>
+    <div className="flex flex-col">
       {/* Barra superior */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2 border-b border-gray-200 bg-white">
         <div className="flex flex-wrap items-center gap-3">
@@ -466,7 +443,7 @@ export default function DotacionTotalPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           {/* KPIs */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {KPI_DEFS.map(def => (
+            {KPI_DEFS_DOTACION.map(def => (
               <KpiCard key={def.key} def={def}
                 value={tableState.kpis?.[def.key]}
                 active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
