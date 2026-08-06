@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Landing Page - GOPLYCO</title>
+
+    <!-- Tailwind CSS compilado localmente (ver frontend/landing/) — antes se cargaba desde
+         cdn.tailwindcss.com, pero la CSP del backend sólo permite recursos propios -->
+    <link rel="stylesheet" href="/landing/landing.css">
+
+    <!-- Fuente Montserrat autoalojada (ver /landing/fonts/) — antes venía de Google Fonts -->
+    <style>
+        @font-face {
+            font-family: 'Montserrat';
+            font-style: normal;
+            font-weight: 400 800;
+            font-display: swap;
+            src: url('/landing/fonts/montserrat-latin.woff2') format('woff2');
+        }
+    </style>
+
+    <!-- Estilos personalizados para las barras de scroll y para limpiar flechas nativas del navegador -->
+    <style>
+        .scrollbar-custom::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.03); 
+            border-radius: 10px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #c6e3d0; 
+            border-radius: 10px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+            background: #a3cbb0; 
+        }
+        
+        .scrollbar-azul::-webkit-scrollbar-thumb {
+            background: #c3cae8; 
+        }
+        .scrollbar-azul::-webkit-scrollbar-thumb:hover {
+            background: #a2add6; 
+        }
+
+        .scrollbar-amarillo::-webkit-scrollbar-thumb {
+            background: #e8dcb8; 
+        }
+        .scrollbar-amarillo::-webkit-scrollbar-thumb:hover {
+            background: #d6c38f; 
+        }
+
+        /* Ocultar la flecha por defecto de la etiqueta details en algunos navegadores */
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
+    </style>
+</head>
+<body class="font-sans bg-brand-fondo text-white min-h-screen py-10 px-4 sm:px-6 lg:px-8 flex flex-col justify-center items-center">
+
+    <!-- Encabezado -->
+    <header class="text-center mb-6 w-full max-w-5xl">
+        <p class="text-gray-300 text-xs font-bold tracking-[0.2em] mb-3 uppercase">Landing Page</p>
+        
+        <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-snug mb-4">
+            Gerencia Operativa de Planificación y Control Operativo de los<br class="hidden md:block"> Recursos Humanos del Sistema de Salud
+        </h1>
+        
+        <div class="text-gray-300 text-sm font-medium leading-relaxed flex flex-col items-center gap-3 mt-2">
+            <p>Ministerio de Salud</p>
+            <img src="/landing/img/logo-gcba.png" alt="Gobierno de la Ciudad de Buenos Aires" class="h-28 md:h-32 w-auto object-contain opacity-90">
+        </div>
+    </header>
+
+    <!-- Grid de 3 Columnas -->
+    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+
+        <!-- COLUMNA 1: PLANILLAS DE DATOS (CON ACORDEONES) -->
+        <div class="bg-brand-fondoVerde px-8 pb-8 pt-4 rounded-[2rem] shadow-2xl flex flex-col h-[850px]">
+            
+            <!-- Icono Flotante Interno -->
+            <div class="flex justify-center -mt-12 mb-3 relative z-20">
+                <img src="/landing/img/icono-excel.png" alt="Icono Excel" class="w-16 h-auto drop-shadow-md">
+            </div>
+
+            <h2 class="text-2xl font-bold text-center text-brand-tituloverde mb-3 leading-tight uppercase shrink-0">
+                PLANILLAS<br>DE DATOS
+            </h2>
+            <p class="text-gray-500 text-sm text-center mb-6 px-2 font-medium shrink-0">
+                Hojas de cálculo, bases de datos y reportes numéricos en Excel o Google Sheets.
+            </p>
+            
+            <div class="flex flex-col gap-2 overflow-y-auto scrollbar-custom pr-3 pb-4 h-full">
+                <script>
+                    const categoriasPlanillas = [
+                        {
+                            titulo: "DOTACIONES",
+                            items: [
+                                { nombre: "CARPETA DOTACIONES", url: "https://drive.google.com/drive/folders/1_JoFln0otDF3UvpxGbXhIBU4cof-pb_M", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "OCUPACIONES POU", url: "https://drive.google.com/drive/u/0/folders/1DXSIT25G8Ydtjb9KySbFyOGfzzl6yfxD", acceso: "Equipo Datos GOPLYCO" }, 
+                                { nombre: "ANALISIS DECRETO 315 Y MODIFICACIONES", url: "https://docs.google.com/spreadsheets/d/1ctT05nMqLAoGOSg2AxIzVhKRVzQy1zenh0W4SOe-ABE/edit?gid=141441799#gid=141441799", acceso: "Equipo Datos GOPLYCO" },
+                            ]
+                        },
+                        {
+                            titulo: "BAJAS Y SEGUIMIENTO CONCURSOS",
+                            items: [
+                                { nombre: "BAJAS CONSOLIDADAS", url: "https://docs.google.com/spreadsheets/d/1dS-kgxYrAfx5Z58myLxpGQ2v0RsstX9RJQqKsGgdCu4/edit?gid=0#gid=0", acceso: "SGORASV - Ale" },
+                                { nombre: "SEGUIMIENTO CONCURSOS CPH", url: "https://docs.google.com/spreadsheets/d/1h9X_JoibGiJQsmLd4alq-c7B_wXIavXKW5970VHB7SE/edit?gid=694073484#gid=694073484", acceso: "SGORASV - Equipo Alexis" },
+                                { nombre: "SGO CONCURSOS - CEETPS", url: "https://docs.google.com/spreadsheets/d/1I9GGCGLTjJpkscG39iBVx8u68gfcR6ose8RKaXuxzpQ/edit?gid=1386854709#gid=1386854709", acceso: "SGOGCETA - Equipo Laura Zárate" },
+                                { nombre: "APTOS MEDICOS - CPH/CEETPS/DGAMT", url: "https://docs.google.com/spreadsheets/d/1e30WzH3__R5pZzXId9HECv4YO7P3pmbBaKF9XZsd3-U/edit?gid=1632575893#gid=1632575893", acceso: "Equipo Datos GOPLYCO" },
+                            ]
+                        },
+                        {
+                            titulo: "OBRAS Y RECORRIDAS",
+                            items: [
+                                { nombre: "OBRAS", url: "https://docs.google.com/spreadsheets/d/1VcuyHkZVJn7RD-l6xZ70fgBtq_ILpahxhYs7g7hA7Ew/edit?gid=636602511#gid=636602511", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "RECORRIDAS", url: "https://drive.google.com/drive/u/0/folders/14gLTEEm50sUHA25q2_EeV_9x9U9bVR8c", acceso: "Equipo Datos GOPLYCO" },
+                            ]
+                        },
+                        {
+                            titulo: "ANÁLISIS SALARIAL",
+                            items: [
+                                { nombre: "ANÁLISIS SALARIOS", url: "https://docs.google.com/spreadsheets/d/1bsR-ZjClikCfIfgAofQfHXSl4z8lRMB5PE9Ls_ZwXHI/edit?gid=2010526784#gid=2010526784", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "MODULOS Y GT", url: "https://docs.google.com/spreadsheets/d/1896mD7zYDENPFMKtQt0ToYbHugVxecw9Audlm_wqJ1A/edit?gid=477892275#gid=477892275", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "SGO LIQUIDACIONES - VALORES/SALARIOS", url: "https://docs.google.com/spreadsheets/d/1KMGeA4HAO9eno-28iIUM-ko-eq2qwfV9/edit?gid=1743501056#gid=1743501056", acceso: "SGO CSL - Equipo Juan Manuel" },
+                                { nombre: "URSES", url: "https://docs.google.com/spreadsheets/d/15UAws5gxlG5Oz63FO15CCXU5joHCGLrKI4WOmmFYTfA/edit?gid=1646050886#gid=1646050886", acceso: "SGO CSL - Equipo Juan Manuel" },
+                            ]
+                        }
+                    ];
+
+                    categoriasPlanillas.forEach((categoria) => {
+                        let htmlItems = "";
+                        
+                        categoria.items.forEach(item => {
+                            htmlItems += `
+                                <div class="flex flex-col shrink-0">
+                                    <a href="${item.url}" target="_blank" class="flex items-center justify-center px-4 w-full h-9 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-xs font-bold text-gray-700 truncate" title="${item.nombre}">
+                                        ${item.nombre}
+                                    </a>
+                                    <div class="flex justify-center items-center mt-1.5 text-[10px] text-gray-500 font-medium">
+                                        <span>Acceso:</span>
+                                        <span class="ml-1 text-brand-tituloverde font-bold tracking-wide">${item.acceso}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        document.write(`
+                            <details class="group mb-2">
+                                <summary class="flex justify-between items-center font-bold cursor-pointer px-2 py-3 border-b-2 border-brand-tituloverde/20 text-brand-tituloverde uppercase text-xs tracking-wider mb-4 hover:bg-brand-tituloverde/5 transition-colors rounded-t-md">
+                                    <span>${categoria.titulo}</span>
+                                    <span class="transition-transform duration-300 group-open:rotate-180">
+                                        <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" width="16"><path d="M6 9l6 6 6-6"></path></svg>
+                                    </span>
+                                </summary>
+                                <div class="flex flex-col gap-4 pb-2">
+                                    ${htmlItems}
+                                </div>
+                            </details>
+                        `);
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- COLUMNA 2: ENLACES DIRECTOS (CON ACORDEONES) -->
+        <div class="bg-brand-fondoAzul px-8 pb-8 pt-4 rounded-[2rem] shadow-2xl flex flex-col h-[850px]">
+            
+            <!-- Icono Flotante Interno -->
+            <div class="flex justify-center -mt-12 mb-3 relative z-20">
+                <img src="/landing/img/icono-enlace.png" alt="Icono Enlace" class="w-16 h-auto drop-shadow-md">
+            </div>
+
+            <h2 class="text-2xl font-bold text-center text-brand-tituloazul mb-3 leading-tight uppercase shrink-0">
+                ENLACES<br>DIRECTOS
+            </h2>
+            <p class="text-gray-500 text-sm text-center mb-6 px-2 font-medium shrink-0">
+                URLs a plataformas externas, sitios web y recursos directos.
+            </p>
+            
+            <div class="flex flex-col gap-2 overflow-y-auto scrollbar-custom scrollbar-azul pr-3 pb-4 h-full">
+                <script>
+                    const categoriasEnlaces = [
+                        {
+                            titulo: "PROYECTOS Y DESARROLLOS",
+                            items: [
+                                { nombre: "SISTEMA", url: "https://dotacion.buenosaires.gob.ar/login", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "GITLAB", url: "https://repositorio-asi.buenosaires.gob.ar/users/sign_in", acceso: "Equipo Datos GOPLYCO" },
+                            ]
+                        },
+                        {
+                            titulo: "NEWSLETTER's",
+                            items: [
+                                { nombre: "ARCHIVO NEWSLETTER's", url: "https://linktr.ee/GO.RRHH", acceso: "SGOPYGD - Equipo Luciano" },
+                            ]
+                        }
+                    ];
+
+                    categoriasEnlaces.forEach((categoria) => {
+                        let htmlItems = "";
+                        
+                        categoria.items.forEach(item => {
+                            htmlItems += `
+                                <div class="flex flex-col shrink-0">
+                                    <a href="${item.url}" target="_blank" class="flex items-center justify-center px-4 w-full h-9 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-xs font-bold text-gray-700 truncate" title="${item.nombre}">
+                                        ${item.nombre}
+                                    </a>
+                                    <div class="flex justify-center items-center mt-1.5 text-[10px] text-gray-500 font-medium">
+                                        <span>Acceso:</span>
+                                        <span class="ml-1 text-brand-tituloazul font-bold tracking-wide">${item.acceso}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        document.write(`
+                            <details class="group mb-2">
+                                <summary class="flex justify-between items-center font-bold cursor-pointer px-2 py-3 border-b-2 border-brand-tituloazul/20 text-brand-tituloazul uppercase text-xs tracking-wider mb-4 hover:bg-brand-tituloazul/5 transition-colors rounded-t-md">
+                                    <span>${categoria.titulo}</span>
+                                    <span class="transition-transform duration-300 group-open:rotate-180">
+                                        <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" width="16"><path d="M6 9l6 6 6-6"></path></svg>
+                                    </span>
+                                </summary>
+                                <div class="flex flex-col gap-4 pb-2">
+                                    ${htmlItems}
+                                </div>
+                            </details>
+                        `);
+                    });
+                </script>
+            </div>
+        </div>
+
+        <!-- COLUMNA 3: PRESENTACIONES Y POWER-BI (CON ACORDEONES) -->
+        <div class="bg-brand-fondoAmarillo px-8 pb-8 pt-4 rounded-[2rem] shadow-2xl flex flex-col h-[850px]">
+            
+            <!-- Iconos Flotantes Internos -->
+            <div class="flex justify-center gap-4 -mt-12 mb-3 relative z-20">
+                <img src="/landing/img/icono-ppt.png" alt="Icono PPT" class="w-16 h-auto drop-shadow-md">
+                <img src="/landing/img/icono-powerbi.png" alt="Icono PowerBI" class="w-16 h-auto drop-shadow-md">
+            </div>
+
+            <h2 class="text-2xl font-bold text-center text-brand-tituloamarillo mb-3 leading-tight uppercase shrink-0">
+                PRESENTACIONES<br>Y POWER-BI
+            </h2>
+            <p class="text-gray-500 text-sm text-center mb-6 px-2 font-medium shrink-0">
+                Diapositivas, material visual en PPT o Google Slides. Power BI.
+            </p>
+            
+            <div class="flex flex-col gap-2 overflow-y-auto scrollbar-custom scrollbar-amarillo pr-3 pb-4 h-full">
+                <script>
+                    const categoriasPresentaciones = [
+                        {
+                            titulo: "INFORMES ENTREGABLES",
+                            items: [
+                                { nombre: "INFORMES TRI/CUATRIMESTRALES", url: "https://drive.google.com/drive/u/0/folders/1eaJxU2dZiJyld5oe-UxnEhZgSx41UIjR", acceso: "Equipo Datos GOPLYCO" },
+                                { nombre: "INSUMOS PARA INFORMES", url: "https://drive.google.com/drive/u/0/folders/1P21WniSCp61XSSF4iJgxOXMY4QziXdsb", acceso: "Equipo Datos GOPLYCO" }
+                            ]
+                        },
+                        {
+                            titulo: "LOOKER STUDIO",
+                            items: [
+                                { nombre: "LOOKER APTOS", url: "https://datastudio.google.com/u/0/reporting/61bd9657-a099-475d-9c91-2de56c6da3e6/page/pRLqF", acceso: "Medicina Laboral" },
+                                
+                            ]
+                        },
+                        {
+                            titulo: "PRESENTACIONES GENERALES",
+                            items: [
+                                { nombre: "BALANCE 25 | 26", url: "https://docs.google.com/presentation/d/1AX5FNrhrPF31S78m49k-bAjiCfptKjXyzDk_wtnUVN4/edit?usp=sharing", acceso: "SGOPYGD - Equipo Luciano" },
+                                
+                            ]
+                        }
+                    ];
+
+                    categoriasPresentaciones.forEach((categoria) => {
+                        let htmlItems = "";
+                        
+                        categoria.items.forEach(item => {
+                            htmlItems += `
+                                <div class="flex flex-col shrink-0">
+                                    <a href="${item.url}" target="_blank" class="flex items-center justify-center px-4 w-full h-9 bg-white rounded-full shadow-sm hover:shadow-md transition-shadow text-xs font-bold text-gray-700 truncate" title="${item.nombre}">
+                                        ${item.nombre}
+                                    </a>
+                                    <div class="flex justify-center items-center mt-1.5 text-[10px] text-gray-500 font-medium">
+                                        <span>Acceso:</span>
+                                        <span class="ml-1 text-brand-tituloamarillo font-bold tracking-wide">${item.acceso}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        document.write(`
+                            <details class="group mb-2">
+                                <summary class="flex justify-between items-center font-bold cursor-pointer px-2 py-3 border-b-2 border-brand-tituloamarillo/20 text-brand-tituloamarillo uppercase text-xs tracking-wider mb-4 hover:bg-brand-tituloamarillo/5 transition-colors rounded-t-md">
+                                    <span>${categoria.titulo}</span>
+                                    <span class="transition-transform duration-300 group-open:rotate-180">
+                                        <svg fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" viewBox="0 0 24 24" width="16"><path d="M6 9l6 6 6-6"></path></svg>
+                                    </span>
+                                </summary>
+                                <div class="flex flex-col gap-4 pb-2">
+                                    ${htmlItems}
+                                </div>
+                            </details>
+                        `);
+                    });
+                </script>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Pie de página con leyenda y logo -->
+    <footer class="mt-14 mb-8 text-center w-full flex flex-col items-center px-4">
+        <p class="text-gray-400 text-sm font-medium leading-relaxed mb-2">
+            GOPLYCO<br>
+            Actualizado: Agosto 2026
+        </p>
+        
+        <p class="text-[9px] text-[#6b8296] font-medium max-w-2xl mx-auto mb-8 leading-tight uppercase tracking-wider">
+            Esta web está reservada únicamente para difusión y uso interno del equipo de la Dirección General de Administración y Desarrollo de Recursos Humanos del Ministerio de Salud del Gobierno de la Ciudad Autónoma de Buenos Aires
+        </p>
+        
+        <img src="/landing/img/logo-footer.png" alt="Logo Footer" loading="lazy" class="w-64 md:w-96 h-auto opacity-90 object-contain">
+    </footer>
+
+</body>
+</html>
