@@ -9,6 +9,7 @@ import {
   TableCellsIcon, CheckIcon, TrashIcon,
   BookOpenIcon,
 } from '@heroicons/react/24/outline';
+import BaseModal from '../../components/ui/modals/BaseModal';
 import { apiGet, apiPost, apiPut, apiDelete, ApiError } from '../../api/client';
 import { hospitalsMap } from '../../data/hospitals-data';
 import { useAuth } from '../../auth/AuthContext';
@@ -184,109 +185,79 @@ function RecorridaEditorModal({
     finally { setSaving(false); }
   };
 
-  if (!open) return null;
   const isNew = !existingRecorrida?.id;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col"
-        style={{ maxHeight: 'calc(100vh - 3rem)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
-          <div>
-            <p className="font-bold text-gray-900 text-base">Recorrida</p>
-            <p className="text-xs text-gray-400 font-mono mt-0.5">{hospitalName} ({hospital})</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <XMarkIcon className="w-5 h-5 text-gray-400" />
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title="Recorrida"
+      subtitle={`${hospitalName} (${hospital})`}
+      size="lg"
+      footer={canEdit && (
+        <>
+          {saveError && <p className="text-sm text-red-600 mr-auto">{saveError}</p>}
+          {saved && (
+            <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-medium mr-auto">
+              <CheckIcon className="w-4 h-4" />Guardado con éxito
+            </span>
+          )}
+          <button onClick={handleSave} disabled={saving}
+            className="btn-primary flex items-center gap-2 text-sm">
+            {saving && <Spinner size="sm" />}
+            {isNew ? 'Crear Recorrida' : 'Guardar cambios'}
           </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4 min-h-0">
-          {isNew && (
-            <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-700 flex-shrink-0">
-              No hay recorrida para este hospital todavía.
-            </div>
-          )}
-          {!isNew && canEdit && (
-            <div className="flex items-center justify-between flex-shrink-0">
-              <p className="text-xs text-gray-400">
-                Modificado: {existingRecorrida.updated_at
-                  ? new Date(existingRecorrida.updated_at).toLocaleDateString('es-AR')
-                  : new Date(existingRecorrida.created_at).toLocaleDateString('es-AR')}
-              </p>
-              <button onClick={onDelete} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                <TrashIcon className="w-3.5 h-3.5" />Eliminar
-              </button>
-            </div>
-          )}
-          {canEdit ? (
-            <>
-              <div className="flex-shrink-0">
-                <label className="block text-xs font-medium text-gray-500 mb-1">Título</label>
-                <input
-                  type="text"
-                  value={draftTitulo}
-                  onChange={e => onDraftChange(e.target.value, draftContent)}
-                  className="form-input w-full"
-                  placeholder="Título de la recorrida"
-                />
-              </div>
-              <div className="flex flex-col flex-1 min-h-0">
-                <label className="block text-xs font-medium text-gray-500 mb-1 flex-shrink-0">Contenido</label>
-                <RichTextEditor
-                  value={draftContent}
-                  onChange={html => onDraftChange(draftTitulo, html)}
-                  placeholder="Escribí el contenido de la recorrida..."
-                  minHeight={320}
-                  className="flex-1"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-5 flex-1">
-              <h2 className="font-semibold text-gray-900 mb-3">{existingRecorrida?.titulo}</h2>
-              <RichTextEditor
-                value={draftContent || ''}
-                readOnly
-                minHeight={120}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Banner de guardado exitoso */}
-        {saved && (
-          <div className="flex-shrink-0 mx-6 mb-0 mt-0 -mb-2">
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
-              <CheckIcon className="w-4 h-4 flex-shrink-0" />
-              Guardado con éxito
-            </div>
+        </>
+      )}
+    >
+      <div className="flex flex-col gap-4">
+        {isNew && (
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-700">
+            No hay recorrida para este hospital todavía.
           </div>
         )}
-
-        {/* Footer */}
-        {canEdit && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 flex-shrink-0">
-            <div>
-              {saveError && <p className="text-sm text-red-600">{saveError}</p>}
-            </div>
-            <button onClick={handleSave} disabled={saving}
-              className="btn-primary flex items-center gap-2 text-sm">
-              {saving && <Spinner size="sm" />}
-              {isNew ? 'Crear Recorrida' : 'Guardar cambios'}
+        {!isNew && canEdit && (
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Modificado: {existingRecorrida.updated_at
+                ? new Date(existingRecorrida.updated_at).toLocaleDateString('es-AR')
+                : new Date(existingRecorrida.created_at).toLocaleDateString('es-AR')}
+            </p>
+            <button onClick={onDelete} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+              <TrashIcon className="w-3.5 h-3.5" />Eliminar
             </button>
           </div>
         )}
+        {canEdit ? (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Título</label>
+              <input
+                type="text"
+                value={draftTitulo}
+                onChange={e => onDraftChange(e.target.value, draftContent)}
+                className="form-input w-full"
+                placeholder="Título de la recorrida"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Contenido</label>
+              <RichTextEditor
+                value={draftContent}
+                onChange={html => onDraftChange(draftTitulo, html)}
+                placeholder="Escribí el contenido de la recorrida..."
+                minHeight={320}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-5">
+            <h2 className="font-semibold text-gray-900 mb-3">{existingRecorrida?.titulo}</h2>
+            <RichTextEditor value={draftContent || ''} readOnly minHeight={120} />
+          </div>
+        )}
       </div>
-    </div>
+    </BaseModal>
   );
 }
 
@@ -540,9 +511,9 @@ export default function OrganizacionTablaPage() {
       {/* Modal de Recorrida */}
       {recorridaOpen && (
         recorridaLoading ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-            <Spinner size="lg" />
-          </div>
+          <BaseModal open onClose={() => setRecorridaOpen(false)} size="sm">
+            <div className="flex justify-center py-8"><Spinner size="lg" /></div>
+          </BaseModal>
         ) : (
           <RecorridaEditorModal
             open
