@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { XMarkIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import BaseModal from '../../components/ui/modals/BaseModal'
 import { seguimientoCeetpsApi, configApi, bajasApi } from '../../api/concursalesApi'
 import { OPCIONES_USUARIOS_CEETPS, SIGLAS_POR_USUARIO_CEETPS, SIGLAS_DATA, OPCIONES_PUESTO_CEETPS_TODOS, isoToDmy, dmyToIso, computeEstadoConcurso, formatDateMask } from '../../utils/concursalesHelpers'
 import { applyRulesCeetps } from '../../utils/conjuntosRulesCeetps'
@@ -213,29 +214,15 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
   if (readOnly) return <PipelineViewCeetps initial={initial} onClose={onClose} />
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl my-8 border-t-4 border-teal-500">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              {isEdit
-                ? `Seguimiento CEETPS #${initial.id} — ${getCategoryLabel(initial.codigo_registro)}`
-                : 'Nuevo seguimiento CEETPS'}
-            </h2>
-            {isEdit && (
-              <p className="text-xs text-gray-500 mt-0.5">
-                {initial.nombre_apellido_baja || '—'} · CUIL {initial.cuil || '—'} · {initial.sigla_efector || '—'}
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-7">
+    <BaseModal
+      open
+      onClose={onClose}
+      title={isEdit ? `Seguimiento CEETPS #${initial.id} — ${getCategoryLabel(initial.codigo_registro)}` : 'Nuevo seguimiento CEETPS'}
+      subtitle={isEdit ? `${initial.nombre_apellido_baja || '—'} · CUIL ${initial.cuil || '—'} · ${initial.sigla_efector || '—'}` : undefined}
+      size="xl"
+      borderTop="border-teal-500"
+    >
+        <form onSubmit={handleSubmit} className="px-2 py-2 space-y-7">
 
           {/* 1 — Datos generales */}
           <Section title="Datos generales">
@@ -328,8 +315,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
           </div>
 
         </form>
-      </div>
-    </div>
+    </BaseModal>
   )
 }
 
@@ -400,45 +386,35 @@ function PipelineViewCeetps({ initial, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 border-t-4 border-teal-500">
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">
-              Seguimiento CEETPS #{initial?.id} — {getCategoryLabel(initial?.codigo_registro)}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {initial?.nombre_apellido_baja || '—'} &middot; CUIL {initial?.cuil || '—'} &middot; {initial?.sigla_efector || '—'}
-            </p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex flex-col gap-2 px-5 py-5">
-          {sections.map((sec) => (
-            <div key={sec.title} className="flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-              <div className={`${sec.bg} flex items-center justify-center px-3 py-3 flex-none w-32`}>
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest text-center leading-tight">{sec.title}</span>
-              </div>
-              <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0 px-4 py-2 bg-white">
-                {sec.fields.map(([lbl, val]) => (
-                  <div key={lbl} className="py-1.5 min-w-[120px]">
-                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide leading-none">{lbl}</div>
-                    <div className="text-xs text-gray-800 font-medium mt-0.5 break-words leading-snug">
-                      {val != null && val !== '' ? String(val) : '—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={`Seguimiento CEETPS #${initial?.id} — ${getCategoryLabel(initial?.codigo_registro)}`}
+      subtitle={`${initial?.nombre_apellido_baja || '—'} · CUIL ${initial?.cuil || '—'} · ${initial?.sigla_efector || '—'}`}
+      size="xl"
+      borderTop="border-teal-500"
+      footer={<button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>}
+    >
+      <div className="flex flex-col gap-2 px-1 py-1">
+        {sections.map((sec) => (
+          <div key={sec.title} className="flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            <div className={`${sec.bg} flex items-center justify-center px-3 py-3 flex-none w-32`}>
+              <span className="text-[10px] font-bold text-white uppercase tracking-widest text-center leading-tight">{sec.title}</span>
             </div>
-          ))}
-        </div>
-        <div className="flex justify-end px-6 py-3 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>
-        </div>
+            <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0 px-4 py-2 bg-white">
+              {sec.fields.map(([lbl, val]) => (
+                <div key={lbl} className="py-1.5 min-w-[120px]">
+                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide leading-none">{lbl}</div>
+                  <div className="text-xs text-gray-800 font-medium mt-0.5 break-words leading-snug">
+                    {val != null && val !== '' ? String(val) : '—'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
+    </BaseModal>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import BaseModal from '../../components/ui/modals/BaseModal'
 import { seguimientoApi, configApi } from '../../api/concursalesApi'
 import { exportSeguimientoToPdf, exportSeguimientoToWord } from '../../utils/exportReport'
 import { applyRules } from '../../utils/conjuntosRules'
@@ -267,25 +267,15 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
 
   return (
     <OrigenContext.Provider value={form.origen}>
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-6xl my-8${origenBorderColor ? ` border-t-4 ${origenBorderColor}` : ''}`}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <h2 className="text-base font-semibold text-gray-900">
-            {isEdit
-              ? `Seguimiento CPH #${initial.id} — ${initial.nombre_baja ?? ''}`
-              : 'Nuevo seguimiento CPH'}
-          </h2>
-          <div className="flex items-center gap-2">
-            {isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportSeguimientoToPdf(form) : exportSeguimientoToWord(form)} />}
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className={`px-6 py-6 ${origenFormClass}`}>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={isEdit ? `Seguimiento CPH #${initial.id} — ${initial.nombre_baja ?? ''}` : 'Nuevo seguimiento CPH'}
+      size="xl"
+      borderTop={origenBorderColor}
+      headerExtra={isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportSeguimientoToPdf(form) : exportSeguimientoToWord(form)} />}
+    >
+        <form onSubmit={handleSubmit} className={`px-2 py-2 ${origenFormClass}`}>
           <fieldset disabled={readOnly} className="border-0 p-0 m-0 min-w-0 space-y-7">
 
             {/* 1 — Datos generales */}
@@ -434,8 +424,7 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
           </div>
 
         </form>
-      </div>
-    </div>
+    </BaseModal>
     </OrigenContext.Provider>
   )
 }
@@ -568,47 +557,33 @@ function PipelineViewSeguimiento({ initial, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">
-              Seguimiento CPH #{initial?.id}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {initial?.nombre_baja || '—'} &middot; CUIL {initial?.cuil_baja || '—'} &middot; {initial?.sigla_efector || '—'} &middot; <span className="font-medium">{initial?.origen || '—'}</span>
-            </p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-        {/* Secciones */}
-        <div className="flex flex-col gap-2 px-5 py-5">
-          {sections.map((sec) => (
-            <div key={sec.title} className="flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-              <div className={`${sec.bg} flex items-center justify-center px-3 py-3 flex-none w-32`}>
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest text-center leading-tight">{sec.title}</span>
-              </div>
-              <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0 px-4 py-2 bg-white">
-                {sec.fields.map(([lbl, val]) => (
-                  <div key={lbl} className="py-1.5 min-w-[120px]">
-                    <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide leading-none">{lbl}</div>
-                    <div className="text-xs text-gray-800 font-medium mt-0.5 break-words leading-snug">
-                      {val != null && val !== '' ? String(val) : '—'}
-                    </div>
-                  </div>
-                ))}
-              </div>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={`Seguimiento CPH #${initial?.id}`}
+      subtitle={`${initial?.nombre_baja || '—'} · CUIL ${initial?.cuil_baja || '—'} · ${initial?.sigla_efector || '—'} · ${initial?.origen || '—'}`}
+      size="xl"
+      footer={<button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>}
+    >
+      <div className="flex flex-col gap-2 px-1 py-1">
+        {sections.map((sec) => (
+          <div key={sec.title} className="flex rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            <div className={`${sec.bg} flex items-center justify-center px-3 py-3 flex-none w-32`}>
+              <span className="text-[10px] font-bold text-white uppercase tracking-widest text-center leading-tight">{sec.title}</span>
             </div>
-          ))}
-        </div>
-        {/* Footer */}
-        <div className="flex justify-end px-6 py-3 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>
-        </div>
+            <div className="flex-1 flex flex-wrap gap-x-8 gap-y-0 px-4 py-2 bg-white">
+              {sec.fields.map(([lbl, val]) => (
+                <div key={lbl} className="py-1.5 min-w-[120px]">
+                  <div className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide leading-none">{lbl}</div>
+                  <div className="text-xs text-gray-800 font-medium mt-0.5 break-words leading-snug">
+                    {val != null && val !== '' ? String(val) : '—'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
-    </div>
+    </BaseModal>
   )
 }
