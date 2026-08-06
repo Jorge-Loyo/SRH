@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { UsersIcon, PlusIcon, PencilIcon, TrashIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { apiGet, apiPost, apiPut, apiDelete, apiPatch, ApiError } from '../../api/client';
+import { useState, useEffect, useCallback } from 'react';
+import { UsersIcon, PlusIcon, PencilIcon, TrashIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { apiGet, apiPost, apiPut, apiDelete, apiPatch } from '../../api/client';
 import Spinner from '../../components/ui/Spinner';
 import RoleBadge from '../../components/ui/RoleBadge';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import BaseModal from '../../components/ui/modals/BaseModal';
+import PageHeader from '../../components/shared/PageHeader';
 
 const ROLES = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales', 'autoridades'];
 
@@ -44,68 +46,62 @@ function UserModal({ open, user, onClose, onSave }) {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-base font-bold text-gray-900">{isEdit ? 'Editar usuario' : 'Nuevo usuario'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="w-5 h-5" /></button>
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Editar usuario' : 'Nuevo usuario'}
+      size="md"
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+          <button form="user-form" type="submit" disabled={saving} className="btn-primary flex items-center gap-2">
+            {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}
+            {isEdit ? 'Guardar' : 'Crear'}
+          </button>
+        </>
+      }
+    >
+      <form id="user-form" onSubmit={handleSubmit} className="space-y-4">
+        {error && <div className="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
+          <input type="text" required value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+            className="form-input w-full" autoFocus />
         </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <div className="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+            className="form-input w-full" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {isEdit ? '(dejar vacío para no cambiar)' : '*'}</label>
+          <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+            className="form-input w-full" minLength={isEdit ? 0 : 6} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Usuario *</label>
-            <input type="text" required value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
-              className="form-input w-full" autoFocus />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-              className="form-input w-full" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña {isEdit ? '(dejar vacío para no cambiar)' : '*'}</label>
-            <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              className="form-input w-full" minLength={isEdit ? 0 : 6} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
-              <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="form-input w-full">
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código hospital</label>
-              <input type="text" value={form.hospital_code} onChange={e => setForm(f => ({ ...f, hospital_code: e.target.value }))}
-                className="form-input w-full" placeholder="ej: HGACA" />
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rol *</label>
+            <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="form-input w-full">
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Alias del rol <span className="text-gray-400 font-normal">(opcional — lo que verá el usuario en el encabezado)</span>
-            </label>
-            <input
-              type="text"
-              maxLength={50}
-              value={form.role_alias}
-              onChange={e => setForm(f => ({ ...f, role_alias: e.target.value }))}
-              className="form-input w-full"
-              placeholder={`ej: Jefa de Concursales, Equipo Gerencia...`}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Código hospital</label>
+            <input type="text" value={form.hospital_code} onChange={e => setForm(f => ({ ...f, hospital_code: e.target.value }))}
+              className="form-input w-full" placeholder="ej: HGACA" />
           </div>
-          <div className="flex items-center gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
-              {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}
-              {isEdit ? 'Guardar' : 'Crear'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Alias del rol <span className="text-gray-400 font-normal">(opcional)</span>
+          </label>
+          <input type="text" maxLength={50} value={form.role_alias}
+            onChange={e => setForm(f => ({ ...f, role_alias: e.target.value }))}
+            className="form-input w-full" placeholder="ej: Jefa de Concursales..." />
+        </div>
+      </form>
+    </BaseModal>
   );
 }
 
@@ -172,23 +168,23 @@ export default function UsuariosPage() {
         onCancel={() => setConfirmDelete(null)}
       />
 
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col">
         <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <UsersIcon className="w-5 h-5 text-primary-700" />
-              <h1 className="text-lg font-bold text-gray-900">Usuarios</h1>
-            </div>
-            <button onClick={() => setModal({ open: true, user: null })}
-              className="btn-primary flex items-center gap-1.5 text-sm">
-              <PlusIcon className="w-4 h-4" />Nuevo usuario
-            </button>
-          </div>
+          <PageHeader
+            icon={UsersIcon}
+            title="Usuarios"
+            actions={
+              <button onClick={() => setModal({ open: true, user: null })}
+                className="btn-primary flex items-center gap-1.5 text-sm">
+                <PlusIcon className="w-4 h-4" />Nuevo usuario
+              </button>
+            }
+          />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por usuario o email..." className="form-input text-sm w-full sm:w-72 py-1.5" />
         </div>
 
-        <div className="flex-1 overflow-auto px-4 py-3">
+        <div className="overflow-auto px-4 py-3">
           {error && <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
           {deleteError && <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{deleteError}</div>}
 

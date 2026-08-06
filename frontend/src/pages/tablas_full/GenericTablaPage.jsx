@@ -1,8 +1,7 @@
 import {
-  useState, useEffect, useRef, useCallback, useMemo, memo,
+  useState, useEffect, useRef, useCallback, useMemo,
 } from 'react';
 import {
-  ChevronUpIcon, ChevronDownIcon,
   ArrowDownTrayIcon, FunnelIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { apiGet, ApiError } from '../../api/client';
@@ -12,6 +11,7 @@ import MultiSelectDropdown from '../../components/ui/MultiSelectDropdown';
 import Pagination from '../../components/ui/Pagination';
 import Spinner from '../../components/ui/Spinner';
 import PeriodoSelect from '../../components/ui/PeriodoSelect';
+import DataTable from '../../components/ui/tables/DataTable';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -103,58 +103,6 @@ function FilterInput({ filter, value, onChange, distinctOptions, onFocus }) {
     </div>
   );
 }
-
-// ─── tabla memoizada ──────────────────────────────────────────────────────────
-
-const DataTable = memo(({ columns, rows, sortBy, sortDir, onSort, tableRef, dateColumns }) => (
-  <div
-    ref={tableRef}
-    className="overflow-auto rounded-lg border border-gray-200 flex-1"
-    style={{ maxHeight: 'calc(100vh - 360px)', minHeight: '280px' }}
-  >
-    <table className="min-w-full text-sm border-collapse">
-      <thead className="sticky top-0 z-10 bg-gray-50">
-        <tr>
-          {columns.map((col) => (
-            <th
-              key={col}
-              onClick={() => onSort(col)}
-              className="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 whitespace-nowrap cursor-pointer hover:bg-gray-100 select-none border-b border-gray-200"
-            >
-              <div className="flex items-center gap-1">
-                {col}
-                {sortBy === col
-                  ? sortDir === 'ASC'
-                    ? <ChevronUpIcon className="w-3 h-3 text-primary-600" />
-                    : <ChevronDownIcon className="w-3 h-3 text-primary-600" />
-                  : <span className="w-3 h-3 inline-block" />}
-              </div>
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, idx) => (
-          <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-            {columns.map((col) => (
-              <td key={col} className="px-3 py-1.5 whitespace-nowrap text-gray-800 border-b border-gray-100 text-sm">
-                {formatCellValue(row[col], col, dateColumns)}
-              </td>
-            ))}
-          </tr>
-        ))}
-        {rows.length === 0 && (
-          <tr>
-            <td colSpan={columns.length || 1} className="px-3 py-10 text-center text-gray-400">
-              Sin registros para los filtros seleccionados
-            </td>
-          </tr>
-        )}
-      </tbody>
-    </table>
-  </div>
-));
-DataTable.displayName = 'DataTable';
 
 // ─── componente principal ─────────────────────────────────────────────────────
 
@@ -404,7 +352,7 @@ export default function GenericTablaPage({ tableKey }) {
 
   // ─── render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col">
       {/* Header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-2 border-b border-gray-200 bg-white">
         <div className="flex flex-wrap items-center gap-3">
@@ -458,7 +406,7 @@ export default function GenericTablaPage({ tableKey }) {
       )}
 
       {/* Tabla */}
-      <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 min-h-0">
+      <div className="flex flex-col px-4 py-3">
         {tableState.error && (
           <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700 flex-shrink-0">
             {tableState.error}
@@ -500,13 +448,14 @@ export default function GenericTablaPage({ tableKey }) {
             </div>
 
             <DataTable
-              columns={tableState.columns}
+              columns={tableState.columns.map(col => ({ key: col, label: col }))}
               rows={tableState.rows}
               sortBy={tableState.sortBy}
               sortDir={tableState.sortDir}
               onSort={handleSort}
               tableRef={tableRef}
-              dateColumns={dateColumns}
+              renderCell={(row, col) => formatCellValue(row[col.key], col.key, dateColumns)}
+              emptyTitle="Sin registros para los filtros seleccionados"
             />
 
             <div className="flex-shrink-0">

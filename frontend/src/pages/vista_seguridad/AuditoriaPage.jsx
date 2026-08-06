@@ -6,6 +6,7 @@ import Pagination from '../../components/ui/Pagination';
 import { useAuth } from '../../auth/AuthContext';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import RoleBadge from '../../components/ui/RoleBadge';
+import PageHeader from '../../components/shared/PageHeader';
 
 const METHODS = ['', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 const SOURCES = ['', 'api', 'admin', 'scheduler'];
@@ -252,7 +253,7 @@ export default function AuditoriaPage() {
   const totalPages = Math.max(1, Math.ceil(state.total / pageSize));
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col">
       <ConfirmModal
         open={confirmPurge}
         title="¿Purgar logs de auditoría?"
@@ -264,26 +265,26 @@ export default function AuditoriaPage() {
       />
       {/* Header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <ShieldCheckIcon className="w-5 h-5 text-primary-700" />
-            <h1 className="text-lg font-bold text-gray-900">Auditoría</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {purgeMsg && (
-              <span className={`text-xs px-2 py-1 rounded ${purgeMsg.startsWith('Error') ? 'text-red-600 bg-red-50' : 'text-green-700 bg-green-50'}`}>
-                {purgeMsg}
-              </span>
-            )}
-            {user?.role === 'admin' && (
-              <button onClick={handlePurge} disabled={purging}
-                className="btn-danger flex items-center gap-1.5 text-sm">
-                {purging ? <Spinner size="sm" /> : <TrashIcon className="w-4 h-4" />}
-                Purgar logs
-              </button>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          icon={ShieldCheckIcon}
+          title="Auditoría"
+          actions={
+            <div className="flex items-center gap-3">
+              {purgeMsg && (
+                <span className={`text-xs px-2 py-1 rounded ${purgeMsg.startsWith('Error') ? 'text-red-600 bg-red-50' : 'text-green-700 bg-green-50'}`}>
+                  {purgeMsg}
+                </span>
+              )}
+              {user?.role === 'admin' && (
+                <button onClick={handlePurge} disabled={purging}
+                  className="btn-danger flex items-center gap-1.5 text-sm">
+                  {purging ? <Spinner size="sm" /> : <TrashIcon className="w-4 h-4" />}
+                  Purgar logs
+                </button>
+              )}
+            </div>
+          }
+        />
 
         {/* Filtros */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mt-3">
@@ -329,7 +330,7 @@ export default function AuditoriaPage() {
       </div>
 
       {/* Tabla */}
-      <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 min-h-0">
+      <div className="flex flex-col px-4 py-3">
         {state.error && (
           <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700 flex-shrink-0">{state.error}</div>
         )}

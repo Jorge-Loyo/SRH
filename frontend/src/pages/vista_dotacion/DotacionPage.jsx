@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChartBarIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import { hospitals, hospitalsByCategory, CATEGORY_ORDER } from '../../data/hospitals-data';
+import PageHeader from '../../components/shared/PageHeader';
 
 export default function DotacionPage() {
   const navigate = useNavigate();
@@ -19,20 +20,20 @@ export default function DotacionPage() {
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col">
       <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-2 mb-1">
-          <ChartBarIcon className="w-5 h-5 text-primary-700" />
-          <h1 className="text-lg font-bold text-gray-900">Dotación Total</h1>
-        </div>
-        <p className="text-sm text-gray-500 mb-3">Seleccioná un hospital para ver su dotación completa</p>
+        <PageHeader
+          icon={ChartBarIcon}
+          title="Dotación Total"
+          subtitle="Seleccioná un hospital para ver su dotación completa"
+        />
         <input
           type="text" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Buscar hospital..." className="form-input text-sm w-72 py-1.5" autoFocus
         />
       </div>
 
-      <div className="flex-1 overflow-auto px-4 py-4">
+      <div className="overflow-auto px-4 py-4">
         {filtered ? (
           /* Resultado de búsqueda */
           <div className="space-y-1.5">
