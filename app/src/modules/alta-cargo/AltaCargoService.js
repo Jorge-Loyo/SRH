@@ -37,7 +37,16 @@ class AltaCargoService {
 
     return await dataSource.transaction(async (manager) => {
       const altaTxRepo = manager.getRepository(this.altaRepo.target);
-      const alta       = altaTxRepo.create({ carrera_seleccionada, expediente, cantidad, categoria_interna: payload.categoria_interna ?? null });
+      const alta       = altaTxRepo.create({
+        carrera_seleccionada,
+        expediente,
+        cantidad,
+        categoria_interna:  payload.categoria_interna  ?? null,
+        jornada:            payload.jornada            ?? null,
+        norma_referencia:   payload.norma_referencia   ?? null,
+        nro_resolucion:     payload.nro_resolucion     ?? null,
+        expediente_origen:  payload.expediente_origen  ?? null,
+      });
       const savedAlta  = await altaTxRepo.save(alta);
 
       // Obtener id_cod de modalidad
@@ -82,8 +91,8 @@ class AltaCargoService {
         const esCphJD  = carrera_seleccionada.toUpperCase() === 'CPH' && tipoCph && tipoCph !== 'ejecucion';
 
         await manager.query(
-          `INSERT INTO new_cargo (codigo, sigla, carrera, modalidad, nivel_formacion, puesto, especialidad, cargo_desde, cargo_hasta, antiguedad, estado, situacion_revista, id_alta, categoria_interna)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo', ?, ?, ?)`,
+          `INSERT INTO new_cargo (codigo, sigla, carrera, modalidad, nivel_formacion, puesto, especialidad, cargo_desde, cargo_hasta, antiguedad, estado, situacion_revista, id_alta, categoria_interna, jornada, norma_referencia, nro_resolucion, expediente_origen)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo', ?, ?, ?, ?, ?, ?, ?)`,
           [
             codigo, payload.sigla, carrera_seleccionada.toUpperCase(),
             payload.modalidad ?? null, payload.nivel_formacion ?? null,
@@ -92,7 +101,11 @@ class AltaCargoService {
             payload.antiguedad ?? null,
             esCphJD ? 'activo' : null,
             savedAlta.id,
-            payload.categoria_interna ?? null,
+            payload.categoria_interna  ?? null,
+            payload.jornada            ?? null,
+            payload.norma_referencia   ?? null,
+            payload.nro_resolucion     ?? null,
+            payload.expediente_origen  ?? null,
           ]
         );
         codigos.push(codigo);

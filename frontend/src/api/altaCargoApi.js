@@ -13,6 +13,7 @@ export const altaCargoApi = {
   searchBajas:       (q)   => apiGet(`${BASE}/bajas/search`, { q }),
   listEspecialidades:(cat, carrera) => apiGet(`${BASE}/especialidades`, { ...(cat && { categoria: cat }), ...(carrera && { carrera }) }),
   listModalidades:   ()    => apiGet(`${BASE}/modalidades`),
+  listPuestos:       (carrera, tipo) => apiGet(`${BASE}/puestos`, { ...(carrera && { carrera }), ...(tipo && { tipo }) }),
   listNewCargo:      (params = {}) => apiGet(`${BASE}/new-cargo`, params),
   exportNewCargo:    (params = {}) => apiGet(`${BASE}/new-cargo/export`, params),
   getNewCargoInfo:   (id)          => apiGet(`${BASE}/new-cargo/${id}`),

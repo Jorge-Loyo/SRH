@@ -7,6 +7,9 @@ const fechasSchema = z.object({
   expediente:         z.string().min(1).max(100),
   cantidad:           z.coerce.number().int().min(1).max(50).default(1),
   categoria_interna:  z.string().max(50).nullable().optional(),
+  norma_referencia:   z.string().max(100).nullable().optional(),
+  nro_resolucion:     z.string().max(100).nullable().optional(),
+  expediente_origen:  z.string().max(100).nullable().optional(),
 })
 
 const altaCargoCreateSchema = z.discriminatedUnion('carrera_seleccionada', [
@@ -22,6 +25,7 @@ const altaCargoCreateSchema = z.discriminatedUnion('carrera_seleccionada', [
     carrera_seleccionada: z.literal('enf'),
     sigla:           z.string().min(1).max(20),
     nivel_formacion: z.string().min(1).max(50),
+    jornada:         z.string().max(50).nullable().optional(),
   }).merge(fechasSchema),
   z.object({
     carrera_seleccionada: z.literal('tec'),

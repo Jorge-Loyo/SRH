@@ -1,6 +1,6 @@
 const express = require('express');
 const { listAltas, getAlta, createAlta } = require('./altaCargoController');
-const { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta } = require('./carrerasController');
+const { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos } = require('./carrerasController');
 const { uploadDotacion } = require('./uploadController');
 const { authenticateJWT, authorizeRoles } = require('../../middlewares/auth');
 const { auditMiddleware }                 = require('../../middlewares/audit');
@@ -18,6 +18,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 router.get('/etiquetas',    authenticateJWT, listEtiquetas);
 router.post('/etiquetas',   authenticateJWT, authorizeRoles('admin', 'editor'), createEtiqueta);
+router.get('/puestos',        authenticateJWT, listPuestos);
 router.get('/carreras',       authenticateJWT, listCarreras);
 router.get('/siglas',         authenticateJWT, listSiglas);
 router.get('/modalidades',    authenticateJWT, listModalidades);

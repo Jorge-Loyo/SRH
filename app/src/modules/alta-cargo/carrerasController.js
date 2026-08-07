@@ -273,6 +273,25 @@ async function updateNewCargo(req, res) {
   }
 }
 
+async function listPuestos(req, res) {
+  try {
+    const carrera  = (req.query.carrera  || '').trim().toLowerCase()
+    const tipo     = (req.query.tipo     || '').trim().toLowerCase()
+    const conditions = ['activo = 1']
+    const params = []
+    if (carrera) { conditions.push('carrera = ?'); params.push(carrera) }
+    if (tipo)    { conditions.push('(tipo = ? OR tipo = \'jefatura\')'); params.push(tipo) }
+    const rows = await AppDataSource.query(
+      `SELECT id, nombre, carrera, tipo, es_medico FROM puestos_cargo WHERE ${conditions.join(' AND ')} ORDER BY tipo ASC, nombre ASC`,
+      params
+    )
+    res.json(rows)
+  } catch (err) {
+    logger.error('[carrerasController] listPuestos', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+}
+
 async function listEtiquetas(req, res) {
   try {
     const q = (req.query.q || '').trim()
@@ -302,4 +321,4 @@ async function createEtiqueta(req, res) {
   }
 }
 
-module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta };
+module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos };
