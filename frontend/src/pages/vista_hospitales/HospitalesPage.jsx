@@ -4,6 +4,7 @@ import { BuildingOffice2Icon, ChevronDownIcon, ChevronRightIcon } from '@heroico
 import { apiGet } from '../../api/client';
 import { hospitals, hospitalsByCategory, CATEGORY_ORDER } from '../../data/hospitals-data';
 import Spinner from '../../components/ui/Spinner';
+import PageHeader from '../../components/shared/PageHeader';
 
 // Caché en memoria para los períodos (TTL 5 minutos)
 const _periodoCache = new Map();
@@ -126,14 +127,12 @@ export default function HospitalesPage() {
   }, {});
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Hospitales</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Seleccioná un hospital para ver su organización de dotación
-        </p>
-      </div>
+    <div className="px-4 py-4 max-w-7xl mx-auto">
+      <PageHeader
+        icon={BuildingOffice2Icon}
+        title="Hospitales"
+        subtitle="Seleccioná un hospital para ver su organización de dotación"
+      />
 
       {/* Buscador */}
       <div className="mb-6 max-w-sm">

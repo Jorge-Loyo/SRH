@@ -1,6 +1,18 @@
 import { createContext, useContext, useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { XMarkIcon, ChevronDownIcon, MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { SIGLAS_DATA, formatDateMask } from '../../utils/concursalesHelpers'
+
+// Hook que calcula la posición del dropdown relativa al trigger y lo renderiza en body
+function useDropdownPos(triggerRef, open) {
+  const [pos, setPos] = useState(null)
+  useEffect(() => {
+    if (!open || !triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width })
+  }, [open, triggerRef])
+  return pos
+}
 
 /**
  * Componentes de formulario compartidos entre BajaForm.jsx y SeguimientoCphDetail.jsx
@@ -88,15 +100,19 @@ export function Field({ label, value, onChange, placeholder = '', type = 'text',
 }
 
 // ─── StyledSelectField — mismo look del buscador, sin caja de búsqueda ───────
-// (para selects con pocas opciones, donde no hace falta buscar)
 export function StyledSelectField({ label, value, onChange, options = [], cols = 1, disabled = false }) {
   const origen = useContext(OrigenContext)
   const [open, setOpen] = useState(false)
-  const wrapRef = useRef(null)
+  const wrapRef    = useRef(null)
+  const triggerRef = useRef(null)
+  const portalRef  = useRef(null)
+  const pos = useDropdownPos(triggerRef, open)
 
   useEffect(() => {
     const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+      const inWrap   = wrapRef.current?.contains(e.target)
+      const inPortal = portalRef.current?.contains(e.target)
+      if (!inWrap && !inPortal) setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -112,6 +128,7 @@ export function StyledSelectField({ label, value, onChange, options = [], cols =
       <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
       <div className="relative">
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => !disabled && setOpen(o => !o)}
           disabled={disabled}
@@ -126,9 +143,13 @@ export function StyledSelectField({ label, value, onChange, options = [], cols =
           <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2 transition-transform ${open ? 'rotate-180' : ''}`} />
         </button>
 
-        {open && (
-          <div className="absolute z-40 left-0 top-full mt-1 w-full max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
+        {open && pos && createPortal(
+          <div
+            ref={portalRef}
+            style={{ position: 'absolute', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+            className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+          >
+            <div className="overflow-y-auto" style={{ maxHeight: '10rem' }}>
               {options.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin opciones</div>
               ) : options.map(opt => (
@@ -142,7 +163,8 @@ export function StyledSelectField({ label, value, onChange, options = [], cols =
                 </button>
               ))}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>
@@ -150,14 +172,15 @@ export function StyledSelectField({ label, value, onChange, options = [], cols =
 }
 
 // ─── SearchSelectField — select de una sola opción con buscador integrado ────
-// (mismo patrón que SiglaSearchField, pero para listas de strings genéricas,
-// como las opciones de Especialidad)
 export function SearchSelectField({ label, value, onChange, options = [], cols = 1, disabled = false }) {
   const origen = useContext(OrigenContext)
   const [query, setQuery] = useState('')
   const [open, setOpen]   = useState(false)
-  const wrapRef  = useRef(null)
-  const inputRef = useRef(null)
+  const wrapRef    = useRef(null)
+  const triggerRef = useRef(null)
+  const inputRef   = useRef(null)
+  const portalRef  = useRef(null)
+  const pos = useDropdownPos(triggerRef, open)
 
   const filtered = query.trim()
     ? options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
@@ -165,10 +188,9 @@ export function SearchSelectField({ label, value, onChange, options = [], cols =
 
   useEffect(() => {
     const handler = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false)
-        setQuery('')
-      }
+      const inWrap   = wrapRef.current?.contains(e.target)
+      const inPortal = portalRef.current?.contains(e.target)
+      if (!inWrap && !inPortal) { setOpen(false); setQuery('') }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -198,6 +220,7 @@ export function SearchSelectField({ label, value, onChange, options = [], cols =
       <div className="relative">
         {!open ? (
           <button
+            ref={triggerRef}
             type="button"
             onClick={openDropdown}
             disabled={disabled}
@@ -212,7 +235,7 @@ export function SearchSelectField({ label, value, onChange, options = [], cols =
             <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2" />
           </button>
         ) : (
-          <div className="relative">
+          <div className="relative" ref={triggerRef}>
             <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
             <input
               ref={inputRef}
@@ -236,9 +259,13 @@ export function SearchSelectField({ label, value, onChange, options = [], cols =
           </button>
         )}
 
-        {open && (
-          <div className="absolute z-40 left-0 top-full mt-1 w-full max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
-            <div className="max-h-64 overflow-y-auto">
+        {open && pos && createPortal(
+          <div
+            ref={portalRef}
+            style={{ position: 'absolute', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
+            className="bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+          >
+            <div className="overflow-y-auto" style={{ maxHeight: '10rem' }}>
               {filtered.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin resultados</div>
               ) : filtered.map(opt => (
@@ -252,7 +279,8 @@ export function SearchSelectField({ label, value, onChange, options = [], cols =
                 </button>
               ))}
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </div>

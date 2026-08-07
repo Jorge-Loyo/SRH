@@ -41,12 +41,21 @@ const ConfiguracionPage        = lazy(() => import('./pages/vista_concursales/Co
 // Director
 const DirectorHomePage = lazy(() => import('./pages/vista_director/DirectorHomePage.jsx'))
 
+// Alta de Cargo
+const CargosPage    = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
+const AltaCargoPage = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
+
 // Seguridad (solo admin)
 const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.jsx'))
 const TokensPage    = lazy(() => import('./pages/vista_seguridad/TokensPage.jsx'))
 const UsuariosPage  = lazy(() => import('./pages/vista_seguridad/UsuariosPage.jsx'))
 const PermisosPage  = lazy(() => import('./pages/vista_seguridad/PermisosPage.jsx'))
 const CargaMasivaPage = lazy(() => import('./pages/vista_seguridad/CargaMasivaPage.jsx'))
+
+// Herramientas
+const TablasVistaPage  = lazy(() => import('./pages/vista_herramientas/TablasVistaPage.jsx'))
+const TablasAdminPage  = lazy(() => import('./pages/vista_herramientas/TablasAdminPage.jsx'))
+const DotaneitorPage   = lazy(() => import('./pages/vista_herramientas/DotaneitorPage.jsx'))
 
 // Roles permitidos por sección
 const ALL_ROLES              = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales']
@@ -163,6 +172,21 @@ export default function App() {
                   <ProtectedRoute roles={DIRECTOR_ONLY}><DirectorHomePage /></ProtectedRoute>
                 } />
 
+                {/* Cargo (Alta + Lista) */}
+                <Route path="cargos" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/lista" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/subir" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/decreto" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
+
                 {/* Seguridad */}
                 <Route path="seguridad/auditoria" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><AuditoriaPage /></ProtectedRoute>
@@ -178,6 +202,17 @@ export default function App() {
                 } />
                 <Route path="seguridad/carga-masiva" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><CargaMasivaPage /></ProtectedRoute>
+                } />
+
+                {/* Herramientas */}
+                <Route path="herramientas/tablas-vista" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><TablasVistaPage /></ProtectedRoute>
+                } />
+                <Route path="herramientas/tablas-admin" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><TablasAdminPage /></ProtectedRoute>
+                } />
+                <Route path="herramientas/dotaneitor" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><DotaneitorPage /></ProtectedRoute>
                 } />
               </Route>
 

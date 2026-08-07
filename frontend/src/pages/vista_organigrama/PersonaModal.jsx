@@ -1,5 +1,6 @@
-import { XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon } from '@heroicons/react/24/outline';
 import { tipoColor } from '../../utils/organigramaHelpers';
+import BaseModal from '../../components/ui/modals/BaseModal';
 
 function formatFecha(d) {
   if (!d) return '—';
@@ -33,28 +34,20 @@ export default function PersonaModal({ open, onClose, data }) {
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-2 sm:p-5"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-xl w-full sm:w-[480px] max-w-[95vw] shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-t-xl bg-gradient-to-r from-primary-700 to-primary-600 border-b-2 border-primary-800">
-          <span className="text-white font-bold text-base tracking-wide flex items-center gap-2 min-w-0">
-            <UserCircleIcon className="w-5 h-5 flex-shrink-0" />
-            <span className="truncate">{persona.nombre}</span>
-          </span>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-1.5 rounded border border-white/25 bg-white/15 hover:bg-white/25 transition-colors"
-          >
-            <XMarkIcon className="w-4 h-4" />
-            Cerrar
-          </button>
-        </div>
+    <BaseModal open={open} onClose={onClose} size="md">
+      {/* Header custom con gradiente */}
+      <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between px-4 sm:px-6 py-3 rounded-t-xl bg-gradient-to-r from-primary-700 to-primary-600 border-b-2 border-primary-800">
+        <span className="text-white font-bold text-base tracking-wide flex items-center gap-2 min-w-0">
+          <UserCircleIcon className="w-5 h-5 flex-shrink-0" />
+          <span className="truncate">{persona.nombre}</span>
+        </span>
+        <button
+          onClick={onClose}
+          className="flex-shrink-0 flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-1.5 rounded border border-white/25 bg-white/15 hover:bg-white/25 transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
 
         {/* Body */}
         <div className="p-4 sm:p-5">
@@ -78,8 +71,7 @@ export default function PersonaModal({ open, onClose, data }) {
               </div>
             ))}
           </dl>
-        </div>
       </div>
-    </div>
+    </BaseModal>
   );
 }

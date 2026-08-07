@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react'
-import { PlusIcon, TrashIcon, CheckIcon, XMarkIcon, MagnifyingGlassIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TrashIcon, CheckIcon, MagnifyingGlassIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import BaseModal from '../../components/ui/modals/BaseModal'
 import { configApi } from '../../api/concursalesApi'
 import { useAuth } from '../../auth/AuthContext.jsx'
 import {
@@ -60,47 +61,25 @@ function FieldPickerModal({ selectedField, onSelect, onClose }) {
   const [search, setSearch] = useState('')
   const inputRef = useRef(null)
 
-  useEffect(() => {
-    inputRef.current?.focus()
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  useEffect(() => { inputRef.current?.focus() }, [])
 
   const q = search.toLowerCase().trim()
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-    >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh]">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <h3 className="text-sm font-semibold text-gray-800">Elegir campo</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-          >
-            <XMarkIcon className="w-4 h-4" />
-          </button>
+    <BaseModal open onClose={onClose} title="Elegir campo" size="md">
+      <div className="space-y-1 -mt-2">
+        <div className="relative mb-4">
+          <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Buscar campo..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="form-input text-xs w-full pl-8"
+          />
         </div>
-
-        <div className="px-4 py-3 border-b border-gray-100 shrink-0">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Buscar campo..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="form-input text-xs w-full pl-8"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-y-auto flex-1 px-4 py-4 space-y-5">
+        <div className="space-y-5">
           {grupos.map(grupo => {
             const camposFiltrados = campos.filter(
               c => c.group === grupo && (!q || c.label.toLowerCase().includes(q))
@@ -130,7 +109,7 @@ function FieldPickerModal({ selectedField, onSelect, onClose }) {
           })}
         </div>
       </div>
-    </div>
+    </BaseModal>
   )
 }
 

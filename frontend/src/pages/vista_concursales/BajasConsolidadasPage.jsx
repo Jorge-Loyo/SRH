@@ -25,6 +25,10 @@ import {
 } from '../../utils/concursalesHelpers'
 import { exportBajasToExcel } from '../../utils/exportReport'
 import BajaForm from './BajaForm'
+import {
+  FilterAccSection, FilterSelect, FilterText, FilterDate,
+  FilterSearchSelect, ConfirmDeleteModal,
+} from './ConcursalesFilterWidgets'
 
 const PAGE_SIZE = 50
 
@@ -285,13 +289,13 @@ export default function BajasConsolidadasPage() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
 
       {/* ══════════════════════════════════════════════
           PANTALLA 1 — Selector de origen (2×2 KPI)
       ══════════════════════════════════════════════ */}
       {!selectedOrigen && (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col">
           <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Bajas Consolidadas</h1>
@@ -328,7 +332,7 @@ export default function BajasConsolidadasPage() {
           PANTALLA 2 — Detalle del origen seleccionado
       ══════════════════════════════════════════════ */}
       {selectedOrigen && (
-        <div className="flex flex-col h-full gap-4">
+        <div className="flex flex-col gap-4">
 
           {/* Botón volver */}
           <button
@@ -435,15 +439,15 @@ export default function BajasConsolidadasPage() {
             title="Cargo"
             activeCount={activeInSection(['ex_baja', 'codigo_cargo', 'cargo_baja', 'carga_horaria', 'partida_presupuestaria'])}
           >
-            <FilterInput label="EX Baja / Ampliación" value={filters.ex_baja}
+            <FilterText label="EX Baja / Ampliación" value={filters.ex_baja}
               onChange={v => setFilter('ex_baja', v)} />
-            <FilterInput label="Código cargo" value={filters.codigo_cargo}
+            <FilterText label="Código cargo" value={filters.codigo_cargo}
               onChange={v => setFilter('codigo_cargo', v)} />
-            <FilterInput label="ID SIAL" value={filters.cargo_baja}
+            <FilterText label="ID SIAL" value={filters.cargo_baja}
               onChange={v => setFilter('cargo_baja', v)} />
-            <FilterInput label="Carga horaria" value={filters.carga_horaria}
+            <FilterText label="Carga horaria" value={filters.carga_horaria}
               onChange={v => setFilter('carga_horaria', v)} />
-            <FilterInput label="Partida presup." value={filters.partida_presupuestaria}
+            <FilterText label="Partida presup." value={filters.partida_presupuestaria}
               onChange={v => setFilter('partida_presupuestaria', v)} />
           </FilterAccSection>
 
@@ -494,7 +498,7 @@ export default function BajasConsolidadasPage() {
               onChange={v => setFilter('fecha_pase_paralelo_desde', v)} />
             <FilterDate label="F. pase paralelo — hasta" value={filters.fecha_pase_paralelo_hasta}
               onChange={v => setFilter('fecha_pase_paralelo_hasta', v)} />
-            <FilterInput label="Doc. respaldatoria" value={filters.doc_respaldatoria}
+            <FilterText label="Doc. respaldatoria" value={filters.doc_respaldatoria}
               onChange={v => setFilter('doc_respaldatoria', v)} />
           </FilterAccSection>
 
@@ -535,7 +539,7 @@ export default function BajasConsolidadasPage() {
       <div
         ref={tableRef}
         className="overflow-auto rounded-lg border border-gray-200 flex-1"
-        style={{ maxHeight: 'calc(100vh - 360px)', minHeight: '280px' }}
+        
       >
         <table className="text-sm border-collapse" style={{ minWidth: '2900px' }}>
           <thead className="sticky top-0 z-10 bg-gray-50">
@@ -677,234 +681,5 @@ export default function BajasConsolidadasPage() {
   )
 }
 
-// ─── FilterAccSection — sección desplegable del acordeón ─────────────────────
-function FilterAccSection({ title, activeCount = 0, children }) {
-  const [open, setOpen] = useState(true)
-  return (
-    <div className="border border-gray-200 rounded-lg">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`flex items-center justify-between w-full px-3 py-2 text-left text-xs font-bold uppercase tracking-widest transition-colors ${
-          open
-            ? 'bg-primary-50 text-primary-700 rounded-t-lg'
-            : 'bg-white text-gray-500 hover:bg-gray-50 rounded-lg'
-        }`}
-      >
-        <span className="flex items-center gap-2">
-          <ChevronDownIcon className={`w-3.5 h-3.5 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
-          {title}
-        </span>
-        {activeCount > 0 && (
-          <span className="bg-primary-600 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none">
-            {activeCount}
-          </span>
-        )}
-      </button>
-      {open && (
-        <div className="p-3 grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 bg-white border-t border-gray-100 rounded-b-lg">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
 
-// ─── FilterSelect ─────────────────────────────────────────────────────────────
-function FilterSelect({ label, value, onChange, options = [], disabled = false, hint = null }) {
-  const normalized = options.map(o => typeof o === 'string' ? { value: o, label: o } : o)
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        disabled={disabled}
-        className={`form-input text-sm w-full ${disabled ? 'opacity-50 cursor-default' : ''}`}
-      >
-        <option value="">Todos</option>
-        {normalized.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
-    </div>
-  )
-}
 
-// ─── FilterInput ──────────────────────────────────────────────────────────────
-function FilterInput({ label, value, onChange, placeholder = '' }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder || 'Filtrar...'}
-        className="form-input text-sm w-full"
-      />
-    </div>
-  )
-}
-
-// ─── FilterDate ───────────────────────────────────────────────────────────────
-function FilterDate({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <input
-        type="date"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="form-input text-sm w-full"
-      />
-    </div>
-  )
-}
-
-// ─── FilterSearchSelect — select con buscador integrado (dropdown fixed) ─────
-// options puede ser string[] o {value, label}[]
-function FilterSearchSelect({ label, value, onChange, options = [], disabled = false, hint = null }) {
-  const [query, setQuery]         = useState('')
-  const [open, setOpen]           = useState(false)
-  const [dropStyle, setDropStyle] = useState({})
-  const wrapRef                   = useRef(null)
-  const dropRef                   = useRef(null)
-  const triggerRef                = useRef(null)
-  const inputRef                  = useRef(null)
-
-  const normalized = useMemo(() =>
-    options.map(o => typeof o === 'string' ? { value: o, label: o } : o),
-  [options])
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return normalized
-    const q = query.toLowerCase()
-    return normalized.filter(o => o.label.toLowerCase().includes(q))
-  }, [normalized, query])
-
-  // Click fuera → cerrar
-  useEffect(() => {
-    const handler = (e) => {
-      if (
-        wrapRef.current && !wrapRef.current.contains(e.target) &&
-        dropRef.current  && !dropRef.current.contains(e.target)
-      ) {
-        setOpen(false)
-        setQuery('')
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  // Scroll fuera del dropdown → cerrar (evita desalineación del fixed)
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => {
-      if (dropRef.current && dropRef.current.contains(e.target)) return
-      setOpen(false)
-      setQuery('')
-    }
-    document.addEventListener('scroll', handler, true)
-    return () => document.removeEventListener('scroll', handler, true)
-  }, [open])
-
-  const handleSelect = (val) => {
-    onChange(val)
-    setOpen(false)
-    setQuery('')
-  }
-
-  const openDropdown = () => {
-    if (disabled) return
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (rect) {
-      const minW = Math.max(rect.width, 260)
-      setDropStyle({
-        position: 'fixed',
-        zIndex: 9999,
-        top:  rect.bottom + 4,
-        left: rect.left,
-        width: minW,
-      })
-    }
-    setOpen(true)
-    setTimeout(() => inputRef.current?.focus(), 30)
-  }
-
-  const selectedLabel = normalized.find(o => o.value === value)?.label ?? value
-
-  return (
-    <div ref={wrapRef}>
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      <div className="relative" ref={triggerRef}>
-        {!open ? (
-          <button
-            type="button"
-            onClick={openDropdown}
-            disabled={disabled}
-            className={`form-input text-sm w-full text-left flex items-center pr-7 ${disabled ? 'opacity-50 cursor-default' : ''}`}
-          >
-            {value
-              ? <span className="text-gray-900 truncate block flex-1 min-w-0">{selectedLabel}</span>
-              : <span className="text-gray-400">Todos</span>
-            }
-            <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 absolute right-2 top-1/2 -translate-y-1/2" />
-          </button>
-        ) : (
-          <>
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none z-10" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Buscar..."
-              className="form-input text-sm w-full pl-8"
-            />
-          </>
-        )}
-
-        {value && !open && (
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); onChange(''); setQuery('') }}
-            className="absolute right-7 top-1/2 -translate-y-1/2 p-0.5 text-gray-300 hover:text-red-500 transition-colors z-10"
-            title="Limpiar"
-          >
-            <XMarkIcon className="w-3 h-3" />
-          </button>
-        )}
-      </div>
-
-      {/* Dropdown con position:fixed para escapar cualquier overflow:hidden del padre */}
-      {open && (
-        <div ref={dropRef} style={dropStyle} className="bg-white border border-gray-200 rounded-lg shadow-2xl overflow-hidden">
-          <div className="max-h-64 overflow-y-auto">
-            <button
-              type="button"
-              onClick={() => handleSelect('')}
-              className={`w-full text-left px-3 py-2.5 text-sm transition-colors border-b border-gray-100 ${!value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-500 hover:bg-gray-50'}`}
-            >
-              Todos
-            </button>
-            {filtered.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-gray-400 text-center">Sin resultados</div>
-            ) : filtered.map(o => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => handleSelect(o.value)}
-                className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${o.value === value ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hint && <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{hint}</p>}
-    </div>
-  )
-}

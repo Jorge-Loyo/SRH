@@ -1,5 +1,6 @@
-import { XMarkIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { tipoColor } from '../../utils/organigramaHelpers';
+import BaseModal from '../../components/ui/modals/BaseModal';
 
 // Agrupa las vacantes por régimen de empleo, orden alfabético de grupo.
 function groupByRegimen(vacantes) {
@@ -26,31 +27,23 @@ export default function VacantesModal({ open, onClose, vacantes, sigla, onSelect
 
   const groups = groupByRegimen(vacantes);
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 p-2 sm:p-5"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-xl w-full sm:w-[900px] max-w-[95vw] max-h-[85vh] flex flex-col shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 rounded-t-xl bg-gradient-to-r from-amber-600 to-amber-500 border-b-2 border-amber-700">
-          <span className="text-white font-bold text-base tracking-wide flex items-center gap-2">
-            <ExclamationTriangleIcon className="w-5 h-5" />
-            Vacantes — {sigla} ({vacantes.length})
-          </span>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-1.5 rounded border border-white/25 bg-white/15 hover:bg-white/25 transition-colors"
-          >
-            <XMarkIcon className="w-4 h-4" />
-            Cerrar
-          </button>
-        </div>
+    <BaseModal open={open} onClose={onClose} size="xl">
+      {/* Header custom con gradiente */}
+      <div className="-mx-4 -mt-4 mb-4 flex items-center justify-between px-4 sm:px-6 py-3 rounded-t-xl bg-gradient-to-r from-amber-600 to-amber-500 border-b-2 border-amber-700">
+        <span className="text-white font-bold text-base tracking-wide flex items-center gap-2">
+          <ExclamationTriangleIcon className="w-5 h-5" />
+          Vacantes — {sigla} ({vacantes.length})
+        </span>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-1.5 text-white text-sm font-semibold px-3 py-1.5 rounded border border-white/25 bg-white/15 hover:bg-white/25 transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-auto p-4 sm:p-5 bg-gray-50">
+      {/* Body */}
+        <div className="bg-gray-50 -mx-4 -mb-4 px-4 py-4">
           {vacantes.length === 0 ? (
             <p className="text-center text-gray-400 py-12">No hay vacantes para este hospital.</p>
           ) : (
@@ -93,7 +86,6 @@ export default function VacantesModal({ open, onClose, vacantes, sigla, onSelect
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 }

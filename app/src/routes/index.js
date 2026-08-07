@@ -28,11 +28,15 @@ const conjuntosConfig     = require('../modules/conjuntos-config/conjuntosConfig
 const tableroKpis         = require('../modules/tablero-kpis/tableroKpisRoutes');
 const cargaMasivaDotacion = require('../modules/carga-masiva/cargaMasivaRoutes');
 const cargaMasivaPou      = require('../modules/carga-masiva/pou/pouRoutes');
+const altaCargo           = require('../modules/alta-cargo/altaCargoRoutes');
+const herramientas        = require('../modules/herramientas/herramientasRoutes');
 
 const router = express.Router();
 
 router.use('/siglas', siglas);
 router.use('/personas', personas);
+// Alta de Cargo debe ir ANTES de /cargos para evitar que /:id/ lo capture
+router.use('/cargos/alta', altaCargo);
 router.use('/cargos', cargos);
 router.use('/roles', roles);
 router.use('/_schema', schema);
@@ -53,11 +57,15 @@ router.use('/dotacion-activa', dotacionActivaApi);
 router.use('/admin/carga-masiva/dotacion', cargaMasivaDotacion);
 router.use('/admin/carga-masiva/pou', cargaMasivaPou);
 
+router.use('/herramientas', herramientas);
+
 // ─── Módulo 2 ─────────────────────────────────────────────────────────────────
 router.use('/concursales/bajas', bajasConsolidadas);
 router.use('/concursales/seguimiento-cph', seguimientoCph);
 router.use('/concursales/seguimiento-ceetps', seguimientoCeetps);
 router.use('/concursales/config', conjuntosConfig);
 router.use('/concursales/tablero', tableroKpis);
+
+// ─── Alta de Cargo — registrado arriba antes de /cargos ─────────────────────
 
 module.exports = router;

@@ -1,0 +1,162 @@
+﻿import { useState, useEffect, useRef } from 'react'
+import { altaCargoApi } from '../../api/altaCargoApi'
+import { MagnifyingGlassIcon, XMarkIcon, CheckIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+
+// â”€â”€â”€ Modal genÃ©rico con buscador â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function PickerModal({ title, options, value, onSelect, onClose }) {
+  const [q, setQ] = useState('')
+  const inputRef  = useRef(null)
+  const filtered  = q.trim()
+    ? options.filter(o => (typeof o === 'string' ? o : o.label).toLowerCase().includes(q.toLowerCase()))
+    : options
+
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50) }, [])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onMouseDown={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col" style={{ maxHeight: '80vh' }} onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-800">{title}</span>
+          <button type="button" onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+            <XMarkIcon className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input ref={inputRef} type="text" value={q} onChange={e => setQ(e.target.value)}
+              placeholder="Buscar..." className="form-input text-sm w-full pl-9" />
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 py-1">
+          {filtered.length === 0 ? (
+            <p className="px-4 py-8 text-sm text-gray-400 text-center">Sin resultados</p>
+          ) : filtered.map(opt => {
+            const key = typeof opt === 'string' ? opt : opt.value
+            const sel = key === value
+            return (
+              <button key={key} type="button"
+                onClick={() => { onSelect(key); onClose() }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                  sel ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                }`}>
+                <span>{typeof opt === 'string' ? opt : opt.label}</span>
+                {sel && <CheckIcon className="w-4 h-4 text-primary-600 flex-shrink-0" />}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// â”€â”€â”€ Campo que abre un PickerModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function PickerField({ label, value, disabled, onOpen, onClear, cols = 1 }) {
+  return (
+    <div className={`col-span-${cols}`}>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <div className="relative">
+        <button type="button" onClick={onOpen} disabled={disabled}
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg border text-sm transition-colors ${
+            disabled
+              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-default'
+              : value
+                ? 'border-primary-300 bg-primary-50 text-gray-900 hover:border-primary-400'
+                : 'border-gray-300 bg-white text-gray-400 hover:border-gray-400'
+          }`}>
+          <span className={value ? 'text-gray-900 font-medium truncate' : ''}>{value || (disabled ? 'â€”' : 'Seleccionar...')}</span>
+          {!disabled && <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 ml-2" />}
+        </button>
+        {value && !disabled && (
+          <button type="button" onClick={e => { e.stopPropagation(); onClear() }}
+            className="absolute right-8 top-1/2 -translate-y-1/2 p-0.5 text-gray-300 hover:text-red-400 transition-colors">
+            <XMarkIcon className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// â”€â”€â”€ Grupo de botones toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function ButtonGroup({ label, options, value, onChange, disabled, cols = 2 }) {
+  return (
+    <div className={`col-span-${cols}`}>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(opt => {
+          const val  = typeof opt === 'string' ? opt : opt.value
+          const lbl  = typeof opt === 'string' ? opt : opt.label
+          const sel  = val === value
+          return (
+            <button key={val} type="button" disabled={disabled}
+              onClick={() => onChange(sel ? '' : val)}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                disabled
+                  ? 'border-gray-200 text-gray-300 bg-gray-50 cursor-default'
+                  : sel
+                    ? 'border-primary-500 bg-primary-600 text-white shadow-sm'
+                    : 'border-gray-200 text-gray-600 bg-white hover:border-primary-300 hover:text-primary-600'
+              }`}>
+              {sel && <CheckIcon className="w-3.5 h-3.5" />}
+              {lbl}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const PUESTOS_CPH = [
+  'ESPECIALISTA EN LA GUARDIA MEDICO', 'PROFESIONAL GUARDIA MEDICO',
+  'FARMACEUTICO DE GUARDIA', 'KINESIOLOGO DE GUARDIA', 'OBSTETRICA DE GUARDIA',
+  'TRABAJADOR SOCIAL DE GUARDIA', 'ODONTOLOGO DE GUARDIA', 'PSICOLOGO DE GUARDIA',
+  'BIOQUIMICO DE GUARDIA', 'MEDICO DE PLANTA',
+  'EXPERTO EN FISICA RADIANTE DE PLANTA', 'PSICOPEDAGOGO DE PLANTA', 'ODONTOLOGO DE PLANTA',
+  'FARMACEUTICO DE PLANTA', 'FONOAUDIOLOGO DE PLANTA', 'OBSTETRICA DE PLANTA',
+  'PSICOLOGO DE PLANTA', 'TRABAJADOR SOCIAL DE PLANTA', 'NUTRICIONISTA DIETISTA DE PLANTA',
+  'BIOQUIMICO DE PLANTA', 'KINESIOLOGO DE PLANTA', 'TERAPEUTA OCUPACIONAL DE PLANTA',
+  'MUSICOTERAPEUTA DE PLANTA', 'SOCIOLOGO DE PLANTA', 'LIC. EN CIENCIAS EDUC. DE PLANTA',
+  'BIOLOGO DE PLANTA',
+  'JEFE DEPARTAMENTO', 'JEFE DIVISION', 'JEFE SECCION', 'JEFE UNIDAD',
+]
+
+const PUESTOS_TEC = [
+  'TECNICO EN LABORATORIO', 'TECNICO EN RADIOLOGIA', 'TECNICO EN HEMOTERAPIA',
+  'TECNICO EN ANATOMIA PATOLOGICA', 'TECNICO EN FARMACIA', 'TECNICO EN ESTERILIZACION',
+  'TECNICO EN ELECTROMEDICINA', 'TECNICO EN NUTRICION', 'TECNICO EN SALUD MENTAL',
+  'TECNICO EN ORTOPEDIA', 'TECNICO EN OPTICA', 'TECNICO EN ODONTOLOGIA',
+  'TECNICO EN KINESIOLOGIA', 'TECNICO EN FONOAUDIOLOGIA', 'TECNICO EN TERAPIA OCUPACIONAL',
+]
+
+const PUESTOS_MEDICO = [
+  'ESPECIALISTA EN LA GUARDIA MEDICO', 'PROFESIONAL GUARDIA MEDICO', 'MEDICO DE PLANTA',
+  'JEFE DEPARTAMENTO', 'JEFE DIVISION', 'JEFE SECCION', 'JEFE UNIDAD',
+]
+
+const EMPTY_FORM = {
+  sigla: '', carrera_seleccionada: '', modalidad: '', nivel_formacion: '',
+  puesto: '', especialidad: '', cargo_desde: '', cantidad: 1, categoria_interna: '',
+}
+
+function isComplete(form) {
+  const { sigla, carrera_seleccionada: c, modalidad, nivel_formacion, puesto, especialidad, cargo_desde } = form
+  if (!sigla || !c || !cargo_desde) return false
+  if (c === 'cph') return !!modalidad && !!puesto && !!especialidad
+  if (c === 'enf') return !!nivel_formacion
+  if (c === 'tec') return !!modalidad && !!puesto
+  return false
+}
+
+function buildPayload(form, expediente) {
+  const { sigla, carrera_seleccionada, modalidad, nivel_formacion, puesto, especialidad, cargo_desde, cantidad, categoria_interna } = form
+  const base = { cargo_desde, cargo_hasta: null, antiguedad: cargo_desde, expediente, cantidad: Number(cantidad), categoria_interna: categoria_interna || null }
+  if (carrera_seleccionada === 'cph') return { sigla, carrera_seleccionada, tipo_cph: 'ejecucion', modalidad, puesto, especialidad, ...base }
+  if (carrera_seleccionada === 'enf') return { sigla, carrera_seleccionada, nivel_formacion, ...base }
+  return { sigla, carrera_seleccionada, modalidad, puesto, especialidad, ...base }
+}
+
+// â”€â”€â”€ Picker de etiquetas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function EtiquetaPicker({ value, onChange }) {

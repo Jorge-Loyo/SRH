@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useContext } from 'react'
-import { XMarkIcon, InformationCircleIcon } from '@heroicons/react/24/outline'
+import { InformationCircleIcon } from '@heroicons/react/24/outline'
 import { bajasApi } from '../../api/concursalesApi'
 import { exportBajaToPdf, exportBajaToWord } from '../../utils/exportReport'
+import BaseModal from '../../components/ui/modals/BaseModal'
 import {
   OPCIONES_USUARIOS,
   OPCIONES_ESCALAFON_BAJAS,
@@ -392,63 +393,47 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
     <OrigenContext.Provider value={form.origen}>
     <>
     {/* Modal de confirmación: campos vacíos */}
-    {confirmModal && (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-          <h3 className="text-base font-semibold text-gray-900 mb-2">Campos sin completar</h3>
-          <p className="text-sm text-gray-600 mb-3">
-            Los siguientes campos están vacíos. ¿Desea guardar de todas formas?
-          </p>
-          <ul className="mb-4 max-h-48 overflow-y-auto space-y-1">
-            {confirmModal.emptyFields.map(label => (
-              <li key={label} className="flex items-center gap-2 text-sm text-amber-700">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                {label}
-              </li>
-            ))}
-          </ul>
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setConfirmModal(null)}
-              className="px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              Volver a revisar
-            </button>
-            <button
-              type="button"
-              onClick={async () => { setConfirmModal(null); await doSave() }}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-primary-600 text-white hover:bg-primary-700"
-            >
-              Guardar igual
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8${origenBorderColor ? ` border-t-4 ${origenBorderColor}` : ''}`}>
+    <BaseModal
+      open={!!confirmModal}
+      onClose={() => setConfirmModal(null)}
+      title="Campos sin completar"
+      size="sm"
+      footer={
+        <>
+          <button type="button" onClick={() => setConfirmModal(null)}
+            className="btn-secondary">Volver a revisar</button>
+          <button type="button"
+            onClick={async () => { setConfirmModal(null); await doSave() }}
+            className="btn-primary">Guardar igual</button>
+        </>
+      }
+    >
+      <p className="text-sm text-gray-600 mb-3">
+        Los siguientes campos están vacíos. ¿Desea guardar de todas formas?
+      </p>
+      <ul className="space-y-1">
+        {(confirmModal?.emptyFields ?? []).map(label => (
+          <li key={label} className="flex items-center gap-2 text-sm text-amber-700">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+            {label}
+          </li>
+        ))}
+      </ul>
+    </BaseModal>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">
-              {isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
-            <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className={`px-6 py-6 space-y-7 ${origenFormClass}`}>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
+      size="xl"
+      headerExtra={isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
+      borderTop={origenBorderColor}
+    >
+        <form id="baja-form" onSubmit={handleSubmit} className={`px-4 sm:px-6 py-6 space-y-7 ${origenFormClass}`}>
 
           {/* 1 — Identificacion */}
           <Section title="Identificacion">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <StyledSelectField label="Usuario" value={form.usuario} onChange={set('usuario')} options={OPCIONES_USUARIOS} cols={1} />
               <StyledSelectField label="Origen"  value={form.origen}  onChange={handleOrigenChange} options={opcionesOrigen} cols={1} disabled={!!lockedOrigen} />
               <ExBajaField value={form.ex_baja} onChange={set('ex_baja')} onSiglaMatch={sigla => handleSiglaChange({ target: { value: sigla } })} cols={2} />
@@ -457,7 +442,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
 
           {/* 2 — Efector */}
           <Section title="Efector">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <SiglaSearchField value={form.sigla} onChange={handleSiglaChange} options={allowedSiglas} />
               <Field       label="Efector"           value={form.efector}      onChange={set('efector')}       disabled={!!form.sigla}          cols={2} />
               <StyledSelectField label="Tipo de efector"   value={form.tipo_efector} onChange={set('tipo_efector')}  options={OPCIONES_TIPO_EFECTOR}  cols={1} disabled={!!form.sigla} />
@@ -466,7 +451,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
 
           {/* 3 — Datos funcionales */}
           <Section title="Datos funcionales">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <Field        label="Codigo cargo"           value={form.codigo_cargo}           onChange={set('codigo_cargo')}           cols={1} disabled={form.origen === 'Ampliación'} />
               <Field        label="ID SIAL"                value={form.cargo_baja}              onChange={set('cargo_baja')}             cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
               <Field        label="CUIL"                   value={form.cuil}                   onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
@@ -483,7 +468,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
 
           {/* 4 — Fechas y expediente */}
           <Section title="Fechas y expediente">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <DateMaskField label="Fecha de baja"            value={form.fecha_baja}          onChange={set('fecha_baja')}          cols={1} />
               <Field         label="Carga horaria"            value={form.carga_horaria}       onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setForm(prev => ({ ...prev, carga_horaria: v })) }}       cols={1} />
               <StyledSelectField   label="Motivo de baja"           value={form.motivo_baja}         onChange={set('motivo_baja')}         options={form.origen === 'Cobertura Dotación' ? ['Cobertura Dotación'] : form.origen === 'Ampliación' ? ['Ampliación'] : form.origen === 'POU a POF' ? ['POU a POF'] : OPCIONES_MOTIVO_BAJA} cols={1} disabled={form.origen === 'Cobertura Dotación' || form.origen === 'Ampliación' || form.origen === 'POU a POF'} />
@@ -498,7 +483,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
 
           {/* 5 — Concurso */}
           <Section title="Concurso">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <CheckField label="Genera concurso" value={form.genera_concurso === 'SI'} staticLabel="Sí"
                 onChange={e => setForm(prev => ({ ...prev, genera_concurso: e.target.value ? 'SI' : 'NO' }))} cols={1} />
               {form.origen === 'Ampliación' ? (
@@ -555,8 +540,7 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
           </div>
 
         </form>
-      </div>
-    </div>
+    </BaseModal>
     </>
     </OrigenContext.Provider>
   )
@@ -711,18 +695,15 @@ function PipelineViewBaja({ initial, onClose }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/30 p-4 overflow-y-auto">
-      <div className={`bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8 border-t-4 ${origenColor}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-200 sticky top-0 bg-white rounded-t-xl z-10">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Baja #{initial?.id}</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{initial?.nombre_apellido || '—'} · CUIL {initial?.cuil || '—'} · <span className="font-medium">{initial?.origen || '—'}</span></p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-100 text-gray-400">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={`Baja #${initial?.id}`}
+      size="xl"
+      borderTop={origenColor}
+      subtitle={`${initial?.nombre_apellido || '—'} · CUIL ${initial?.cuil || '—'} · ${initial?.origen || '—'}`}
+      footer={<button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>}
+    >
         {/* Secciones */}
         <div className="flex flex-col gap-2 px-5 py-5">
           {sections.map((sec) => (
@@ -743,11 +724,6 @@ function PipelineViewBaja({ initial, onClose }) {
             </div>
           ))}
         </div>
-        {/* Footer */}
-        <div className="flex justify-end px-6 py-3 border-t border-gray-100">
-          <button type="button" onClick={onClose} className="btn-secondary">Cerrar</button>
-        </div>
-      </div>
-    </div>
+    </BaseModal>
   )
 }

@@ -9,6 +9,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../../api/client';
 import Spinner from '../../components/ui/Spinner';
 import RichTextEditor from '../../components/ui/RichTextEditor';
 import MinutaModal from '../../components/ui/MinutaModal';
+import BaseModal from '../../components/ui/modals/BaseModal';
 import { useAuth } from '../../auth/AuthContext';
 import { hospitals } from '../../data/hospitals-data';
 
@@ -54,50 +55,49 @@ function RecorridaModal({ open, item, hospitalCode, onClose, onSave }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 bg-black/30 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 mb-10">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-base font-bold text-gray-900">{isEdit ? 'Editar recorrida' : 'Nueva recorrida'}</h2>
-          <button onClick={onClose}><XMarkIcon className="w-5 h-5 text-gray-400 hover:text-gray-600" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {error && <div className="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hospital *</label>
-              <select value={form.hospital_code}
-                onChange={e => setForm(f => ({ ...f, hospital_code: e.target.value }))}
-                className="form-input w-full" required>
-                <option value="">Seleccionar...</option>
-                {hospitals.map(h => <option key={h.id} value={h.id}>{h.id} – {h.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
-              <input type="text" value={form.titulo}
-                onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
-                className="form-input w-full" required maxLength={200} />
-            </div>
+    <BaseModal
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Editar recorrida' : 'Nueva recorrida'}
+      size="lg"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <div className="p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hospital *</label>
+            <select value={form.hospital_code}
+              onChange={e => setForm(f => ({ ...f, hospital_code: e.target.value }))}
+              className="form-input w-full" required>
+              <option value="">Seleccionar...</option>
+              {hospitals.map(h => <option key={h.id} value={h.id}>{h.id} – {h.name}</option>)}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contenido</label>
-            <RichTextEditor
-              value={form.contenido_html}
-              onChange={html => setForm(f => ({ ...f, contenido_html: html }))}
-              placeholder="Escribí el contenido de la recorrida..."
-              minHeight={260}
-            />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
+            <input type="text" value={form.titulo}
+              onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))}
+              className="form-input w-full" required maxLength={200} />
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
-              {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}
-              {isEdit ? 'Guardar' : 'Crear'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido</label>
+          <RichTextEditor
+            value={form.contenido_html}
+            onChange={html => setForm(f => ({ ...f, contenido_html: html }))}
+            placeholder="Escribí el contenido de la recorrida..."
+            minHeight={260}
+          />
+        </div>
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" disabled={saving} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}
+            {isEdit ? 'Guardar' : 'Crear'}
+          </button>
+        </div>
+      </form>
+    </BaseModal>
   );
 }
 
@@ -329,24 +329,17 @@ function MinutaTable({ datos }) {
 function MinutaFullscreen({ minuta, onClose }) {
   if (!minuta) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-6 md:p-12">
-      <div className="bg-white rounded-xl shadow-2xl flex flex-col w-full h-full max-w-7xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-3 bg-primary-800 text-white flex-shrink-0">
-          <div>
-            <p className="font-bold text-sm">{minuta.titulo}</p>
-            <p className="text-xs text-primary-200 font-mono">
-              {minuta.hospital_code} · {minuta.datos_tabla?.rows?.length ?? 0} filas × {minuta.datos_tabla?.columns?.length ?? 0} cols
-            </p>
-          </div>
-          <button onClick={onClose} className="p-1.5 text-primary-200 hover:text-white">
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-auto p-2">
-          {minuta.datos_tabla && <MinutaTable datos={minuta.datos_tabla} />}
-        </div>
+    <BaseModal
+      open
+      onClose={onClose}
+      title={minuta.titulo}
+      subtitle={`${minuta.hospital_code} · ${minuta.datos_tabla?.rows?.length ?? 0} filas × ${minuta.datos_tabla?.columns?.length ?? 0} cols`}
+      size="full"
+    >
+      <div className="overflow-auto">
+        {minuta.datos_tabla && <MinutaTable datos={minuta.datos_tabla} />}
       </div>
-    </div>
+    </BaseModal>
   );
 }
 
@@ -467,32 +460,36 @@ export default function RecorridasPage() {
       <MinutaFullscreen minuta={minFullscreen} onClose={() => setMinFullscreen(null)} />
 
       {/* Confirmación eliminar recorrida */}
-      {recDel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
-            <p className="font-bold text-gray-900 mb-2">¿Eliminar recorrida?</p>
-            <p className="text-sm text-gray-500 mb-5">"{recDel.titulo}" — esta acción no se puede deshacer.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setRecDel(null)} className="btn-secondary">Cancelar</button>
-              <button onClick={handleDeleteRec} className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Eliminar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BaseModal
+        open={!!recDel}
+        onClose={() => setRecDel(null)}
+        title="¿Eliminar recorrida?"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setRecDel(null)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleDeleteRec} className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Eliminar</button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-500">"{recDel?.titulo}" — esta acción no se puede deshacer.</p>
+      </BaseModal>
 
       {/* Confirmación eliminar minuta */}
-      {minDel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
-            <p className="font-bold text-gray-900 mb-2">¿Eliminar minuta?</p>
-            <p className="text-sm text-gray-500 mb-5">"{minDel.titulo}" — esta acción no se puede deshacer.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setMinDel(null)} className="btn-secondary">Cancelar</button>
-              <button onClick={handleDeleteMin} className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Eliminar</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <BaseModal
+        open={!!minDel}
+        onClose={() => setMinDel(null)}
+        title="¿Eliminar minuta?"
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setMinDel(null)} className="btn-secondary">Cancelar</button>
+            <button onClick={handleDeleteMin} className="btn-primary bg-red-600 hover:bg-red-700 border-red-600">Eliminar</button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-500">"{minDel?.titulo}" — esta acción no se puede deshacer.</p>
+      </BaseModal>
 
       {/* Layout principal */}
       <div className="flex flex-col h-full overflow-hidden">

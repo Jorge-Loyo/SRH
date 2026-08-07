@@ -1,0 +1,25 @@
+import { apiGet, apiPost, apiPatch, apiUpload } from './client'
+
+const BASE = '/api/cargos/alta'
+
+export const altaCargoApi = {
+  list:         (params = {}) => apiGet(BASE, params),
+  getById:      (id)          => apiGet(`${BASE}/${id}`),
+  create:       (body)        => apiPost(BASE, body),
+  listEtiquetas:     (q)   => apiGet(`${BASE}/etiquetas`, q ? { q } : {}),
+  createEtiqueta:    (body) => apiPost(`${BASE}/etiquetas`, body),
+  listCarreras:      ()    => apiGet(`${BASE}/carreras`),
+  listSiglas:        ()    => apiGet(`${BASE}/siglas`),
+  searchBajas:       (q)   => apiGet(`${BASE}/bajas/search`, { q }),
+  listEspecialidades:(cat, carrera) => apiGet(`${BASE}/especialidades`, { ...(cat && { categoria: cat }), ...(carrera && { carrera }) }),
+  listModalidades:   ()    => apiGet(`${BASE}/modalidades`),
+  listNewCargo:      (params = {}) => apiGet(`${BASE}/new-cargo`, params),
+  exportNewCargo:    (params = {}) => apiGet(`${BASE}/new-cargo/export`, params),
+  getNewCargoInfo:   (id)          => apiGet(`${BASE}/new-cargo/${id}`),
+  updateNewCargo:    (id, body)    => apiPatch(`${BASE}/new-cargo/${id}`, body),
+  uploadDotacion:    (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return apiUpload(`${BASE}/upload-dotacion`, fd)
+  },
+}
