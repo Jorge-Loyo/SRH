@@ -36,6 +36,9 @@ function createApp(options = {}) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
+        // La landing page (public/landing.html) ya no depende de CDNs externos:
+        // Tailwind se compila local (frontend/landing/), Montserrat e imágenes
+        // se sirven desde /landing/** (public/landing/) → no hacen falta excepciones.
         scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'blob:'],
@@ -55,7 +58,22 @@ function createApp(options = {}) {
   // Logging estándar de requests HTTP
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
-  // Servir el frontend SPA (React) desde la raíz
+  // Landing page (portal de enlaces) en la raíz "/".
+  // Va ANTES del static de la SPA para que gane siempre a su index.html.
+  // El acceso al sistema queda dentro de la landing (botón "SISTEMA" → /login).
+  app.get('/', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
+  });
+
+  // Assets propios de la landing (CSS de Tailwind compilado, imágenes, fuente)
+  // servidos desde /landing/** — ver frontend/landing/README.md para regenerarlos.
+  app.use('/landing', express.static(path.resolve(__dirname, '..', 'public', 'landing'), {
+    etag: true,
+    maxAge: '7d',
+  }));
+
+  // Servir el frontend SPA (React) desde el resto de rutas
   // Assets con hash Vite → caché 1 año; index.html → sin caché
   app.use(express.static(path.resolve(__dirname, '..', 'public', 'spa'), {
     etag: true,
