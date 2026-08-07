@@ -54,13 +54,30 @@ function mapCarrera(unificador, escalafon, jefeEscalafon) {
   return { carrera: 'GEN', modalidad: 'planta', tipoCph: null };
 }
 
+// ─── Parsear fecha DD/MM/YYYY → YYYY-MM-DD (o null) ─────────────────────────
+function parseDate(val) {
+  const s = String(val || '').trim();
+  if (!s) return null;
+  const [d, m, y] = s.split('/');
+  if (!d || !m || !y) return null;
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+// ─── Normalizar situación de revista (col 20) ───────────────────────────────
+function mapSituacionRevista(val, tipoCph) {
+  if (!tipoCph || tipoCph === 'comun') return null;
+  const v = (val || '').trim().toLowerCase();
+  if (v === 'activo')              return 'activo';
+  if (v.includes('retenci'))       return 'retencion_cargo';
+  if (v.includes('comisi'))        return 'comision';
+  return 'activo';
+}
+
 // ─── Normalizar estado ────────────────────────────────────────────────────────
 function mapEstado(estado) {
   const e = (estado || '').trim().toLowerCase();
-  if (e === 'activo')    return 'activo';
   if (e === 'bloqueado') return 'bloqueado';
-  if (e === 'comision')  return 'comision';
-  return 'retencion';
+  return 'activo';
 }
 
 // ─── Generar código único por prefijo ─────────────────────────────────────────
@@ -120,15 +137,19 @@ async function run() {
     const escalafon    = String(row.getCell(16).value || '').trim();
     const unificador   = String(row.getCell(24).value || '').trim();
     const jefeEscalafon= String(row.getCell(27).value || '').trim();
-    const litPuesto    = String(row.getCell(22).value || '').trim() || null;
-    const especialidad = String(row.getCell(23).value || '').trim() || null;
-    const estado       = String(row.getCell(58).value || '').trim();
+    const litPuesto     = String(row.getCell(22).value || '').trim() || null;
+    const especialidad  = String(row.getCell(23).value || '').trim() || null;
+    const cargoDesde    = parseDate(row.getCell(53).value);
+    const cargoHasta    = parseDate(row.getCell(54).value);
+    const antiguedad    = parseDate(row.getCell(57).value);
+    const estado        = String(row.getCell(58).value || '').trim();
+    const sitRevista    = String(row.getCell(20).value || '').trim();
 
     if (!id_sial) { skipped++; return; }
 
     const { carrera, modalidad, tipoCph } = mapCarrera(unificador, escalafon, jefeEscalafon);
 
-    rows.push({ id_sial, sigla, carrera, modalidad, tipoCph, puesto: litPuesto, especialidad, estado: mapEstado(estado) });
+    rows.push({ id_sial, sigla, carrera, modalidad, tipoCph, puesto: litPuesto, especialidad, cargoDesde, cargoHasta, antiguedad, estado: mapEstado(estado), situacionRevista: mapSituacionRevista(sitRevista, tipoCph) });
   });
 
   console.log(`Filas a procesar: ${rows.length} | Saltadas (sin id_sial): ${skipped}`);
@@ -143,20 +164,34 @@ async function run() {
       );
 
       if (existing) {
-        // UPDATE — no cambia el código
         await manager.query(
-          `UPDATE new_cargo SET sigla=?, carrera=?, modalidad=?, puesto=?, especialidad=?, estado=?
+          `UPDATE new_cargo SET sigla=?, carrera=?, modalidad=?, puesto=?, especialidad=?, estado=?, cargo_desde=?, cargo_hasta=?, antiguedad=?, situacion_revista=?,
+             id_carrera=(SELECT id_carrera FROM carreras WHERE codigo=? LIMIT 1),
+             id_modalidad=(SELECT id FROM modalidades WHERE nombre=? LIMIT 1),
+             id_especialidad=(SELECT id FROM especialidades WHERE nombre=? LIMIT 1),
+             id_puesto_tec=CASE WHEN ?='TEC' THEN (SELECT id FROM puestos_tec WHERE nombre=? LIMIT 1) ELSE NULL END,
+             fecha_actualizacion=NOW()
            WHERE id_sial=?`,
-          [r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.id_sial]
+          [r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.cargoDesde, r.cargoHasta, r.antiguedad, r.situacionRevista,
+           r.carrera, r.modalidad, r.especialidad, r.carrera, r.puesto, r.id_sial]
         );
         updated++;
       } else {
-        // INSERT — genera código nuevo
         const codigo = await getNextSeq(manager, r.carrera, r.modalidad, r.tipoCph);
         await manager.query(
-          `INSERT INTO new_cargo (id_sial, codigo, sigla, carrera, modalidad, puesto, especialidad, estado, id_alta)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
-          [r.id_sial, codigo, r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado]
+          `INSERT INTO new_cargo (id_sial, codigo, sigla, carrera, modalidad, puesto, especialidad, estado, cargo_desde, cargo_hasta, antiguedad, situacion_revista, id_alta)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+          [r.id_sial, codigo, r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.cargoDesde, r.cargoHasta, r.antiguedad, r.situacionRevista]
+        );
+        // Poblar FKs de normalización
+        await manager.query(
+          `UPDATE new_cargo SET
+             id_carrera     = (SELECT id_carrera FROM carreras WHERE codigo = carrera LIMIT 1),
+             id_modalidad   = (SELECT id FROM modalidades WHERE nombre = modalidad LIMIT 1),
+             id_especialidad= (SELECT id FROM especialidades WHERE nombre = especialidad LIMIT 1),
+             id_puesto_tec  = CASE WHEN carrera = 'TEC' THEN (SELECT id FROM puestos_tec WHERE nombre = puesto LIMIT 1) ELSE NULL END
+           WHERE id_sial = ?`,
+          [r.id_sial]
         );
         inserted++;
       }

@@ -29,6 +29,7 @@ const tableroKpis         = require('../modules/tablero-kpis/tableroKpisRoutes')
 const cargaMasivaDotacion = require('../modules/carga-masiva/cargaMasivaRoutes');
 const cargaMasivaPou      = require('../modules/carga-masiva/pou/pouRoutes');
 const altaCargo           = require('../modules/alta-cargo/altaCargoRoutes');
+const herramientas        = require('../modules/herramientas/herramientasRoutes');
 
 const router = express.Router();
 
@@ -55,6 +56,8 @@ router.use('/dotacion-total', dotacionTotalApi);
 router.use('/dotacion-activa', dotacionActivaApi);
 router.use('/admin/carga-masiva/dotacion', cargaMasivaDotacion);
 router.use('/admin/carga-masiva/pou', cargaMasivaPou);
+
+router.use('/herramientas', herramientas);
 
 // ─── Módulo 2 ─────────────────────────────────────────────────────────────────
 router.use('/concursales/bajas', bajasConsolidadas);

@@ -4,20 +4,22 @@ import ListaCargosPage from './ListaCargosPage'
 import SubirDataPage   from './SubirDataPage'
 
 const TABS = [
-  { key: 'alta',   label: 'Alta de Cargo', path: '/cargos'        },
-  { key: 'lista',  label: 'Cargos',        path: '/cargos/lista'  },
-  { key: 'subir',  label: 'Subir Data',    path: '/cargos/subir'  },
+  { key: 'alta',    label: 'Alta de cargo por Expediente', path: '/cargos'          },
+  { key: 'decreto', label: 'Alta de cargo por Decreto',    path: '/cargos/decreto'  },
+  { key: 'lista',   label: 'Cargos',                       path: '/cargos/lista'    },
+  { key: 'subir',   label: 'Subir Data',                   path: '/cargos/subir'    },
 ]
 
 export default function CargosPage() {
   const { pathname } = useLocation()
   const navigate     = useNavigate()
-  const active = pathname.startsWith('/cargos/subir') ? 'subir'
-               : pathname.startsWith('/cargos/lista') ? 'lista'
+  const active = pathname.startsWith('/cargos/subir')   ? 'subir'
+               : pathname.startsWith('/cargos/lista')   ? 'lista'
+               : pathname.startsWith('/cargos/decreto') ? 'decreto'
                : 'alta'
 
   return (
-    <div className="px-6 py-6">
+    <div className="px-6 py-6 max-w-none">
       <div className="flex gap-1 mb-6 border-b border-gray-200">
         {TABS.map(tab => (
           <button key={tab.key} type="button" onClick={() => navigate(tab.path)}
@@ -31,9 +33,10 @@ export default function CargosPage() {
         ))}
       </div>
 
-      {active === 'alta'  && <AltaCargoPage embedded />}
-      {active === 'lista' && <ListaCargosPage />}
-      {active === 'subir' && <SubirDataPage />}
+      {active === 'alta'    && <AltaCargoPage embedded />}
+      {active === 'decreto'  && <AltaCargoPage embedded />}
+      {active === 'lista'   && <ListaCargosPage />}
+      {active === 'subir'   && <SubirDataPage />}
     </div>
   )
 }

@@ -15,7 +15,7 @@
     "seed:modalidades": "node scripts/seed-modalidades.js",
     "seed:new-cargo": "node scripts/seed-new-cargo.js",
     "seed:cargos-alta": "node scripts/seed-cargos-alta.js",
-    "load:dotacion": "node scripts/load-dotacion.js",
+    "setup:dotaneitor": "node scripts/setup-dotaneitor-tables.js",
     "migrate": "node scripts/run-migrations.js run",
     "migrate:revert": "node scripts/run-migrations.js revert",
     "migrate:show": "node scripts/run-migrations.js show",

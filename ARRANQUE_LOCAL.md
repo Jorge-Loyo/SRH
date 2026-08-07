@@ -52,6 +52,29 @@ Contraseña: `admin`
 
 ---
 
+## 4. Levantar el microservicio Dotaneitor (opcional)
+
+Solo necesario para usar la herramienta **Dotaneitor** (`/herramientas/dotaneitor`).
+
+Doble click en:
+```
+app\python-service\start.bat
+```
+
+O desde CMD:
+```cmd
+cd C:\Desarrollo\SRH\dotacion-rrhh\app\python-service
+start.bat
+```
+
+El servicio queda en **http://localhost:5001**  
+Verificá que esté activo: http://localhost:5001/health → `{ "status": "ok" }`
+
+> La página muestra un badge verde/rojo según si el servicio está corriendo.
+> Si aparece rojo, ejecutá `start.bat` y recargá la página.
+
+---
+
 ## Notas
 
 - El frontend ya está compilado en `app/public/spa/` y lo sirve el backend directamente.
@@ -60,5 +83,5 @@ Contraseña: `admin`
   cd /c/Desarrollo/SRH/dotacion-rrhh/frontend
   npm run build
   ```
-- La rama de trabajo es **Jorge** (no tocar `develop`).
-- Para cambiar de rama: `git checkout Jorge`
+- La rama de trabajo es **Desarrollo_Jorge** (no tocar `develop`).
+- Para cambiar de rama: `git checkout Desarrollo_Jorge`

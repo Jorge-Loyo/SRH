@@ -52,6 +52,11 @@ const UsuariosPage  = lazy(() => import('./pages/vista_seguridad/UsuariosPage.js
 const PermisosPage  = lazy(() => import('./pages/vista_seguridad/PermisosPage.jsx'))
 const CargaMasivaPage = lazy(() => import('./pages/vista_seguridad/CargaMasivaPage.jsx'))
 
+// Herramientas
+const TablasVistaPage  = lazy(() => import('./pages/vista_herramientas/TablasVistaPage.jsx'))
+const TablasAdminPage  = lazy(() => import('./pages/vista_herramientas/TablasAdminPage.jsx'))
+const DotaneitorPage   = lazy(() => import('./pages/vista_herramientas/DotaneitorPage.jsx'))
+
 // Roles permitidos por sección
 const ALL_ROLES              = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales']
 const NO_DIRECTOR            = ['admin', 'editor', 'viewer', 'gerencia', 'concursales']
@@ -177,6 +182,9 @@ export default function App() {
                 <Route path="cargos/subir" element={
                   <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
                 } />
+                <Route path="cargos/decreto" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                } />
                 <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
 
                 {/* Seguridad */}
@@ -194,6 +202,17 @@ export default function App() {
                 } />
                 <Route path="seguridad/carga-masiva" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><CargaMasivaPage /></ProtectedRoute>
+                } />
+
+                {/* Herramientas */}
+                <Route path="herramientas/tablas-vista" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><TablasVistaPage /></ProtectedRoute>
+                } />
+                <Route path="herramientas/tablas-admin" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><TablasAdminPage /></ProtectedRoute>
+                } />
+                <Route path="herramientas/dotaneitor" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><DotaneitorPage /></ProtectedRoute>
                 } />
               </Route>
 

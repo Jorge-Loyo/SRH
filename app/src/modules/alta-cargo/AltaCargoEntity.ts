@@ -16,4 +16,7 @@ export class CargosAlta extends BaseEntity {
 
   @Column({ type: 'varchar', length: 10 })
   carrera_seleccionada!: string  // 'cph' | 'enf' | 'tec'
+
+  @Column({ type: 'varchar', length: 50, nullable: true, default: null })
+  categoria_interna!: string | null
 }

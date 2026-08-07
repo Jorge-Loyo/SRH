@@ -1,25 +1,34 @@
 const { z } = require('zod');
 
+const fechasSchema = z.object({
+  cargo_desde:        z.string().min(1),
+  cargo_hasta:        z.string().nullable().optional(),
+  antiguedad:         z.string().min(1),
+  expediente:         z.string().min(1).max(100),
+  cantidad:           z.coerce.number().int().min(1).max(50).default(1),
+  categoria_interna:  z.string().max(50).nullable().optional(),
+})
+
 const altaCargoCreateSchema = z.discriminatedUnion('carrera_seleccionada', [
   z.object({
     carrera_seleccionada: z.literal('cph'),
-    sigla:       z.string().min(1).max(20),
-    modalidad:   z.string().min(1).max(50),
-    puesto:      z.string().min(1).max(150),
+    sigla:        z.string().min(1).max(20),
+    modalidad:    z.string().min(1).max(50),
+    puesto:       z.string().min(1).max(150),
     especialidad: z.string().min(1).max(150),
-    tipo_cph:    z.enum(['comun', 'jefe', 'director']).default('comun'),
-  }),
+    tipo_cph:     z.enum(['ejecucion', 'jefe', 'director']).default('ejecucion'),
+  }).merge(fechasSchema),
   z.object({
     carrera_seleccionada: z.literal('enf'),
     sigla:           z.string().min(1).max(20),
     nivel_formacion: z.string().min(1).max(50),
-  }),
+  }).merge(fechasSchema),
   z.object({
     carrera_seleccionada: z.literal('tec'),
     sigla:     z.string().min(1).max(20),
     modalidad: z.string().min(1).max(50),
     puesto:    z.string().min(1).max(150),
-  }),
+  }).merge(fechasSchema),
 ]);
 
 const altaCargoPaginationSchema = z.object({

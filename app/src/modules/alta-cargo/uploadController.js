@@ -24,12 +24,28 @@ function mapCarrera(unificador, jefeEscalafon) {
   return { carrera: 'GEN', modalidad: 'planta', tipoCph: null };
 }
 
+// ─── Parsear fecha DD/MM/YYYY → YYYY-MM-DD (o null) ─────────────────────────
+function parseDate(val) {
+  const s = String(val || '').trim();
+  if (!s) return null;
+  const [d, m, y] = s.split('/');
+  if (!d || !m || !y) return null;
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+function mapSituacionRevista(val, tipoCph) {
+  if (!tipoCph || tipoCph === 'comun') return null;
+  const v = (val || '').trim().toLowerCase();
+  if (v === 'activo')        return 'activo';
+  if (v.includes('retenci')) return 'retencion_cargo';
+  if (v.includes('comisi'))  return 'comision';
+  return 'activo';
+}
+
 function mapEstado(estado) {
   const e = (estado || '').trim().toLowerCase();
-  if (e === 'activo')    return 'activo';
   if (e === 'bloqueado') return 'bloqueado';
-  if (e === 'comision')  return 'comision';
-  return 'retencion';
+  return 'activo';
 }
 
 async function uploadDotacion(req, res) {
@@ -46,13 +62,17 @@ async function uploadDotacion(req, res) {
       const id_sial    = String(row.getCell(1).value  || '').trim();
       if (!id_sial) return;
       const sigla      = String(row.getCell(12).value || '').trim() || null;
+      const sitRevista     = String(row.getCell(20).value || '').trim();
       const unificador    = String(row.getCell(24).value || '').trim();
       const jefeEscalafon  = String(row.getCell(27).value || '').trim();
       const litPuesto      = String(row.getCell(22).value || '').trim() || null;
       const especialidad   = String(row.getCell(23).value || '').trim() || null;
+      const cargoDesde     = parseDate(row.getCell(53).value);
+      const cargoHasta     = parseDate(row.getCell(54).value);
+      const antiguedad     = parseDate(row.getCell(57).value);
       const estado         = String(row.getCell(58).value || '').trim();
       const { carrera, modalidad, tipoCph } = mapCarrera(unificador, jefeEscalafon);
-      rows.push({ id_sial, sigla, carrera, modalidad, tipoCph, puesto: litPuesto, especialidad, estado: mapEstado(estado) });
+      rows.push({ id_sial, sigla, carrera, modalidad, tipoCph, puesto: litPuesto, especialidad, cargoDesde, cargoHasta, antiguedad, estado: mapEstado(estado), situacionRevista: mapSituacionRevista(sitRevista, tipoCph) });
     });
 
     // Contadores de código por prefijo
@@ -84,16 +104,31 @@ async function uploadDotacion(req, res) {
         );
         if (existing) {
           await manager.query(
-            `UPDATE new_cargo SET sigla=?, carrera=?, modalidad=?, puesto=?, especialidad=?, estado=? WHERE id_sial=?`,
-            [r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.id_sial]
+            `UPDATE new_cargo SET sigla=?, carrera=?, modalidad=?, puesto=?, especialidad=?, estado=?, cargo_desde=?, cargo_hasta=?, antiguedad=?, situacion_revista=?,
+             id_carrera=(SELECT id_carrera FROM carreras WHERE codigo=? LIMIT 1),
+             id_modalidad=(SELECT id FROM modalidades WHERE nombre=? LIMIT 1),
+             id_especialidad=(SELECT id FROM especialidades WHERE nombre=? LIMIT 1),
+             id_puesto_tec=CASE WHEN ?='TEC' THEN (SELECT id FROM puestos_tec WHERE nombre=? LIMIT 1) ELSE NULL END,
+             fecha_actualizacion=NOW() WHERE id_sial=?`,
+            [r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.cargoDesde, r.cargoHasta, r.antiguedad, r.situacionRevista,
+             r.carrera, r.modalidad, r.especialidad, r.carrera, r.puesto, r.id_sial]
           );
           updated++;
         } else {
           const codigo = await getNextSeq(manager, r.carrera, r.modalidad, r.tipoCph);
           await manager.query(
-            `INSERT INTO new_cargo (id_sial, codigo, sigla, carrera, modalidad, puesto, especialidad, estado, id_alta)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
-            [r.id_sial, codigo, r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado]
+            `INSERT INTO new_cargo (id_sial, codigo, sigla, carrera, modalidad, puesto, especialidad, estado, cargo_desde, cargo_hasta, antiguedad, situacion_revista, id_alta)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+            [r.id_sial, codigo, r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.cargoDesde, r.cargoHasta, r.antiguedad, r.situacionRevista]
+          );
+          await manager.query(
+            `UPDATE new_cargo SET
+               id_carrera=(SELECT id_carrera FROM carreras WHERE codigo=carrera LIMIT 1),
+               id_modalidad=(SELECT id FROM modalidades WHERE nombre=modalidad LIMIT 1),
+               id_especialidad=(SELECT id FROM especialidades WHERE nombre=especialidad LIMIT 1),
+               id_puesto_tec=CASE WHEN carrera='TEC' THEN (SELECT id FROM puestos_tec WHERE nombre=puesto LIMIT 1) ELSE NULL END
+             WHERE id_sial=?`,
+            [r.id_sial]
           );
           inserted++;
         }
