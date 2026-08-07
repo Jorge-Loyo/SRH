@@ -292,12 +292,11 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
             <Section title="Datos generales">
               <div className="grid grid-cols-4 gap-3">
                 <StyledSelectField label="Usuario"             value={form.usuario}       onChange={set('usuario')}       options={OPCIONES_USUARIOS} cols={1} />
+                <Field       label="Descripción efector" value={form.descr_efector} onChange={set('descr_efector')} cols={1} disabled={!!form.sigla_efector} />
                 <SiglaSearchField value={form.sigla_efector} onChange={handleSiglaChange} />
                 <StyledSelectField label="Tipo efector"        value={form.tipo_efector}  onChange={set('tipo_efector')}  options={OPCIONES_TIPO_EFECTOR} cols={1} disabled={!!form.sigla_efector} />
-                <Field       label="Descripción efector" value={form.descr_efector} onChange={set('descr_efector')} cols={1} disabled={!!form.sigla_efector} />
                 <StyledSelectField label="Origen"              value={form.origen}        onChange={handleOrigenChange}   options={OPCIONES_ORIGEN} cols={1} />
                 <Field       label="Conjuntos"           value={form.conjuntos}     onChange={set('conjuntos')}     cols={1} />
-                <Field       label="ID SIAL"             value={form.cargo_baja}    onChange={set('cargo_baja')}    cols={1} disabled={form.origen === 'Ampliación'} />
                 {form.origen === 'Ampliación' && (
                   <div className="col-span-1 flex items-center gap-2 pt-5">
                     <input type="checkbox" checked={!!form.obra} disabled className="h-4 w-4 rounded border-gray-300 text-green-600 cursor-default" />
@@ -309,6 +308,7 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <CalcField label="Sub-estado"      value={calcSubEstado({ ...form })}           cols={1} title="19 etapas del proceso concursal" />
                 <CalcField label="Sub-estado 3"    value={calcSubEstado3({ ...form })}          cols={1} title="Estado resumido para filtros y color-coding" />
                 <CalcField label="Cambio esp."     value={calcCambioEspecialidad({ ...form })}  cols={1} title="SI si especialidad baja ≠ especialidad solicitada" />
+                <Field       label="ID SIAL"             value={form.cargo_baja}    onChange={set('cargo_baja')}    cols={1} disabled={form.origen === 'Ampliación'} />
               </div>
             </Section>
 
@@ -317,8 +317,8 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
               <div className="grid grid-cols-4 gap-3">
                 <Field         label="EE baja"                value={form.ee_baja}              onChange={set('ee_baja')}              cols={2} />
                 <Field         label="CUIL baja"              value={form.cuil_baja}            onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil_baja: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación'} />
-                <DateMaskField label="Fecha baja"             value={form.fecha_baja}           onChange={set('fecha_baja')}           cols={1} />
                 <Field         label="Nombre baja"            value={form.nombre_baja}          onChange={set('nombre_baja')}          cols={4} disabled={form.origen === 'Ampliación'} />
+                <DateMaskField label="Fecha baja"             value={form.fecha_baja}           onChange={set('fecha_baja')}           cols={1} />
                 <StyledSelectField   label="Escalafón"             value={form.escalafon_baja}       onChange={set('escalafon_baja')}       options={OPCIONES_ESCALAFON_BAJAS} cols={1} />
                 <StyledSelectField   label="POU/POF"                value={form.escalafon_1}          onChange={set('escalafon_1')}          options={OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={!!initial?.escalafon_1} />
                 <StyledSelectField   label="Unificador puestos"    value={form.unificador_puestos}   onChange={set('unificador_puestos')}   options={OPCIONES_UNIFICADOR_PUESTOS} cols={2} />
@@ -340,14 +340,14 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <DateMaskField label="Fecha EE concurso"        value={form.fecha_ee_concurso}        onChange={set('fecha_ee_concurso')}       cols={1} />
                 <Field         label="IF autorización vacante"  value={form.if_solicitante}           onChange={set('if_solicitante')}          cols={1} />
                 
-                {/* Puesto 2 + Fecha autorización */}
+                {/* Puesto 2 → Especialidad solicitada → Cambio de Especialidad */}
                 <StyledSelectField   label="POU/POF 2"               value={form.escalafon_2}              onChange={set('escalafon_2')}             options={OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={!!initial?.escalafon_1} />
                 <StyledSelectField   label="Puesto 2"                value={form.puesto_2}                 onChange={set('puesto_2')}                options={getPuestoOptions(form.escalafon_2, '')} cols={2} disabled={form.cambio_especialidad !== 'SI'} />
-                <DateMaskField label="Fecha autorización"      value={form.fecha_autorizacion}       onChange={set('fecha_autorizacion')}      cols={1} />
-
-                {/* Especialidad solicitada → Cambio de Especialidad → Sorteo */}
                 <SearchSelectField label="Especialidad solicitada" value={form.especialidad_solicitada}  onChange={set('especialidad_solicitada')} options={OPCIONES_ESPECIALIDADES} cols={2} disabled={form.cambio_especialidad !== 'SI'} />
                 <CheckField    label="Solicitud de cambio"     value={form.cambio_especialidad === 'SI'} onChange={(e) => handleCambioEspecialidadChange({ target: { value: e.target.value ? 'SI' : 'NO' } })} cols={1} />
+
+                {/* Fecha autorización → Sorteo jurado */}
+                <DateMaskField label="Fecha autorización"      value={form.fecha_autorizacion}       onChange={set('fecha_autorizacion')}      cols={1} />
                 <CheckField    label="Sorteo jurado"           value={form.sorteo_jurado}            onChange={setBool('sorteo_jurado')}       cols={1} />
 
                 {/* Doc cambio esp. (sólo si SI) + Disposición */}
@@ -363,7 +363,6 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <DateMaskField label="Fecha insc. desde"  value={form.fecha_insc_desde}   onChange={set('fecha_insc_desde')}   cols={1} />
                 <DateMaskField label="Fecha insc. hasta"  value={form.fecha_insc_hasta}   onChange={set('fecha_insc_hasta')}   cols={1} />
                 <Field         label="Cant. inscriptos"   value={form.q_inscriptos}       onChange={set('q_inscriptos')}       type="number" cols={1} />
-                <DateMaskField label="Fecha INSAL"        value={form.fecha_insal}        onChange={set('fecha_insal')}        cols={1} />
                 {/* Evaluación */}
                 <CheckField    label="Examen publicado"   value={form.examen_publicado}   onChange={setBool('examen_publicado')}   cols={1} />
                 <DateMaskField label="Fecha examen"       value={form.fecha_examen}       onChange={set('fecha_examen')}           cols={1} />
@@ -372,7 +371,7 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 {/* Adjudicación */}
                 <DateMaskField label="Fecha IFACS"        value={form.fecha_ifacs}        onChange={set('fecha_ifacs')}            cols={1} />
                 <CheckField    label="INSAL"              value={form.insal}              onChange={setBool('insal')}              cols={1} />
-                <div className="col-span-2" />
+                <DateMaskField label="Fecha INSAL"        value={form.fecha_insal}        onChange={set('fecha_insal')}        cols={1} />
               </div>
             </Section>
 
@@ -383,17 +382,16 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <DateMaskField label="Fecha EE designación"    value={form.fecha_ee_designacion}   onChange={set('fecha_ee_designacion')}    cols={1} />
                 <Field         label="Nombre designación"      value={form.nombre_designacion}     onChange={set('nombre_designacion')}      cols={1} />
                 <Field         label="CUIL designación"        value={form.cuil_designacion}       onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil_designacion: v })) }}  placeholder="20123456789" cols={1} />
-                {/* Fechas clave */}
+                {/* Doc + fechas clave */}
+                <CheckField    label="Carga doc."               value={form.carga_documentacion}    onChange={setBool('carga_documentacion')} cols={1} />
                 <DateMaskField label="Fecha apto médico"      value={form.fecha_apto_medico}      onChange={set('fecha_apto_medico')}       cols={1} />
                 <DateMaskField label="Fecha ITE"               value={form.fecha_ite}              onChange={set('fecha_ite')}               cols={1} />
+                {/* Resolución */}
+                <CheckField    label="Proyecto resolución"     value={form.proyecto_resolucion}    onChange={setBool('proyecto_resolucion')} cols={1} />
+                <CheckField    label="Reso. a la firma"         value={form.reso_a_la_firma}        onChange={setBool('reso_a_la_firma')}     cols={1} />
+                <Field         label="Resolución designación" value={form.resolucion_designacion} onChange={set('resolucion_designacion')}  cols={4} />
                 <DateMaskField label="Fecha resolución"       value={form.fecha_resolucion}       onChange={set('fecha_resolucion')}        cols={1} />
                 <DateMaskField label="Fecha cargo"             value={form.fecha_cargo}            onChange={set('fecha_cargo')}             cols={1} />
-                {/* Resolución */}
-                <Field         label="Resolución designación" value={form.resolucion_designacion} onChange={set('resolucion_designacion')}  cols={4} />
-                {/* Checks — todos juntos en fila */}
-                <CheckField    label="Carga doc."               value={form.carga_documentacion}    onChange={setBool('carga_documentacion')} cols={1} />
-                <CheckField    label="Reso. a la firma"         value={form.reso_a_la_firma}        onChange={setBool('reso_a_la_firma')}     cols={1} />
-                <CheckField    label="Proyecto resolución"     value={form.proyecto_resolucion}    onChange={setBool('proyecto_resolucion')} cols={1} />
                 <Field         label="Cargo SIAL"               value={form.cargo_sial}             onChange={set('cargo_sial')}              cols={1} />
                 {/* Suspensión y desierta */}
                 <CheckField    label="Suspendido"               value={form.suspendido}             onChange={setBool('suspendido')}          cols={1} />
@@ -468,8 +466,8 @@ function PipelineViewSeguimiento({ initial, onClose }) {
       title: 'Datos generales', bg: 'bg-indigo-700',
       fields: [
         ['Usuario',          initial?.usuario],
-        ['Sigla',            initial?.sigla_efector],
         ['Descripción',      initial?.descr_efector],
+        ['Sigla',            initial?.sigla_efector],
         ['Tipo efector',     initial?.tipo_efector],
         ['Origen',           initial?.origen],
         ['Conjuntos',        initial?.conjuntos],
@@ -548,8 +546,8 @@ function PipelineViewSeguimiento({ initial, onClose }) {
         ['Carga doc.',          b(initial?.carga_documentacion)],
         ['F. apto médico',     initial?.fecha_apto_medico],
         ['F. ITE',              initial?.fecha_ite],
-        ['Reso. a la firma',    b(initial?.reso_a_la_firma)],
         ['Proy. resolución',   b(initial?.proyecto_resolucion)],
+        ['Reso. a la firma',    b(initial?.reso_a_la_firma)],
         ['Reso. designación',   initial?.resolucion_designacion],
         ['F. resolución',       initial?.fecha_resolucion],
         ['F. cargo',            initial?.fecha_cargo],

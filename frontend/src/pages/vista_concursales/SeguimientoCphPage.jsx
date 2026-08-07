@@ -773,8 +773,21 @@ export default function SeguimientoCphPage() {
         <table className="text-sm border-collapse" style={{ minWidth: '6000px' }}>
             <thead className="sticky top-0 z-10 bg-gray-50">
               <tr>
-                {/* — Identificación baja — */}
+                {/* — Datos generales — */}
                 <Th label="Usuario" field="usuario" sort={sort} onSort={handleSortToggle} />
+                <Th label="Efector" field="descr_efector" sort={sort} onSort={handleSortToggle} />
+                <Th label="Sigla" field="sigla_efector" sort={sort} onSort={handleSortToggle} />
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Tipo efector</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Origen</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Conjuntos</th>
+                <Th label="Estado" field="estado" sort={sort} onSort={handleSortToggle} />
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Sub-estado</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Sub-estado 3</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Cambio esp.</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Tipo baja</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Suspendido</th>
+                {/* — Baja — */}
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Cargo baja</th>
                 <Th label="EE baja" field="ee_baja" sort={sort} onSort={handleSortToggle} />
                 <Th label="CUIL" field="cuil_baja" sort={sort} onSort={handleSortToggle} />
                 <Th label="Nombre baja" field="nombre_baja" sort={sort} onSort={handleSortToggle} />
@@ -782,21 +795,6 @@ export default function SeguimientoCphPage() {
                 <Th label="Escalafón" field="escalafon_1" sort={sort} onSort={handleSortToggle} />
                 <Th label="Puesto" field="puesto_1" sort={sort} onSort={handleSortToggle} />
                 <Th label="Especialidad baja" field="especialidad_baja" sort={sort} onSort={handleSortToggle} />
-                {/* — Efector — */}
-                <Th label="Sigla" field="sigla_efector" sort={sort} onSort={handleSortToggle} />
-                <Th label="Efector" field="descr_efector" sort={sort} onSort={handleSortToggle} />
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Tipo efector</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Origen</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Conjuntos</th>
-                {/* — Estado — */}
-                <Th label="Estado" field="estado" sort={sort} onSort={handleSortToggle} />
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Sub-estado</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Sub-estado 3</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Cambio esp.</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Tipo baja</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Suspendido</th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. desierta</th>
-                <Th label="F. dispo. desierta" field="fecha_dispo_desierta" sort={sort} onSort={handleSortToggle} />
                 {/* — Concurso — */}
                 <Th label="EE concurso" field="ee_concurso" sort={sort} onSort={handleSortToggle} />
                 <Th label="F. EE concurso" field="fecha_ee_concurso" sort={sort} onSort={handleSortToggle} />
@@ -833,8 +831,8 @@ export default function SeguimientoCphPage() {
                 <Th label="F. resolución" field="fecha_resolucion" sort={sort} onSort={handleSortToggle} />
                 <Th label="F. cargo" field="fecha_cargo" sort={sort} onSort={handleSortToggle} />
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Cargo SIAL</th>
-                {/* — POU — */}
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Cargo baja</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Dispo. desierta</th>
+                <Th label="F. dispo. desierta" field="fecha_dispo_desierta" sort={sort} onSort={handleSortToggle} />
                 {/* — Observaciones — */}
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Observaciones</th>
                 <th className="px-3 py-2.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide sticky right-0 bg-gray-50 whitespace-nowrap">Acciones</th>
@@ -853,22 +851,13 @@ export default function SeguimientoCphPage() {
                   onClick={() => setViewRecord(row)}
                   className="hover:bg-blue-50 cursor-pointer transition-colors"
                 >
-                  {/* Identificación */}
+                  {/* Datos generales */}
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.usuario ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.ee_baja ?? '—'}</td>
-                  <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil_baja ?? '—'}</td>
-                  <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{row.nombre_baja ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_baja)}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.escalafon_1 ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_1 ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.especialidad_baja ?? '—'}</td>
-                  {/* Efector */}
-                  <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{row.sigla_efector ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.descr_efector ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs font-medium text-gray-900 whitespace-nowrap">{row.sigla_efector ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipo_efector ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.origen ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.conjuntos ?? '—'}</td>
-                  {/* Estado */}
                   <td className="px-3 py-2 whitespace-nowrap">
                     <EstadoBadge estado={calcEstado(row)} />
                   </td>
@@ -877,8 +866,15 @@ export default function SeguimientoCphPage() {
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cambio_especialidad ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.tipo_baja ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{bool(row.suspendido)}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.dispo_desierta ?? '—'}</td>
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_dispo_desierta)}</td>
+                  {/* Baja */}
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cargo_baja ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.ee_baja ?? '—'}</td>
+                  <td className="px-3 py-2 font-mono text-xs text-gray-600 whitespace-nowrap">{row.cuil_baja ?? '—'}</td>
+                  <td className="px-3 py-2 font-medium text-gray-900 whitespace-nowrap">{row.nombre_baja ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_baja)}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.escalafon_1 ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.puesto_1 ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.especialidad_baja ?? '—'}</td>
                   {/* Concurso */}
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.ee_concurso ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_ee_concurso)}</td>
@@ -915,8 +911,8 @@ export default function SeguimientoCphPage() {
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_resolucion)}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_cargo)}</td>
                   <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cargo_sial ?? '—'}</td>
-                  {/* POU */}
-                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.cargo_baja ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{row.dispo_desierta ?? '—'}</td>
+                  <td className="px-3 py-2 text-xs text-gray-600 whitespace-nowrap">{formatDate(row.fecha_dispo_desierta)}</td>
                   {/* Observaciones */}
                   <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap max-w-[200px] truncate" title={row.observaciones ?? ''}>{row.observaciones ?? '—'}</td>
                   <td className="px-3 py-2.5 sticky right-0 bg-white" onClick={e => e.stopPropagation()}>

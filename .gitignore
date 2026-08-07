@@ -24,3 +24,6 @@ yarn-error.log*
 
 # Archivos temporales de Linux/Git
 *~
+
+app/public/spa/
+frontend/node_modules/
