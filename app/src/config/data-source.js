@@ -1,6 +1,6 @@
 const path = require('path');
 // Load env from project root .env (../.. from src/config)
-require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env'), override: false });
 const { DataSource } = require('typeorm');
 const { config } = require('./env');
 

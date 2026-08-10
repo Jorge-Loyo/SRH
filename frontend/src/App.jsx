@@ -42,8 +42,10 @@ const ConfiguracionPage        = lazy(() => import('./pages/vista_concursales/Co
 const DirectorHomePage = lazy(() => import('./pages/vista_director/DirectorHomePage.jsx'))
 
 // Alta de Cargo
-const CargosPage    = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
-const AltaCargoPage = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
+const CargosPage      = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
+const AltaCargoPage   = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
+const ListaCargosPage = lazy(() => import('./pages/vista_alta_cargo/ListaCargosPage.jsx'))
+const SubirDataPage   = lazy(() => import('./pages/vista_alta_cargo/SubirDataPage.jsx'))
 
 // Seguridad (solo admin)
 const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.jsx'))
@@ -177,10 +179,10 @@ export default function App() {
                   <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/lista" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES}><ListaCargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/subir" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES}><SubirDataPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/decreto" element={
                   <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>

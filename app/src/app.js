@@ -87,6 +87,17 @@ function createApp(options = {}) {
     },
   }));
 
+  // Swagger UI — solo en desarrollo
+  if (config.env !== 'production') {
+    const swaggerUi   = require('swagger-ui-express')
+    const swaggerSpec = require('./config/swagger')
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customSiteTitle: 'Dotacion RRHH — API Docs',
+      swaggerOptions: { persistAuthorization: true },
+    }))
+    app.get('/api/docs.json', (req, res) => res.json(swaggerSpec))
+  }
+
   // Health check endpoint
   app.get('/health', async (req, res) => {
     try {

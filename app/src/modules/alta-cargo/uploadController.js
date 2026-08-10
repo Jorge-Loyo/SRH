@@ -44,8 +44,8 @@ function mapSituacionRevista(val, tipoCph) {
 
 function mapEstado(estado) {
   const e = (estado || '').trim().toLowerCase();
-  if (e === 'bloqueado') return 'bloqueado';
-  return 'activo';
+  if (e === 'bloqueado' || e === 'no_vigente') return 'no_vigente';
+  return 'vigente';
 }
 
 async function uploadDotacion(req, res) {
@@ -108,7 +108,7 @@ async function uploadDotacion(req, res) {
              id_carrera=(SELECT id_carrera FROM carreras WHERE codigo=? LIMIT 1),
              id_modalidad=(SELECT id FROM modalidades WHERE nombre=? LIMIT 1),
              id_especialidad=(SELECT id FROM especialidades WHERE nombre=? LIMIT 1),
-             id_puesto_tec=CASE WHEN ?='TEC' THEN (SELECT id FROM puestos_tec WHERE nombre=? LIMIT 1) ELSE NULL END,
+             id_puesto=CASE WHEN ?='TEC' THEN (SELECT id FROM puestos_cargo WHERE nombre=? AND carrera='tec' LIMIT 1) ELSE NULL END,
              fecha_actualizacion=NOW() WHERE id_sial=?`,
             [r.sigla, r.carrera, r.modalidad, r.puesto, r.especialidad, r.estado, r.cargoDesde, r.cargoHasta, r.antiguedad, r.situacionRevista,
              r.carrera, r.modalidad, r.especialidad, r.carrera, r.puesto, r.id_sial]
@@ -126,7 +126,7 @@ async function uploadDotacion(req, res) {
                id_carrera=(SELECT id_carrera FROM carreras WHERE codigo=carrera LIMIT 1),
                id_modalidad=(SELECT id FROM modalidades WHERE nombre=modalidad LIMIT 1),
                id_especialidad=(SELECT id FROM especialidades WHERE nombre=especialidad LIMIT 1),
-               id_puesto_tec=CASE WHEN carrera='TEC' THEN (SELECT id FROM puestos_tec WHERE nombre=puesto LIMIT 1) ELSE NULL END
+               id_puesto=CASE WHEN carrera='TEC' THEN (SELECT id FROM puestos_cargo WHERE nombre=puesto AND carrera='tec' LIMIT 1) ELSE NULL END
              WHERE id_sial=?`,
             [r.id_sial]
           );

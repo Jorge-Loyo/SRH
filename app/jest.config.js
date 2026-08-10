@@ -3,7 +3,8 @@ module.exports = {
   // Backend tests use Node environment; React component tests override with @jest-environment jsdom
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.js', '<rootDir>/tests/test-setup.js'],
+  setupFiles: ['<rootDir>/tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/tests/test-setup.js'],
   testTimeout: 30000,
   transform: {
     '^.+\\.jsx?$': 'babel-jest',

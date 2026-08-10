@@ -1,12 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
-const { AppDataSource } = require('../src/config/data-source');
 const apiRoutes = require('../src/routes');
 const { auditMiddleware } = require('../src/middlewares/audit');
 
 async function initTestDataSource(entities) {
-  // Reconfigure AppDataSource for in-memory SQL.js (pure WASM, no native build)
+  const { AppDataSource } = require('../src/config/data-source');
+  const path = require('path');
+
   AppDataSource.setOptions({
     type: 'sqljs',
     database: new Uint8Array(),
@@ -15,6 +16,9 @@ async function initTestDataSource(entities) {
     dropSchema: true,
     logging: false,
     entities,
+    sqlJsConfig: {
+      locateFile: (file) => path.join(__dirname, '..', 'node_modules', 'sql.js', 'dist', file),
+    },
   });
   if (AppDataSource.isInitialized) await AppDataSource.destroy();
   await AppDataSource.initialize();
@@ -32,7 +36,7 @@ async function createTestApp() {
   const { Permission } = require('../src/entities-class/Permission');
   const { Recorrida } = require('../src/entities-class/Recorrida');
 
-  await initTestDataSource([Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida]);
+  const ds = await initTestDataSource([Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida]);
 
   const app = express();
   app.use(cookieParser());
@@ -41,14 +45,14 @@ async function createTestApp() {
   // Minimal health route similar to server's
   app.get('/health', async (_req, res) => {
     try {
-      await AppDataSource.query('SELECT 1');
+      await ds.query('SELECT 1');
       res.json({ status: 'ok', db: 'sqljs' });
     } catch (e) {
       res.status(500).json({ status: 'fail', error: e.message });
     }
   });
   app.use('/api', auditMiddleware, apiRoutes);
-  return { app, ds: AppDataSource, entities: { Sigla, Persona, Cargo, Rol, User, RefreshToken, Permission, Recorrida } };
+  return { app, ds, entities: { Sigla, Persona, Cargo, Rol, User, RefreshToken, Permission, Recorrida } };
 }
 
 module.exports = { createTestApp };

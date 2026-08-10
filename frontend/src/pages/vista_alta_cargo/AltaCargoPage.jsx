@@ -259,51 +259,70 @@ function EtiquetaPicker({ value, onChange }) {
 }
 
 // --- Constantes ---
-const CARRERAS_EXCLUIDAS = ['doc', 'res', 'sup', 'sg']
-
-const NORMA_POR_CARRERA = {
-  cph: 'Ley 6.035',
-  tec: 'Ley 6.035',
-  enf: 'Ley 6.767',
-  gen: 'Ley 471',
-}
+// (carreras y jornadas se cargan desde BD)
 
 const EMPTY_FORM = {
-  sigla: '', carrera_seleccionada: '', modalidad: '', nivel_formacion: '',
+  sigla: '', carrera_seleccionada: '', modalidad: '',
   puesto: '', puesto_es_medico: 0, especialidad: '', cargo_desde: '', cantidad: 1,
   categoria_interna: '', jornada: '',
-  nro_resolucion: '', expediente_origen: '',
+  nro_resolucion: '', documento_origen: '',
+  tipo_cargo_estructura: '', tipo_eg: '', tipo_tec: '',
 }
 
-function isComplete(form) {
-  const { sigla, carrera_seleccionada: c, modalidad, nivel_formacion, puesto, especialidad, cargo_desde } = form
+function isComplete(form, modo) {
+  const { sigla, carrera_seleccionada: c, modalidad, puesto, especialidad, cargo_desde } = form
   if (!sigla || !c || !cargo_desde) return false
-  if (c === 'cph') return !!modalidad && !!puesto && !!especialidad
-  if (c === 'enf') return !!nivel_formacion && !!form.jornada
-  if (c === 'tec') return !!modalidad && !!puesto
-  return false
+  if (c === 'cph') {
+    if (modo === 'estructura') {
+      const tipo = form.tipo_cargo_estructura
+      if (!tipo) return false
+      if (tipo === 'jefe') return !!modalidad && !!puesto && !!especialidad
+      return true // director / subdirector no requieren modalidad/puesto/esp
+    }
+    return !!modalidad && !!puesto && !!especialidad
+  }
+  if (c === 'eg') {
+    if (modo === 'estructura') return !!form.tipo_eg
+    return true
+  }
+  if (c === 'enf') return !!form.jornada
+  if (c === 'tec') return !!modalidad && !!puesto && !!form.tipo_tec
+  return true
 }
 
-function buildPayload(form, expediente) {
+function buildPayload(form, documento, tipo_alta, modo, norma_referencia) {
   const {
-    sigla, carrera_seleccionada, modalidad, nivel_formacion, puesto, especialidad,
-    cargo_desde, cantidad, categoria_interna, jornada, nro_resolucion, expediente_origen,
+    sigla, carrera_seleccionada, modalidad, puesto, especialidad,
+    cargo_desde, cantidad, categoria_interna, jornada, nro_resolucion, documento_origen,
+    tipo_cargo_estructura, tipo_eg, tipo_tec,
   } = form
-  const norma_referencia = NORMA_POR_CARRERA[carrera_seleccionada] ?? null
   const base = {
-    cargo_desde, cargo_hasta: null, antiguedad: cargo_desde, expediente,
+    cargo_desde, cargo_hasta: null, antiguedad: cargo_desde,
+    documento, tipo_alta,
     cantidad: Number(cantidad),
     categoria_interna:  categoria_interna  || null,
-    norma_referencia,
+    norma_referencia:   norma_referencia   || null,
     nro_resolucion:     nro_resolucion     || null,
-    expediente_origen:  expediente_origen  || null,
+    documento_origen:   documento_origen   || null,
   }
-  if (carrera_seleccionada === 'cph') return { sigla, carrera_seleccionada, tipo_cph: 'ejecucion', modalidad, puesto, especialidad, ...base }
-  if (carrera_seleccionada === 'enf') return { sigla, carrera_seleccionada, nivel_formacion, jornada: jornada || null, ...base }
-  return { sigla, carrera_seleccionada, modalidad, puesto, especialidad, ...base }
+  if (carrera_seleccionada === 'cph') {
+    const tipo_cph = modo === 'estructura' ? tipo_cargo_estructura : 'ejecucion'
+    // jefe estructura necesita modalidad/puesto/esp; director/subdirector no
+    const extra = (modo === 'estructura' && tipo_cph !== 'jefe')
+      ? {}
+      : { modalidad, puesto, especialidad }
+    return { sigla, carrera_seleccionada, tipo_cph, ...extra, ...base }
+  }
+  if (carrera_seleccionada === 'eg') {
+    const tipo_eg_val = modo === 'estructura' ? tipo_eg : 'ejecucion'
+    return { sigla, carrera_seleccionada, tipo_eg: tipo_eg_val, ...base }
+  }
+  if (carrera_seleccionada === 'enf') return { sigla, carrera_seleccionada, jornada: jornada || null, ...base }
+  if (carrera_seleccionada === 'tec') return { sigla, carrera_seleccionada, tipo_tec, modalidad, puesto, especialidad, ...base }
+  return { sigla, carrera_seleccionada, ...base }
 }
 
-export default function AltaCargoPage({ embedded = false }) {
+export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) {
   const wrap = embedded ? '' : 'px-6 py-8'
 
   const [expediente,     setExpediente]     = useState('')
@@ -320,6 +339,8 @@ export default function AltaCargoPage({ embedded = false }) {
   const [espNoMedico,    setEspNoMedico]    = useState([])
   const [espTec,         setEspTec]         = useState([])
   const [modalidades,    setModalidades]    = useState([])
+  const [jornadas,       setJornadas]       = useState([])
+  const [tiposCargo,     setTiposCargo]     = useState([])
   const [puestos,        setPuestos]        = useState([])
   const [picker,         setPicker]         = useState(null)
 
@@ -327,20 +348,28 @@ export default function AltaCargoPage({ embedded = false }) {
     altaCargoApi.listCarreras().then(setCarreras).catch(() => {})
     altaCargoApi.listSiglas().then(setSiglas).catch(() => {})
     altaCargoApi.listModalidades().then(setModalidades).catch(() => {})
+    altaCargoApi.listJornadas().then(setJornadas).catch(() => {})
     altaCargoApi.listEspecialidades('medico').then(rows => setEspMedico(rows.map(r => r.nombre))).catch(() => {})
     altaCargoApi.listEspecialidades('no_medico').then(rows => setEspNoMedico(rows.map(r => r.nombre))).catch(() => {})
     altaCargoApi.listEspecialidades(null, 'TEC').then(rows => setEspTec(rows.map(r => r.nombre))).catch(() => {})
   }, [])
+
+  // Cargar tipos de cargo cuando cambia la carrera en modo estructura
+  useEffect(() => {
+    if (modo !== 'estructura' || !form.carrera_seleccionada) { setTiposCargo([]); return }
+    altaCargoApi.listTiposCargo(form.carrera_seleccionada.toUpperCase()).then(setTiposCargo).catch(() => {})
+  }, [form.carrera_seleccionada, modo])
 
   // Cargar puestos cuando cambia carrera o modalidad
   useEffect(() => {
     const c = form.carrera_seleccionada
     const m = form.modalidad
     if (!c || (c !== 'cph' && c !== 'tec')) { setPuestos([]); return }
-    // Para CPH filtramos por tipo segun modalidad; para TEC traemos todos
     const tipo = c === 'cph' ? (m ? m.toLowerCase() : null) : null
-    altaCargoApi.listPuestos(c, tipo).then(setPuestos).catch(() => {})
-  }, [form.carrera_seleccionada, form.modalidad])
+    altaCargoApi.listPuestos(c, tipo, modo).then(setPuestos).catch(() => {})
+  }, [form.carrera_seleccionada, form.modalidad, form.tipo_cargo_estructura])
+
+  const tipo_alta = modo === 'estructura' ? 'estructura' : 'ejecucion'
 
   const confirmarExpediente = () => {
     const v = expInput.trim()
@@ -363,7 +392,8 @@ export default function AltaCargoPage({ embedded = false }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    setCargos(prev => [...prev, buildPayload(form, expediente)])
+    const norma = carreras.find(cr => cr.codigo.toLowerCase() === form.carrera_seleccionada)?.norma_referencia ?? null
+    setCargos(prev => [...prev, buildPayload(form, expediente, tipo_alta, modo, norma)])
     setForm(EMPTY_FORM)
     setError(null)
   }
@@ -389,6 +419,11 @@ export default function AltaCargoPage({ embedded = false }) {
   const esCph = c === 'cph'
   const esEnf = c === 'enf'
   const esTec = c === 'tec'
+  const esEg  = c === 'eg'
+
+  // Modalidad aplica según requiere_modalidad del tipo seleccionado (estructura) o siempre para ejecución CPH/TEC
+  const tipoCphObj = tiposCargo.find(t => t.codigo === form.tipo_cargo_estructura)
+  const mostrarModalidad = (esCph && (modo !== 'estructura' || tipoCphObj?.requiere_modalidad)) || esTec
 
   // Especialidades segun si el puesto seleccionado es medico o no
   const espOptions = esCph
@@ -398,7 +433,7 @@ export default function AltaCargoPage({ embedded = false }) {
   const puestosOptions = puestos.map(p => p.nombre)
 
   const carreraOpts = carreras
-    .filter(cr => !CARRERAS_EXCLUIDAS.includes(cr.codigo.toLowerCase()))
+    .filter(cr => modo === 'estructura' ? cr.solo_estructura : !cr.excluir_alta)
     .map(cr => ({ value: cr.codigo.toLowerCase(), label: cr.nombre }))
 
   return (
@@ -429,18 +464,18 @@ export default function AltaCargoPage({ embedded = false }) {
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900 mb-4">Alta de Cargo por Expediente</h1>
+        <h1 className="text-xl font-bold text-gray-900 mb-4">{modo === 'estructura' ? 'Cargo por Estructura' : 'Cargo por Ejecucion'}</h1>
 
         {!expConfirmado ? (
           <div className="flex items-end gap-3 p-4 rounded-xl border-2 border-primary-200 bg-primary-50">
             <div className="flex-1">
               <label className="block text-xs font-bold text-primary-700 mb-1.5 uppercase tracking-wider">
-                Expediente <span className="text-red-400">*</span>
+                {modo === 'estructura' ? 'Decreto' : 'Expediente'} <span className="text-red-400">*</span>
               </label>
               <input type="text" value={expInput}
                 onChange={e => setExpInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && confirmarExpediente()}
-                placeholder="Ej: EX-2026-32260736-GCABA-DGAYDRH"
+                placeholder={modo === 'estructura' ? 'Ej: 541/MSGC/26' : 'Ej: EX-2026-32260736-GCABA-DGAYDRH'}
                 className="form-input text-sm w-full" autoFocus />
             </div>
             <button type="button" onClick={confirmarExpediente}
@@ -456,7 +491,7 @@ export default function AltaCargoPage({ embedded = false }) {
                 <CheckIcon className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <p className="text-xs font-medium text-green-700 uppercase tracking-wider">Expediente confirmado</p>
+                <p className="text-xs font-medium text-green-700 uppercase tracking-wider">{modo === 'estructura' ? 'Decreto confirmado' : 'Expediente confirmado'}</p>
                 <p className="text-sm font-bold text-gray-800 mt-0.5">{expediente}</p>
               </div>
             </div>
@@ -494,7 +529,34 @@ export default function AltaCargoPage({ embedded = false }) {
             {/* Fila 2 — Detalle condicional */}
             {c && (
               <div className="bg-gray-50 rounded-xl px-4 py-3 space-y-3">
-                {(esCph || esTec) && (
+                {modo === 'estructura' && esCph && (
+                  <ButtonGroup
+                    label="Tipo de cargo"
+                    options={tiposCargo.map(t => ({ value: t.codigo, label: t.nombre }))}
+                    value={form.tipo_cargo_estructura}
+                    disabled={false}
+                    onChange={v => setForm(p => ({ ...p, tipo_cargo_estructura: v, modalidad: '', puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                )}
+                {modo === 'estructura' && esEg && (
+                  <ButtonGroup
+                    label="Tipo de cargo"
+                    options={tiposCargo.map(t => ({ value: t.codigo, label: t.nombre }))}
+                    value={form.tipo_eg}
+                    disabled={false}
+                    onChange={v => setForm(p => ({ ...p, tipo_eg: v }))} />
+                )}
+                {esTec && (
+                  <ButtonGroup
+                    label="Tipo TEC"
+                    options={[
+                      { value: 'pof', label: 'POF (Planta)' },
+                      { value: 'pou', label: 'POU (Guardia)' },
+                    ]}
+                    value={form.tipo_tec}
+                    disabled={false}
+                    onChange={v => setForm(p => ({ ...p, tipo_tec: v }))} />
+                )}
+                {mostrarModalidad && (
                   <ButtonGroup
                     label="Modalidad"
                     options={modalidades.map(m => m.nombre)}
@@ -503,28 +565,14 @@ export default function AltaCargoPage({ embedded = false }) {
                     onChange={v => setForm(p => ({ ...p, modalidad: v, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
                 )}
                 {esEnf && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <ButtonGroup
-                      label="Nivel de formacion"
-                      options={[
-                        { value: 'enfermero prof',           label: 'Enfermero Prof.' },
-                        { value: 'licenciado en enfermeria', label: 'Lic. en Enfermeria' },
-                      ]}
-                      value={form.nivel_formacion}
-                      disabled={false}
-                      onChange={v => setForm(p => ({ ...p, nivel_formacion: v }))} />
-                    <ButtonGroup
-                      label="Jornada"
-                      options={[
-                        { value: 'Jornada completa', label: 'Jornada completa' },
-                        { value: 'ATP',              label: 'ATP' },
-                      ]}
-                      value={form.jornada}
-                      disabled={false}
-                      onChange={v => setForm(p => ({ ...p, jornada: v }))} />
-                  </div>
+                  <ButtonGroup
+                    label="Jornada"
+                    options={jornadas.map(j => ({ value: j.nombre, label: j.nombre }))}
+                    value={form.jornada}
+                    disabled={false}
+                    onChange={v => setForm(p => ({ ...p, jornada: v }))} />
                 )}
-                {(esCph || esTec) && (
+                {mostrarModalidad && (
                   <div className="grid grid-cols-2 gap-3">
                     <PickerField label="Puesto" value={form.puesto}
                       disabled={!form.modalidad}
@@ -546,7 +594,7 @@ export default function AltaCargoPage({ embedded = false }) {
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">Norma</label>
                 <input type="text"
-                  value={NORMA_POR_CARRERA[c] ?? ''}
+                  value={carreras.find(cr => cr.codigo.toLowerCase() === c)?.norma_referencia ?? ''}
                   readOnly
                   className="form-input text-sm w-full bg-gray-50 text-gray-400 cursor-default" />
               </div>
@@ -558,9 +606,9 @@ export default function AltaCargoPage({ embedded = false }) {
                   className="form-input text-sm w-full" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Expediente origen</label>
-                <input type="text" value={form.expediente_origen}
-                  onChange={e => setForm(p => ({ ...p, expediente_origen: e.target.value }))}
+                <label className="block text-xs font-medium text-gray-500 mb-1.5">Documento origen</label>
+                <input type="text" value={form.documento_origen}
+                  onChange={e => setForm(p => ({ ...p, documento_origen: e.target.value }))}
                   placeholder="Ej: EX-2026-17549845"
                   className="form-input text-sm w-full" />
               </div>
@@ -594,7 +642,7 @@ export default function AltaCargoPage({ embedded = false }) {
               </div>
               <div className="flex flex-col justify-end">
                 {error && <p className="text-xs text-red-500 mb-1.5 truncate">{error}</p>}
-                <button type="submit" className="btn-primary w-full" disabled={saving || !isComplete(form)}>
+                <button type="submit" className="btn-primary w-full" disabled={saving || !isComplete(form, modo)}>
                   + Agregar
                 </button>
               </div>
@@ -607,7 +655,7 @@ export default function AltaCargoPage({ embedded = false }) {
         <div className="w-72 flex-shrink-0">
           <div className="rounded-xl border border-gray-200 bg-white sticky top-4">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Cargos del expediente</span>
+              <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{modo === 'estructura' ? 'Cargos del decreto' : 'Cargos del expediente'}</span>
               {cargos.length > 0 && (
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary-600 text-white text-xs font-bold">
                   {cargos.reduce((acc, c) => acc + c.cantidad, 0)}
@@ -624,7 +672,7 @@ export default function AltaCargoPage({ embedded = false }) {
                       <p className="text-xs font-semibold text-green-700">
                         {results.reduce((acc, r) => acc + r.codigos.length, 0)} cargos registrados
                       </p>
-                      <p className="text-xs text-green-600 mt-0.5">Exp: {results[0]?.payload.expediente}</p>
+                      <p className="text-xs text-green-600 mt-0.5">{modo === 'estructura' ? 'Decreto' : 'Exp'}: {results[0]?.payload.documento}</p>
                     </div>
                   </div>
                   {results.map((r, i) => {

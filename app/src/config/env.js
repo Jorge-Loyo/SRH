@@ -2,7 +2,10 @@
 const path = require('path');
 try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') }); } catch {}
 // .env.local overrides .env — usar para desarrollo local sin Docker (ej: DB_HOST=localhost)
-try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env.local'), override: true }); } catch {}
+// En modo test, no cargar .env.local para que las variables de setup.js tengan prioridad
+if (process.env.NODE_ENV !== 'test') {
+  try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env.local'), override: true }); } catch {}
+}
 
 // ✅ BLOQUEANTE: Validar environment crítico
 const { validateEnvironment } = require('../utils/envValidator');

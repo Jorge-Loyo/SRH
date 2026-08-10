@@ -15,37 +15,48 @@ class AltaCargoService {
     return (result?.max ?? 0) + 1;
   }
 
-  async #nextCodigo(manager, carrera, modalidadCod, tipoCph) {
-    let prefix;
-    if (carrera.toUpperCase() === 'CPH' && tipoCph && tipoCph !== 'ejecucion') {
-      const sufijo = tipoCph === 'jefe' ? 'J' : 'D';
-      prefix = modalidadCod ? `CPH-${sufijo}-${modalidadCod.toUpperCase()}` : `CPH-${sufijo}`;
+  async #nextCodigo(manager, carrera, modalidadCod, tipo) {
+    const c = carrera.toUpperCase()
+    const m = modalidadCod ? modalidadCod.toUpperCase() : null
+    let prefix
+
+    if (c === 'CPH') {
+      if      (tipo === 'jefe')        prefix = m ? `CPH-J-${m}` : 'CPH-J'
+      else if (tipo === 'director')    prefix = 'CPH-D'
+      else if (tipo === 'subdirector') prefix = 'CPH-SD'
+      else                             prefix = m ? `CPH-${m}` : 'CPH'
+    } else if (c === 'EG') {
+      if      (tipo === 'jefe')        prefix = 'EG-J'
+      else if (tipo === 'director')    prefix = 'EG-D'
+      else if (tipo === 'gerencial')   prefix = 'EG-CG'
+      else                             prefix = 'EG'
+    } else if (c === 'TEC') {
+      prefix = m ? `TEC-${m}` : 'TEC'
     } else {
-      prefix = modalidadCod ? `${carrera.toUpperCase()}-${modalidadCod.toUpperCase()}` : carrera.toUpperCase();
+      prefix = c
     }
+
     const [{ total }] = await manager.query(
       `SELECT COUNT(*) as total FROM new_cargo WHERE codigo LIKE ?`, [`${prefix}-%`]
-    );
-    const seq = (parseInt(total, 10) + 1).toString().padStart(6, '0');
-    return `${prefix}-${seq}`;
+    )
+    const seq = (parseInt(total, 10) + 1).toString().padStart(6, '0')
+    return `${prefix}-${seq}`
   }
 
   // ─── CREATE ──────────────────────────────────────────────────────────────────
   async create(payload) {
-    const { carrera_seleccionada, expediente, cantidad = 1 } = payload;
+    const { carrera_seleccionada, documento, tipo_alta = 'ejecucion', cantidad = 1 } = payload;
     const dataSource = this.altaRepo.manager.connection;
 
     return await dataSource.transaction(async (manager) => {
       const altaTxRepo = manager.getRepository(this.altaRepo.target);
       const alta       = altaTxRepo.create({
-        carrera_seleccionada,
-        expediente,
+        tipo_alta,
+        documento,
         cantidad,
-        categoria_interna:  payload.categoria_interna  ?? null,
-        jornada:            payload.jornada            ?? null,
-        norma_referencia:   payload.norma_referencia   ?? null,
-        nro_resolucion:     payload.nro_resolucion     ?? null,
-        expediente_origen:  payload.expediente_origen  ?? null,
+        norma_referencia:  payload.norma_referencia  ?? null,
+        nro_resolucion:    payload.nro_resolucion    ?? null,
+        documento_origen:  payload.documento_origen  ?? null,
       });
       const savedAlta  = await altaTxRepo.save(alta);
 
@@ -58,12 +69,16 @@ class AltaCargoService {
         );
         modalidadCod = mod?.id_cod ?? null;
       }
+      // Para TEC el modalidadCod viene del tipo (pou/pof)
+      if (carrera_seleccionada === 'tec') {
+        modalidadCod = payload.tipo_tec === 'pou' ? 'POU' : 'POF';
+      }
 
       const codigos = [];
       let detalle = null;
 
       for (let i = 0; i < cantidad; i++) {
-        const codigo = await this.#nextCodigo(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph);
+        const codigo = await this.#nextCodigo(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg);
 
         if (carrera_seleccionada === 'cph') {
           const numero_unico = await this.#nextNumero(manager, this.cphRepo.target);
@@ -75,37 +90,49 @@ class AltaCargoService {
         } else if (carrera_seleccionada === 'enf') {
           const numero_unico = await this.#nextNumero(manager, this.enfRepo.target);
           const repo = manager.getRepository(this.enfRepo.target);
-          detalle = await repo.save(repo.create({
-            id_alta: savedAlta.id, nivel_formacion: payload.nivel_formacion, numero_unico,
-          }));
+          detalle = await repo.save(repo.create({ id_alta: savedAlta.id, numero_unico }));
         } else if (carrera_seleccionada === 'tec') {
           const repoTarget = payload.tipo_tec === 'pou' ? this.pouRepo.target : this.pofRepo.target;
           const numero_unico = await this.#nextNumero(manager, repoTarget);
           const repo = manager.getRepository(repoTarget);
-          detalle = await repo.save(repo.create({
-            id_alta: savedAlta.id, puesto: payload.puesto, numero_unico,
-          }));
+          detalle = await repo.save(repo.create({ id_alta: savedAlta.id, puesto: payload.puesto, numero_unico }));
+        }
+        // EG no tiene tabla de registro propia por ahora
+
+        const tipo    = payload.tipo_cph ?? payload.tipo_eg ?? null;
+        const esEstructura = tipo && tipo !== 'ejecucion'
+
+        // Resolver id_jornada desde nombre si viene como texto
+        let id_jornada = payload.id_jornada ?? null
+        if (!id_jornada && payload.jornada) {
+          const [jRow] = await manager.query(`SELECT id FROM jornadas WHERE nombre = ? LIMIT 1`, [payload.jornada])
+          id_jornada = jRow?.id ?? null
         }
 
-        const tipoCph = payload.tipo_cph || null;
-        const esCphJD  = carrera_seleccionada.toUpperCase() === 'CPH' && tipoCph && tipoCph !== 'ejecucion';
+        // Resolver id_puesto para TEC desde id_puesto_tec o puesto texto
+        let id_puesto = payload.id_puesto ?? null
+        if (!id_puesto && carrera_seleccionada === 'tec' && payload.puesto) {
+          const [pRow] = await manager.query(`SELECT id FROM puestos_cargo WHERE nombre = ? AND carrera = 'tec' LIMIT 1`, [payload.puesto])
+          id_puesto = pRow?.id ?? null
+        }
 
         await manager.query(
-          `INSERT INTO new_cargo (codigo, sigla, carrera, modalidad, nivel_formacion, puesto, especialidad, cargo_desde, cargo_hasta, antiguedad, estado, situacion_revista, id_alta, categoria_interna, jornada, norma_referencia, nro_resolucion, expediente_origen)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activo', ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO new_cargo (codigo, sigla, carrera, modalidad, nivel_formacion, puesto, especialidad, cargo_desde, cargo_hasta, antiguedad, estado, situacion_revista, id_alta, categoria_interna, id_jornada, id_puesto, norma_referencia, nro_resolucion, documento_origen)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'vigente', ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             codigo, payload.sigla, carrera_seleccionada.toUpperCase(),
-            payload.modalidad ?? null, payload.nivel_formacion ?? null,
+            payload.modalidad ?? null, null,
             payload.puesto ?? null, payload.especialidad ?? null,
             payload.cargo_desde ?? null, payload.cargo_hasta ?? null,
             payload.antiguedad ?? null,
-            esCphJD ? 'activo' : null,
+            esEstructura ? 'activo' : null,
             savedAlta.id,
-            payload.categoria_interna  ?? null,
-            payload.jornada            ?? null,
-            payload.norma_referencia   ?? null,
-            payload.nro_resolucion     ?? null,
-            payload.expediente_origen  ?? null,
+            payload.categoria_interna ?? null,
+            id_jornada,
+            id_puesto,
+            payload.norma_referencia  ?? null,
+            payload.nro_resolucion    ?? null,
+            payload.documento_origen  ?? null,
           ]
         );
         codigos.push(codigo);
@@ -117,11 +144,9 @@ class AltaCargoService {
   }
 
   // ─── LIST ────────────────────────────────────────────────────────────────────
-  async list({ carrera_seleccionada, limit, offset, sort, order }) {
-    const where = {};
-    if (carrera_seleccionada) where.carrera_seleccionada = carrera_seleccionada;
+  async list({ limit, offset, sort, order }) {
     const [rows, count] = await this.altaRepo.findAndCount({
-      where, order: { [sort]: order }, skip: offset, take: limit,
+      order: { [sort]: order }, skip: offset, take: limit,
     });
     return { rows, count };
   }

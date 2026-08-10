@@ -45,8 +45,8 @@ function SiglaPickerModal({ siglas, value, onSelect, onClose }) {
   )
 }
 
-const ESTADOS_ENUM = ['activo', 'bloqueado']
-const ESTADOS_FILTER = ['activo', 'bloqueado', 'comision', 'retencion']
+const ESTADOS_ENUM = ['vigente', 'no_vigente']
+const ESTADOS_FILTER = ['vigente', 'no_vigente', 'comision', 'retencion']
 const SR_ENUM = ['activo', 'retencion_cargo', 'comision']
 const SR_LABELS = { activo: 'Activo', retencion_cargo: 'Retención de Cargo', comision: 'Comisión' }
 const SR_STYLES = {
@@ -210,10 +210,10 @@ const COLS = [
 ]
 
 const ESTADO_STYLES = {
-  activo:    'bg-green-100 text-green-700',
-  bloqueado: 'bg-red-100 text-red-700',
-  comision:  'bg-yellow-100 text-yellow-700',
-  retencion: 'bg-gray-100 text-gray-600',
+  vigente:    'bg-green-100 text-green-700',
+  no_vigente: 'bg-red-100 text-red-700',
+  comision:   'bg-yellow-100 text-yellow-700',
+  retencion:  'bg-gray-100 text-gray-600',
 }
 
 const fmtDate = v => v ? new Date(v).toLocaleDateString('es-AR') : null

@@ -29,7 +29,7 @@ async function listNewCargo(req, res) {
     if (estado) {
       if (estado === 'comision') { conditions.push("nc.situacion_revista = 'comision'") }
       else if (estado === 'retencion') { conditions.push("nc.situacion_revista = 'retencion_cargo'") }
-      else { conditions.push('nc.estado = ?'); params.push(estado) }
+      else { conditions.push('nc.estado = ?'); params.push(estado === 'activo' ? 'vigente' : estado === 'bloqueado' ? 'no_vigente' : estado) }
     }
     if (tipoCph) {
       if (tipoCph === 'jefe')          conditions.push("nc.codigo LIKE 'CPH-J-%'")
@@ -43,9 +43,9 @@ async function listNewCargo(req, res) {
       `SELECT COUNT(*) as total FROM new_cargo nc LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta ${where}`, params
     )
     const rows = await AppDataSource.query(
-      `SELECT nc.id, nc.codigo, nc.sigla, nc.carrera, nc.modalidad, nc.nivel_formacion, nc.puesto, nc.especialidad,
+      `SELECT nc.id, nc.codigo, nc.sigla, nc.carrera, nc.modalidad, nc.puesto, nc.especialidad,
               nc.estado, nc.situacion_revista, nc.cargo_desde, nc.cargo_hasta, nc.antiguedad, nc.fecha_actualizacion,
-              nc.categoria_interna,
+              nc.categoria_interna, nc.id_jornada, nc.id_puesto,
               CASE WHEN nc.estado = 'activo' AND nc.antiguedad IS NOT NULL
                 THEN CONCAT(
                   TIMESTAMPDIFF(YEAR, nc.antiguedad, CURDATE()), ' a ',
@@ -95,7 +95,7 @@ async function exportNewCargo(req, res) {
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
     const rows = await AppDataSource.query(
-      `SELECT id_sial, codigo, sigla, carrera, modalidad, nivel_formacion, puesto, especialidad,
+      `SELECT id_sial, codigo, sigla, carrera, modalidad, puesto, especialidad,
               estado, situacion_revista, cargo_desde, cargo_hasta, antiguedad, fecha_actualizacion,
               CASE WHEN estado = 'activo' AND antiguedad IS NOT NULL
                 THEN CONCAT(
@@ -183,12 +183,43 @@ async function listEspecialidades(req, res) {
 async function listCarreras(req, res) {
   try {
     const rows = await AppDataSource.query(
-      `SELECT id_carrera, codigo, nombre FROM carreras WHERE activo = 1 ORDER BY id_carrera ASC`
+      `SELECT id_carrera, codigo, nombre, norma_referencia, excluir_alta, solo_estructura
+       FROM carreras WHERE activo = 1 ORDER BY id_carrera ASC`
     );
     res.json(rows);
   } catch (err) {
     logger.error('[carrerasController] listCarreras', { error: err.message });
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+async function listTiposCargo(req, res) {
+  try {
+    const carrera = (req.query.carrera || '').trim().toUpperCase()
+    const conditions = ['activo = 1', 'solo_estructura = 1']
+    const params = []
+    if (carrera) { conditions.push('aplica_carrera = ?'); params.push(carrera) }
+    const rows = await AppDataSource.query(
+      `SELECT id, codigo, nombre, aplica_carrera, requiere_modalidad
+       FROM tipos_cargo WHERE ${conditions.join(' AND ')} ORDER BY id ASC`,
+      params
+    )
+    res.json(rows)
+  } catch (err) {
+    logger.error('[carrerasController] listTiposCargo', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+}
+
+async function listJornadas(req, res) {
+  try {
+    const rows = await AppDataSource.query(
+      `SELECT id, nombre FROM jornadas WHERE activo = 1 ORDER BY id ASC`
+    )
+    res.json(rows)
+  } catch (err) {
+    logger.error('[carrerasController] listJornadas', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
 
@@ -198,7 +229,7 @@ async function getNewCargoInfo(req, res) {
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
     const [row] = await AppDataSource.query(
       `SELECT nc.id, nc.codigo, nc.sigla, nc.estado, nc.situacion_revista, nc.cargo_desde, nc.cargo_hasta, nc.antiguedad,
-              ca.expediente, ca.fecha_registro, ca.cantidad, ca.categoria_interna
+              ca.documento, ca.tipo_alta, ca.fecha_registro, ca.cantidad
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
        WHERE nc.id = ?`,
@@ -217,9 +248,10 @@ async function updateNewCargo(req, res) {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
 
-    // Manejar expediente por separado
-    if ('expediente' in req.body) {
-      const expediente = req.body.expediente?.trim() || null
+    // Manejar documento/expediente por separado
+    const docValue = req.body.documento ?? req.body.expediente ?? undefined
+    if (docValue !== undefined) {
+      const documento = docValue?.trim() || null
       const [cargo] = await AppDataSource.query(
         `SELECT id_alta FROM new_cargo WHERE id = ?`, [id]
       )
@@ -227,11 +259,13 @@ async function updateNewCargo(req, res) {
 
       if (cargo.id_alta) {
         await AppDataSource.query(
-          `UPDATE cargos_alta SET expediente = ? WHERE id = ?`, [expediente, cargo.id_alta]
+          `UPDATE cargos_alta SET documento = ?, expediente = ? WHERE id = ?`,
+          [documento, documento, cargo.id_alta]
         )
       } else {
         const result = await AppDataSource.query(
-          `INSERT INTO cargos_alta (carrera_seleccionada, expediente, cantidad) VALUES ('', ?, 1)`, [expediente]
+          `INSERT INTO cargos_alta (tipo_alta, documento, expediente, cantidad) VALUES ('ejecucion', ?, ?, 1)`,
+          [documento, documento]
         )
         await AppDataSource.query(
           `UPDATE new_cargo SET id_alta = ? WHERE id = ?`, [result.insertId, id]
@@ -256,9 +290,9 @@ async function updateNewCargo(req, res) {
     }
 
     const [updated] = await AppDataSource.query(
-      `SELECT nc.id, nc.codigo, nc.sigla, nc.carrera, nc.modalidad, nc.nivel_formacion, nc.especialidad,
+      `SELECT nc.id, nc.codigo, nc.sigla, nc.carrera, nc.modalidad, nc.especialidad,
               nc.estado, nc.situacion_revista, nc.cargo_desde, nc.cargo_hasta, nc.antiguedad, nc.fecha_actualizacion,
-              ca.expediente,
+              nc.id_jornada, nc.id_puesto, ca.documento, ca.tipo_alta,
               CASE WHEN nc.estado = 'activo' AND nc.antiguedad IS NOT NULL
                 THEN CONCAT(TIMESTAMPDIFF(YEAR, nc.antiguedad, CURDATE()), ' a ', MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m')
                 ELSE NULL END AS antiguedad_calc
@@ -277,10 +311,13 @@ async function listPuestos(req, res) {
   try {
     const carrera  = (req.query.carrera  || '').trim().toLowerCase()
     const tipo     = (req.query.tipo     || '').trim().toLowerCase()
+    const modo     = (req.query.modo     || 'ejecucion').trim().toLowerCase()
     const conditions = ['activo = 1']
     const params = []
     if (carrera) { conditions.push('carrera = ?'); params.push(carrera) }
-    if (tipo)    { conditions.push('(tipo = ? OR tipo = \'jefatura\')'); params.push(tipo) }
+    if (tipo)    { conditions.push('tipo = ?');    params.push(tipo) }
+    conditions.push('es_estructura = ?')
+    params.push(modo === 'estructura' ? 1 : 0)
     const rows = await AppDataSource.query(
       `SELECT id, nombre, carrera, tipo, es_medico FROM puestos_cargo WHERE ${conditions.join(' AND ')} ORDER BY tipo ASC, nombre ASC`,
       params
@@ -321,4 +358,4 @@ async function createEtiqueta(req, res) {
   }
 }
 
-module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos };
+module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo };
