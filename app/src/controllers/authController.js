@@ -7,6 +7,12 @@ const {
   refreshAccessToken,
   revokeUserSession,
 } = require('../services/AuthService');
+const { PAGE_PERMISSIONS } = require('../config/pagePermissions');
+const mpService = require('../services/modulePermissionsService');
+
+async function getAllowedModules(role) {
+  return mpService.getForRole(role);
+}
 
 const LoginSchema = z.union([
   z.object({ email: z.string().email(), password: z.string().min(1) }),
@@ -39,6 +45,7 @@ async function login(req, res) {
       accessToken: result.accessToken,
       refreshToken: config.auth.cookies ? undefined : result.refreshToken,
       user: result.user,
+      allowedModules: await getAllowedModules(result.user?.role),
     });
   } catch (e) {
     if (e?.issues) {
@@ -85,9 +92,9 @@ async function refresh(req, res) {
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/api/auth',
       });
-      return res.json({ accessToken: result.accessToken, user: result.user ?? null });
+      return res.json({ accessToken: result.accessToken, user: result.user ?? null, allowedModules: await getAllowedModules(result.user?.role) });
     }
-    return res.json({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user ?? null });
+    return res.json({ accessToken: result.accessToken, refreshToken: result.refreshToken, user: result.user ?? null, allowedModules: await getAllowedModules(result.user?.role) });
   } catch (e) {
     if (e?.statusCode) {
       return res.status(e.statusCode).json({ error: e.message });

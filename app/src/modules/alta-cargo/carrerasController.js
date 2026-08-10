@@ -18,14 +18,14 @@ async function listNewCargo(req, res) {
     const params = []
 
     if (q) {
-      conditions.push('(nc.codigo LIKE ? OR nc.sigla LIKE ? OR nc.puesto LIKE ? OR nc.especialidad LIKE ?)')
+      conditions.push('(nc.codigo LIKE ? OR nc.sigla LIKE ? OR nc.puesto LIKE ? OR nc.especialidad LIKE ? OR nc.norma_referencia LIKE ? OR nc.nro_resolucion LIKE ?)')
       const like = `%${q}%`
-      params.push(like, like, like, like)
+      params.push(like, like, like, like, like, like)
     }
     if (carrera)   { conditions.push('nc.carrera = ?');   params.push(carrera) }
     if (modalidad) { conditions.push('nc.modalidad = ?'); params.push(modalidad) }
     if (sigla)     { conditions.push('nc.sigla = ?');     params.push(sigla) }
-    if (categoria) { conditions.push('ca.categoria_interna = ?'); params.push(categoria) }
+    if (categoria) { conditions.push('nc.categoria_interna = ?'); params.push(categoria) }
     if (estado) {
       if (estado === 'comision') { conditions.push("nc.situacion_revista = 'comision'") }
       else if (estado === 'retencion') { conditions.push("nc.situacion_revista = 'retencion_cargo'") }
@@ -43,17 +43,29 @@ async function listNewCargo(req, res) {
       `SELECT COUNT(*) as total FROM new_cargo nc LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta ${where}`, params
     )
     const rows = await AppDataSource.query(
-      `SELECT nc.id, nc.codigo, nc.sigla, nc.carrera, nc.modalidad, nc.puesto, nc.especialidad,
-              nc.estado, nc.situacion_revista, nc.cargo_desde, nc.cargo_hasta, nc.antiguedad, nc.fecha_actualizacion,
-              nc.categoria_interna, nc.id_jornada, nc.id_puesto,
-              CASE WHEN nc.estado = 'activo' AND nc.antiguedad IS NOT NULL
-                THEN CONCAT(
-                  TIMESTAMPDIFF(YEAR, nc.antiguedad, CURDATE()), ' a ',
-                  MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m'
-                )
-                ELSE NULL
-              END AS antiguedad_calc
-       FROM new_cargo nc LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta ${where} ORDER BY nc.id DESC LIMIT ? OFFSET ?`,
+      `SELECT
+        nc.id, nc.id_sial, nc.codigo, nc.sigla, nc.carrera, nc.modalidad,
+        nc.puesto, nc.especialidad, nc.estado, nc.situacion_revista,
+        nc.cargo_desde, nc.cargo_hasta, nc.antiguedad, nc.fecha_alta,
+        nc.fecha_actualizacion, nc.categoria_interna,
+        nc.norma_referencia, nc.nro_resolucion, nc.documento_origen,
+        ca.id        AS id_alta,
+        ca.tipo_alta, ca.documento, ca.expediente, ca.cantidad,
+        ca.fecha_registro,
+        COALESCE(ca.norma_referencia, nc.norma_referencia)   AS norma_ref_final,
+        COALESCE(ca.nro_resolucion,   nc.nro_resolucion)     AS resolucion_final,
+        COALESCE(ca.documento_origen, nc.documento_origen)   AS doc_origen_final,
+        CASE WHEN nc.antiguedad IS NOT NULL
+          THEN CONCAT(
+            TIMESTAMPDIFF(YEAR,  nc.antiguedad, CURDATE()), ' a ',
+            MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m'
+          )
+          ELSE NULL
+        END AS antiguedad_calc
+       FROM new_cargo nc
+       LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
+       ${where}
+       ORDER BY nc.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     )
     res.json({ rows, total: parseInt(total, 10), page, limit })
@@ -228,8 +240,23 @@ async function getNewCargoInfo(req, res) {
     const id = parseInt(req.params.id, 10)
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido' })
     const [row] = await AppDataSource.query(
-      `SELECT nc.id, nc.codigo, nc.sigla, nc.estado, nc.situacion_revista, nc.cargo_desde, nc.cargo_hasta, nc.antiguedad,
-              ca.documento, ca.tipo_alta, ca.fecha_registro, ca.cantidad
+      `SELECT
+        nc.id, nc.id_sial, nc.codigo, nc.sigla, nc.carrera, nc.modalidad,
+        nc.puesto, nc.especialidad, nc.estado, nc.situacion_revista,
+        nc.cargo_desde, nc.cargo_hasta, nc.antiguedad, nc.fecha_alta,
+        nc.fecha_actualizacion, nc.categoria_interna,
+        nc.norma_referencia, nc.nro_resolucion, nc.documento_origen,
+        ca.tipo_alta, ca.documento, ca.expediente, ca.cantidad, ca.fecha_registro,
+        COALESCE(ca.norma_referencia, nc.norma_referencia)   AS norma_ref_final,
+        COALESCE(ca.nro_resolucion,   nc.nro_resolucion)     AS resolucion_final,
+        COALESCE(ca.documento_origen, nc.documento_origen)   AS doc_origen_final,
+        CASE WHEN nc.antiguedad IS NOT NULL
+          THEN CONCAT(
+            TIMESTAMPDIFF(YEAR,  nc.antiguedad, CURDATE()), ' a ',
+            MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m'
+          )
+          ELSE NULL
+        END AS antiguedad_calc
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
        WHERE nc.id = ?`,

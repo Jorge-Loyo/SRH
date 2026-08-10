@@ -140,7 +140,8 @@ export async function apiPost(path, body = {}) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, err.error || `Error ${res.status}`)
+    const detail = err.issues?.map(i => i.message).join(', ')
+    throw new ApiError(res.status, detail || err.error || `Error ${res.status}`)
   }
   return res.json()
 }
@@ -152,7 +153,8 @@ export async function apiPut(path, body = {}) {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
-    throw new ApiError(res.status, err.error || `Error ${res.status}`)
+    const detail = err.issues?.map(i => i.message).join(', ')
+    throw new ApiError(res.status, detail || err.error || `Error ${res.status}`)
   }
   return res.json()
 }

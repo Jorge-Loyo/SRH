@@ -52,6 +52,7 @@ const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.j
 const TokensPage    = lazy(() => import('./pages/vista_seguridad/TokensPage.jsx'))
 const UsuariosPage  = lazy(() => import('./pages/vista_seguridad/UsuariosPage.jsx'))
 const PermisosPage  = lazy(() => import('./pages/vista_seguridad/PermisosPage.jsx'))
+const RolesPage     = lazy(() => import('./pages/vista_seguridad/RolesPage.jsx'))
 const CargaMasivaPage = lazy(() => import('./pages/vista_seguridad/CargaMasivaPage.jsx'))
 
 // Herramientas
@@ -176,16 +177,16 @@ export default function App() {
 
                 {/* Cargo (Alta + Lista) */}
                 <Route path="cargos" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/lista" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><ListaCargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><ListaCargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/subir" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><SubirDataPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="SubirData"><SubirDataPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/decreto" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
 
@@ -201,6 +202,9 @@ export default function App() {
                 } />
                 <Route path="seguridad/permisos" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><PermisosPage /></ProtectedRoute>
+                } />
+                <Route path="seguridad/roles" element={
+                  <ProtectedRoute roles={ADMIN_ONLY}><RolesPage /></ProtectedRoute>
                 } />
                 <Route path="seguridad/carga-masiva" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><CargaMasivaPage /></ProtectedRoute>

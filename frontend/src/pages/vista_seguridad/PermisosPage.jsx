@@ -1,45 +1,198 @@
-import { useState, useEffect, useCallback } from 'react';
-import { LockClosedIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldCheckIcon, CheckIcon, ChevronRightIcon, TagIcon } from '@heroicons/react/24/outline';
 import { apiGet, apiPut } from '../../api/client';
 import Spinner from '../../components/ui/Spinner';
 import RoleBadge from '../../components/ui/RoleBadge';
 
-const BOOL_FIELDS = [
-  { key: 'can_read_all', label: 'Leer todo' },
-  { key: 'can_create', label: 'Crear' },
-  { key: 'can_update', label: 'Editar' },
-  { key: 'can_delete', label: 'Eliminar' },
-  { key: 'can_alter_structure', label: 'Modificar estructura' },
-  { key: 'can_manage_users', label: 'Gestionar usuarios' },
-  { key: 'can_view_audit', label: 'Ver auditoría' },
-  { key: 'filter_by_hospital', label: 'Filtrar por hospital' },
+const TREE = [
+  {
+    key: 'general',
+    label: 'General',
+    items: [
+      { key: 'Panel', label: 'Panel' },
+    ],
+  },
+  {
+    key: 'hospitales',
+    label: 'Hospitales',
+    items: [
+      { key: 'Hospitales',          label: 'Lista de Hospitales' },
+      { key: 'OrganizacionTabla',   label: 'Organización / Dotación' },
+      { key: 'TablaAmpliada',       label: 'Tabla Ampliada' },
+    ],
+  },
+  {
+    key: 'organigrama',
+    label: 'Organigrama',
+    items: [
+      { key: 'OrganigramaHome',     label: 'Inicio Organigrama' },
+      { key: 'OrganigramaDetalle',  label: 'Detalle por Hospital' },
+    ],
+  },
+  {
+    key: 'tablas',
+    label: 'Tablas BD',
+    items: [
+      { key: 'PersonasFull',        label: 'Personas' },
+      { key: 'CargosFull',          label: 'Cargos' },
+      { key: 'RolesFull',           label: 'Roles' },
+      { key: 'SiglasFull',          label: 'Siglas' },
+    ],
+  },
+  {
+    key: 'recorridas',
+    label: 'Recorridas',
+    items: [
+      { key: 'RecorridasHospitales', label: 'Lista de Recorridas' },
+      { key: 'RecorridasDetalle',    label: 'Detalle / Minutas' },
+    ],
+  },
+  {
+    key: 'dotacion',
+    label: 'Dotación y POU',
+    items: [
+      { key: 'DotacionTotal',       label: 'Dotación Total' },
+      { key: 'POUDetalle',          label: 'POU por Hospital' },
+      { key: 'POUComparativa',      label: 'POU Comparativa' },
+    ],
+  },
+  {
+    key: 'concursales',
+    label: 'Concursales',
+    items: [
+      { key: 'BajasConsolidadas',   label: 'Bajas Consolidadas' },
+      { key: 'SeguimientoCph',      label: 'Seguimiento CPH' },
+      { key: 'SeguimientoCeetps',   label: 'Seguimiento CEETPS' },
+      { key: 'TableroKpis',         label: 'Tablero KPIs' },
+      { key: 'AltasCargo',          label: 'Altas de Cargo' },
+      { key: 'ListaCargos',         label: 'Lista de Cargos' },
+      { key: 'SubirData',           label: 'Importar Data' },
+    ],
+  },
+  {
+    key: 'director',
+    label: 'Director',
+    items: [
+      { key: 'Director',            label: 'Mi Hospital' },
+    ],
+  },
 ];
 
-function BoolCell({ value, onChange }) {
+const ROLES = [
+  { value: 'admin',       label: 'Admin' },
+  { value: 'editor',      label: 'Editor' },
+  { value: 'viewer',      label: 'Viewer' },
+  { value: 'director',    label: 'Director' },
+  { value: 'concursales', label: 'Concursales' },
+  { value: 'gerencia',    label: 'Gerencia' },
+  { value: 'autoridades', label: 'Autoridades' },
+];
+
+function IndeterminateCheckbox({ checked, indeterminate, onChange, disabled }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !!indeterminate;
+  }, [indeterminate]);
   return (
-    <button onClick={() => onChange(!value)}
-      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-        value ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-      }`}>
-      {value ? <CheckIcon className="w-4 h-4" /> : <XMarkIcon className="w-4 h-4" />}
-    </button>
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      disabled={disabled}
+      className="w-4 h-4 rounded accent-primary-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+    />
+  );
+}
+
+function GrupoRow({ grupo, modulos, isAdmin, onToggleGrupo, onToggleItem }) {
+  const [open, setOpen] = useState(false);
+  const keys = grupo.items.map(i => i.key);
+  const allOn  = isAdmin || keys.every(k => modulos.includes(k));
+  const someOn = !isAdmin && keys.some(k => modulos.includes(k));
+
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* Cabecera del grupo — clickeable para expandir */}
+      <div
+        className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition-colors ${
+          open ? 'bg-primary-50 border-b border-primary-100' : 'bg-gray-50 hover:bg-gray-100'
+        }`}
+        onClick={() => setOpen(v => !v)}
+      >
+        {/* Checkbox del grupo — stopPropagation para no colapsar al hacer click */}
+        <div onClick={e => e.stopPropagation()}>
+          <IndeterminateCheckbox
+            checked={allOn}
+            indeterminate={someOn && !allOn}
+            onChange={() => onToggleGrupo(grupo)}
+            disabled={isAdmin}
+          />
+        </div>
+
+        <span className="flex-1 text-sm font-semibold text-gray-700">{grupo.label}</span>
+
+        {/* Contador de activos */}
+        <span className="text-xs text-gray-400 mr-1">
+          {isAdmin ? keys.length : keys.filter(k => modulos.includes(k)).length}/{keys.length}
+        </span>
+
+        <ChevronRightIcon
+          className={`w-4 h-4 text-gray-400 transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
+        />
+      </div>
+
+      {/* Items desplegables */}
+      {open && (
+        <div className="divide-y divide-gray-100">
+          {grupo.items.map((item) => {
+            const checked = isAdmin || modulos.includes(item.key);
+            return (
+              <label
+                key={item.key}
+                className={`flex items-center gap-3 px-4 py-2.5 pl-10 transition-colors ${
+                  isAdmin ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-primary-50'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggleItem(item.key)}
+                  disabled={isAdmin}
+                  className="w-4 h-4 rounded accent-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
+                />
+                <span className={`text-sm ${checked ? 'text-gray-800' : 'text-gray-400'}`}>
+                  {item.label}
+                </span>
+                {checked && !isAdmin && (
+                  <span className="ml-auto text-xs text-primary-500 font-medium">Activo</span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
 export default function PermisosPage() {
-  const [permissions, setPermissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(null);
-  const [error, setError] = useState('');
-  const [saveError, setSaveError] = useState({});
-  const [dirty, setDirty] = useState({});
+  const navigate = useNavigate();
+  const [permisos, setPermisos]     = useState({});
+  const [loading, setLoading]       = useState(true);
+  const [selectedRole, setSelectedRole] = useState('editor');
+  const [dirty, setDirty]           = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [saved, setSaved]           = useState(false);
+  const [error, setError]           = useState('');
 
   const fetchPermisos = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiGet('/api/seguridad/permisos');
-      setPermissions(data.permissions || []);
-      setDirty({});
+      const data = await apiGet('/api/seguridad/permisos/modulos');
+      setPermisos(data.permisos || {});
+      setDirty(false);
       setError('');
     } catch (e) {
       setError(e.message);
@@ -48,83 +201,148 @@ export default function PermisosPage() {
     }
   }, []);
 
-  useEffect(() => { fetchPermisos(); }, []);
+  useEffect(() => { fetchPermisos(); }, [fetchPermisos]);
 
-  const handleChange = (id, field, value) => {
-    setPermissions(ps => ps.map(p => p.id === id ? { ...p, [field]: value } : p));
-    setDirty(d => ({ ...d, [id]: true }));
+  const handleRoleChange = (role) => {
+    setSelectedRole(role);
+    setDirty(false);
+    setSaved(false);
   };
 
-  const handleSave = async (perm) => {
-    setSaving(perm.id);
-    setSaveError(e => ({ ...e, [perm.id]: '' }));
+  const isAdmin = selectedRole === 'admin';
+  const current = permisos[selectedRole] || [];
+
+  const toggleItem = (key) => {
+    if (isAdmin) return;
+    setPermisos(prev => {
+      const cur = prev[selectedRole] || [];
+      const next = cur.includes(key) ? cur.filter(k => k !== key) : [...cur, key];
+      return { ...prev, [selectedRole]: next };
+    });
+    setDirty(true);
+    setSaved(false);
+  };
+
+  const toggleGrupo = (grupo) => {
+    if (isAdmin) return;
+    const keys = grupo.items.map(i => i.key);
+    const cur  = permisos[selectedRole] || [];
+    const allOn = keys.every(k => cur.includes(k));
+    setPermisos(prev => {
+      const next = allOn
+        ? cur.filter(k => !keys.includes(k))
+        : [...new Set([...cur, ...keys])];
+      return { ...prev, [selectedRole]: next };
+    });
+    setDirty(true);
+    setSaved(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      await apiPut(`/api/seguridad/permisos/${perm.id}`, perm);
-      setDirty(d => { const n = { ...d }; delete n[perm.id]; return n; });
+      await apiPut('/api/seguridad/permisos/modulos', {
+        role: selectedRole,
+        modulos: permisos[selectedRole] || [],
+      });
+      setDirty(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setSaveError(prev => ({ ...prev, [perm.id]: e.message }));
+      setError(e.message);
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   };
 
+  const totalActivos = isAdmin
+    ? TREE.flatMap(g => g.items).length
+    : current.length;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
       <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-2">
-          <LockClosedIcon className="w-5 h-5 text-primary-700" />
-          <h1 className="text-lg font-bold text-gray-900">Permisos por Rol</h1>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <ShieldCheckIcon className="w-5 h-5 text-primary-700" />
+            <h1 className="text-lg font-bold text-gray-900">Permisos por Rol</h1>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              onClick={() => navigate('/seguridad/roles')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <TagIcon className="w-4 h-4" />
+              Gestionar roles
+            </button>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Rol:</label>
+              <select
+                value={selectedRole}
+                onChange={e => handleRoleChange(e.target.value)}
+                className="form-input text-sm py-1.5 w-40"
+              >
+                {ROLES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <RoleBadge role={selectedRole} />
+
+            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+              {totalActivos} módulos activos
+            </span>
+
+            {!isAdmin && (
+              <button
+                onClick={handleSave}
+                disabled={!dirty || saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {saving ? <Spinner size="sm" /> : <CheckIcon className="w-4 h-4" />}
+                Guardar cambios
+              </button>
+            )}
+
+            {saved && (
+              <span className="text-sm text-green-600 font-medium">✓ Guardado</span>
+            )}
+          </div>
         </div>
-        <p className="text-sm text-gray-500 mt-1">Haz clic en cada celda para cambiar el permiso. Guarda cada fila por separado.</p>
+
+        {isAdmin && (
+          <p className="text-xs text-amber-600 mt-2 bg-amber-50 border border-amber-200 rounded px-3 py-1.5">
+            El rol <strong>Admin</strong> tiene acceso total y no puede modificarse.
+          </p>
+        )}
+        {dirty && (
+          <p className="text-xs text-primary-600 mt-1.5">● Hay cambios sin guardar.</p>
+        )}
       </div>
 
+      {/* Árbol */}
       <div className="flex-1 overflow-auto px-4 py-4">
-        {error && <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="mb-3 p-3 rounded bg-red-50 border border-red-200 text-sm text-red-700">{error}</div>
+        )}
 
         {loading ? (
           <div className="flex items-center justify-center py-16"><Spinner size="lg" /></div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Rol</th>
-                  {BOOL_FIELDS.map(f => (
-                    <th key={f.key} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">{f.label}</th>
-                  ))}
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600">Guardar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {permissions.map((perm, idx) => (
-                  <tr key={perm.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} ${dirty[perm.id] ? 'outline outline-2 outline-primary-200 outline-offset-[-2px]' : ''}`}>
-                    <td className="px-4 py-2.5"><RoleBadge role={perm.role} /></td>
-                    {BOOL_FIELDS.map(f => (
-                      <td key={f.key} className="px-3 py-2.5 text-center">
-                        <div className="flex justify-center">
-                          <BoolCell value={!!perm[f.key]} onChange={(v) => handleChange(perm.id, f.key, v)} />
-                        </div>
-                      </td>
-                    ))}
-                    <td className="px-3 py-2.5 text-center">
-                      {dirty[perm.id] && (
-                        <button onClick={() => handleSave(perm)} disabled={saving === perm.id}
-                          className="btn-primary text-xs py-1 px-3 flex items-center gap-1 mx-auto">
-                          {saving === perm.id ? <Spinner size="sm" /> : <CheckIcon className="w-3.5 h-3.5" />}
-                          Guardar
-                        </button>
-                      )}
-                      {saveError[perm.id] && (
-                        <p className="text-xs text-red-600 mt-1">{saveError[perm.id]}</p>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {permissions.length === 0 && (
-                  <tr><td colSpan={BOOL_FIELDS.length + 2} className="px-4 py-10 text-center text-gray-400">Sin permisos configurados</td></tr>
-                )}
-              </tbody>
-            </table>
+          <div className="max-w-lg space-y-2">
+            {TREE.map(grupo => (
+              <GrupoRow
+                key={grupo.key}
+                grupo={grupo}
+                modulos={current}
+                isAdmin={isAdmin}
+                onToggleGrupo={toggleGrupo}
+                onToggleItem={toggleItem}
+              />
+            ))}
           </div>
         )}
       </div>

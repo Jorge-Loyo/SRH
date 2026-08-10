@@ -56,6 +56,8 @@ const SR_STYLES = {
 }
 const isJefeDirector = row => /^CPH-[JD]-/.test(row.codigo || '')
 
+const TIPO_ALTA_LABELS = { ejecucion: 'Ejecución', estructura: 'Estructura' }
+
 function InfoModal({ cargoId, onClose }) {
   const [data, setData]   = useState(null)
   const [error, setError] = useState(null)
@@ -66,36 +68,84 @@ function InfoModal({ cargoId, onClose }) {
   }, [cargoId])
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onMouseDown={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4" onMouseDown={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-800">Información del Alta</span>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col" style={{ maxHeight: '85vh' }} onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <span className="text-sm font-semibold text-gray-800">Información del cargo</span>
           <button type="button" onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><XMarkIcon className="w-4 h-4" /></button>
         </div>
-        <div className="px-5 py-4 space-y-3">
+        <div className="overflow-y-auto px-5 py-4 space-y-4">
           {error && <p className="text-sm text-red-500">{error}</p>}
           {!data && !error && <p className="text-sm text-gray-400 text-center py-4">Cargando...</p>}
           {data && (
             <>
-              <Row label="Código"     val={<span className="font-mono font-semibold text-primary-700">{data.codigo}</span>} />
-              <Row label="Expediente" val={data.expediente || <span className="text-amber-500 text-xs">Sin expediente cargado</span>} />
-              <Row label="Categoría"  val={data.categoria_interna
-                ? <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-xs font-bold">{data.categoria_interna}</span>
-                : <span className="text-gray-300 text-xs">—</span>} />
-              <Row label="Cantidad"   val={data.cantidad ?? '—'} />
-              <Row label="Fecha alta" val={data.fecha_registro ? new Date(data.fecha_registro).toLocaleDateString('es-AR') : '—'} />
-              {isJefeDirector(data) && (
-                <Row label="Sit. revista" val={
-                  data.situacion_revista
-                    ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SR_STYLES[data.situacion_revista]}`}>{SR_LABELS[data.situacion_revista]}</span>
-                    : <span className="text-gray-300 text-xs">—</span>
+              {/* Identificación */}
+              <Section title="Identificación">
+                <Row label="Código"    val={<span className="font-mono font-semibold text-primary-700">{data.codigo}</span>} />
+                {data.id_sial && <Row label="ID SIAL" val={<span className="font-mono text-gray-600">{data.id_sial}</span>} />}
+                <Row label="Sigla"     val={data.sigla} />
+                <Row label="Carrera"   val={data.carrera} />
+                <Row label="Modalidad" val={<span className="capitalize">{data.modalidad}</span>} />
+                {data.categoria_interna && (
+                  <Row label="Categoría" val={
+                    <span className="inline-flex px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-xs font-bold">{data.categoria_interna}</span>
+                  } />
+                )}
+              </Section>
+
+              {/* Puesto */}
+              <Section title="Puesto">
+                {data.puesto      && <Row label="Puesto"       val={data.puesto} />}
+                {data.especialidad && <Row label="Especialidad" val={data.especialidad} />}
+                {isJefeDirector(data) && (
+                  <Row label="Sit. revista" val={
+                    data.situacion_revista
+                      ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SR_STYLES[data.situacion_revista]}`}>{SR_LABELS[data.situacion_revista]}</span>
+                      : <Dash />
+                  } />
+                )}
+              </Section>
+
+              {/* Estado y fechas */}
+              <Section title="Estado y fechas">
+                <Row label="Estado" val={
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium capitalize ${ESTADO_STYLES[data.estado] || 'bg-gray-100 text-gray-600'}`}>{data.estado}</span>
                 } />
-              )}
+                <Row label="Cargo desde"   val={data.cargo_desde   ? fmtDate(data.cargo_desde)   : <Dash />} />
+                <Row label="Cargo hasta"   val={data.cargo_hasta   ? fmtDate(data.cargo_hasta)   : <Dash />} />
+                <Row label="Antigüedad"    val={data.antiguedad_calc || (data.antiguedad ? fmtDate(data.antiguedad) : <Dash />)} />
+                <Row label="Fecha alta"    val={data.fecha_alta    ? fmtDate(data.fecha_alta)    : <Dash />} />
+                <Row label="Actualización" val={data.fecha_actualizacion ? fmtDate(data.fecha_actualizacion) : <Dash />} />
+              </Section>
+
+              {/* Datos del alta */}
+              <Section title="Datos del alta">
+                <Row label="Tipo alta"   val={data.tipo_alta ? (TIPO_ALTA_LABELS[data.tipo_alta] || data.tipo_alta) : <Dash />} />
+                <Row label="Expediente"  val={data.expediente || <span className="text-amber-500 text-xs">Sin expediente</span>} />
+                <Row label="Cantidad"    val={data.cantidad ?? <Dash />} />
+                <Row label="Fec. registro" val={data.fecha_registro ? fmtDate(data.fecha_registro) : <Dash />} />
+                <Row label="Norma ref."  val={data.norma_ref_final  || <Dash />} />
+                <Row label="Resolución"  val={data.resolucion_final || <Dash />} />
+                <Row label="Doc. origen" val={data.doc_origen_final || <Dash />} />
+              </Section>
             </>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+function Section({ title, children }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">{title}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  )
+}
+
+function Dash() {
+  return <span className="text-gray-300 text-xs">—</span>
 }
 
 function Row({ label, val }) {
@@ -199,14 +249,14 @@ const COLS = [
   { key: 'sigla',               label: 'Sigla'                        },
   { key: 'carrera',             label: 'Carrera'                      },
   { key: 'modalidad',           label: 'Modalidad'                    },
-  { key: 'nivel_formacion',     label: 'Nivel form.'                  },
+  { key: 'puesto',              label: 'Puesto',          wide: true  },
   { key: 'especialidad',        label: 'Especialidad',    wide: true  },
   { key: 'estado',              label: 'Estado'                       },
-  { key: 'situacion_revista',   label: 'Sit. revista',    sr: true    },
   { key: 'antiguedad_calc',     label: 'Antigüedad'                   },
   { key: 'cargo_desde',         label: 'Desde',           date: true  },
   { key: 'cargo_hasta',         label: 'Hasta',           date: true  },
-  { key: 'fecha_actualizacion', label: 'Actualización',   date: true  },
+  { key: 'norma_ref_final',     label: 'Norma ref.'                   },
+  { key: 'resolucion_final',    label: 'Resolución'                   },
 ]
 
 const ESTADO_STYLES = {

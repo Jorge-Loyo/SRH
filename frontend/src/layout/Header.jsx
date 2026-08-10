@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 import RoleBadge from '../components/ui/RoleBadge.jsx'
@@ -24,6 +24,71 @@ const ROUTE_TITLES = {
   '/concursales/bajas':           'Bajas Consolidadas',
   '/concursales/seguimiento-cph': 'Seguimiento CPH',
 }
+
+const SEGURIDAD_ITEMS = [
+  { to: '/seguridad/auditoria',    label: 'Auditoría' },
+  { to: '/seguridad/tokens',       label: 'Tokens' },
+  { to: '/seguridad/usuarios',     label: 'Usuarios' },
+  { to: '/seguridad/permisos',     label: 'Permisos' },
+  { to: '/seguridad/carga-masiva', label: 'Carga de Datos' },
+]
+
+const HERRAMIENTAS_ITEMS = [
+  { to: '/herramientas/tablas-vista', label: 'Tablas Vista' },
+  { to: '/herramientas/tablas-admin', label: 'Tablas Admin' },
+  { to: '/herramientas/dotaneitor',   label: 'Dotaneitor' },
+]
+
+function HeaderMenu({ title, items, navigate, icon }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        title={title}
+        className={`p-1.5 rounded-lg transition-colors ${
+          open ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+        }`}
+      >
+        {icon}
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
+          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
+          {items.map(item => (
+            <button key={item.to} onClick={() => { navigate(item.to); setOpen(false) }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ICON_SHIELD = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+)
+
+const ICON_WRENCH = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+)
 
 function resolveTitle(pathname) {
   if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname]
@@ -69,8 +134,8 @@ export default function Header({ onMenuClick = () => {} }) {
         <h1 className="text-sm font-semibold text-gray-700 truncate">{title}</h1>
       </div>
 
-      {/* Usuario + cerrar sesión */}
-      <div className="flex items-center gap-3">
+      {/* Usuario + seguridad + cerrar sesión */}
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold shrink-0">
             {initial}
@@ -78,6 +143,8 @@ export default function Header({ onMenuClick = () => {} }) {
           <span className="text-sm font-medium text-gray-800 hidden sm:block">{displayName}</span>
           <RoleBadge role={role} alias={roleAlias} />
         </div>
+        {role === 'admin' && <HeaderMenu title="Herramientas" items={HERRAMIENTAS_ITEMS} navigate={navigate} icon={ICON_WRENCH} />}
+        {role === 'admin' && <HeaderMenu title="Seguridad" items={SEGURIDAD_ITEMS} navigate={navigate} icon={ICON_SHIELD} />}
         <button
           onClick={handleLogout}
           disabled={loggingOut}
