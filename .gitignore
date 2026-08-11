@@ -21,6 +21,9 @@ yarn-error.log*
 
 # Frameworks / Cache
 .DS_Store
+__pycache__/
+*.pyc
+*.pyo
 
 # Build del frontend
 app/public/spa/
