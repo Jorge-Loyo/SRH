@@ -317,6 +317,8 @@ function buildPayload(form, documento, tipo_alta, modo, norma_referencia) {
     const tipo_eg_val = modo === 'estructura' ? tipo_eg : 'ejecucion'
     return { sigla, carrera_seleccionada, tipo_eg: tipo_eg_val, ...base }
   }
+  if (carrera_seleccionada === 'as') return { sigla, carrera_seleccionada, ...base }
+  if (carrera_seleccionada === 'rg') return { sigla, carrera_seleccionada, ...base }
   if (carrera_seleccionada === 'enf') return { sigla, carrera_seleccionada, jornada: jornada || null, ...base }
   if (carrera_seleccionada === 'tec') return { sigla, carrera_seleccionada, tipo_tec, modalidad, puesto, especialidad, ...base }
   return { sigla, carrera_seleccionada, ...base }

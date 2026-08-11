@@ -38,7 +38,17 @@ const altaCargoCreateSchema = z.discriminatedUnion('carrera_seleccionada', [
     carrera_seleccionada: z.literal('eg'),
     sigla:    z.string().min(1).max(20),
     puesto:   z.string().min(1).max(150),
-    tipo_eg:  z.enum(['ejecucion', 'jefe', 'director', 'gerencial']).default('ejecucion'),
+    tipo_eg:  z.enum(['ejecucion', 'jefe']).default('ejecucion'),
+  }).merge(fechasSchema),
+  z.object({
+    carrera_seleccionada: z.literal('as'),
+    sigla:    z.string().min(1).max(20),
+    puesto:   z.string().max(150).nullable().optional(),
+  }).merge(fechasSchema),
+  z.object({
+    carrera_seleccionada: z.literal('rg'),
+    sigla:    z.string().min(1).max(20),
+    puesto:   z.string().max(150).nullable().optional(),
   }).merge(fechasSchema),
 ]);
 

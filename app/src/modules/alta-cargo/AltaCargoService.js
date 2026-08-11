@@ -26,10 +26,12 @@ class AltaCargoService {
       else if (tipo === 'subdirector') prefix = 'CPH-SD'
       else                             prefix = m ? `CPH-${m}` : 'CPH'
     } else if (c === 'EG') {
-      if      (tipo === 'jefe')        prefix = 'EG-J'
-      else if (tipo === 'director')    prefix = 'EG-D'
-      else if (tipo === 'gerencial')   prefix = 'EG-CG'
-      else                             prefix = 'EG'
+      if (tipo === 'jefe') prefix = 'EG-J'
+      else                 prefix = 'EG'
+    } else if (c === 'AS') {
+      prefix = 'AS-D'
+    } else if (c === 'RG') {
+      prefix = 'RG-CG'
     } else if (c === 'TEC') {
       prefix = m ? `TEC-${m}` : 'TEC'
     } else {
