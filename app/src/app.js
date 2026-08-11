@@ -73,19 +73,22 @@ function createApp(options = {}) {
     maxAge: '7d',
   }));
 
-  // Servir el frontend SPA (React) desde el resto de rutas
+  // Servir el frontend SPA (React) desde el resto de rutas — solo si existe localmente
   // Assets con hash Vite → caché 1 año; index.html → sin caché
-  app.use(express.static(path.resolve(__dirname, '..', 'public', 'spa'), {
-    etag: true,
-    maxAge: 0,
-    setHeaders: (res, filePath) => {
-      if (/[/\\]assets[/\\].+\.[a-f0-9]{8,}\.(js|css)$/.test(filePath)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      } else {
-        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-      }
-    },
-  }));
+  const spaDir = path.resolve(__dirname, '..', 'public', 'spa');
+  if (require('fs').existsSync(spaDir)) {
+    app.use(express.static(spaDir, {
+      etag: true,
+      maxAge: 0,
+      setHeaders: (res, filePath) => {
+        if (/[/\\]assets[/\\].+\.[a-f0-9]{8,}\.(js|css)$/.test(filePath)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        }
+      },
+    }));
+  }
 
   // Swagger UI — solo en desarrollo
   if (config.env !== 'production') {
@@ -150,10 +153,14 @@ function createApp(options = {}) {
     res.redirect(301, '/');
   });
 
-  // SPA catch-all: cualquier ruta sin handler Express la resuelve React Router
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '..', 'public', 'spa', 'index.html'));
-  });
+  // SPA catch-all: solo si el SPA está presente (no en Render con frontend en Vercel)
+  const spaIndex = path.resolve(__dirname, '..', 'public', 'spa', 'index.html');
+  const fs = require('fs');
+  if (fs.existsSync(spaIndex)) {
+    app.get('*', (req, res) => res.sendFile(spaIndex));
+  } else {
+    app.get('*', (req, res) => res.status(404).json({ error: 'Not found' }));
+  }
 
   // Generic error handler
   // ✅ BLOQUEANTE FIX: Diferencia 4xx vs 5xx, no expone stack
