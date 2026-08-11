@@ -59,6 +59,7 @@ const CargaMasivaPage = lazy(() => import('./pages/vista_seguridad/CargaMasivaPa
 const TablasVistaPage  = lazy(() => import('./pages/vista_herramientas/TablasVistaPage.jsx'))
 const TablasAdminPage  = lazy(() => import('./pages/vista_herramientas/TablasAdminPage.jsx'))
 const DotaneitorPage   = lazy(() => import('./pages/vista_herramientas/DotaneitorPage.jsx'))
+const DotacionPadronPage = lazy(() => import('./pages/vista_herramientas/DotacionPadronPage.jsx'))
 
 // Roles permitidos por sección
 const ALL_ROLES              = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales']
@@ -188,6 +189,9 @@ export default function App() {
                 <Route path="cargos/decreto" element={
                   <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
                 } />
+                <Route path="cargos/pou" element={
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
+                } />
                 <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
 
                 {/* Seguridad */}
@@ -211,6 +215,9 @@ export default function App() {
                 } />
 
                 {/* Herramientas */}
+                <Route path="herramientas/dotacion-padron" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><DotacionPadronPage /></ProtectedRoute>
+                } />
                 <Route path="herramientas/tablas-vista" element={
                   <ProtectedRoute roles={EDIT_ROLES}><TablasVistaPage /></ProtectedRoute>
                 } />

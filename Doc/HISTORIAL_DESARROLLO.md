@@ -1,7 +1,7 @@
 # DISEÑO — Tabla `cargo` y estructura de datos
 
 > Documento de trabajo. Registra decisiones de diseño, estado actual y estructura objetivo.
-> Última actualización: 2026-08 (actualizado post M10-M14 + Plan Dotación)
+> Última actualización: 2026-09 (actualizado post M10-M14 + Plan Dotación + Módulo Alta Cargos)
 
 ---
 
@@ -49,19 +49,21 @@ y que los procesos (alta, concurso, baja, transferencia) sean eventos vinculados
 | `puestos_cargo`  | id, nombre, carrera, tipo, es_medico, activo, es_estructura, modalidad_tec      | ✅ OK — M5/M8                            |
 | `siglas`         | id_sigla, sigla                                                                 | ✅ OK                                    |
 | `jornadas`       | id, nombre, activo                                                              | ✅ Creada M3 — 'Jornada completa', 'ATP' |
-| `tipos_cargo`    | id, codigo, nombre, aplica_carrera, requiere_modalidad, solo_estructura, activo | ✅ Creada M4 — 7 tipos                   |
+| `tipos_cargo`    | id, codigo(VARCHAR 30), nombre, aplica_carrera, requiere_modalidad, solo_estructura, activo | ✅ Creada M4 — 11 tipos (CPH + EG + AS)   |
 
-### Estado de `new_cargo` — campos FK (post M10-M14)
+### Estado de `new_cargo` — campos FK (post M10-M14 + normalización alta)
 
-| Campo FK            | Tipo                    | NULLs  | Estado                                                   |
-| ------------------- | ----------------------- | ------ | -------------------------------------------------------- |
-| `id_carrera`        | int FK → carreras       | 0      | ✅ Completo                                              |
-| `id_modalidad`      | int FK → modalidades    | 3.038  | ✅ Correcto — carreras sin modalidad (EG/ENF/SG/RES/DOC) |
-| `id_especialidad`   | int FK → especialidades | 24.485 | ✅ Correcto — carreras donde no aplica                   |
-| `id_puesto`         | int FK → puestos_cargo  | 24.585 | ✅ Correcto — ENF/EG/SG/RES/DOC sin puestos individuales |
-| `id_jornada`        | tinyint FK → jornadas   | 46.943 | ✅ Correcto — solo ENF usa jornada                       |
-| `id_alta`           | int FK → cargos_alta    | 46.889 | ⚠️ Pendiente — cargos históricos sin evento de alta      |
-| ~~`id_puesto_tec`~~ | eliminado               | —      | ✅ Eliminado M14 — reemplazado por `id_puesto`           |
+| Campo FK            | Tipo                      | NULLs  | Estado                                                   |
+| ------------------- | ------------------------- | ------ | -------------------------------------------------------- |
+| `id_carrera`        | int FK → carreras         | 0      | ✅ Completo                                              |
+| `id_modalidad`      | int FK → modalidades      | 3.038  | ✅ Correcto — carreras sin modalidad (EG/ENF/SG/RES/DOC) |
+| `id_especialidad`   | int FK → especialidades   | 24.485 | ✅ Correcto — carreras donde no aplica                   |
+| `id_puesto`         | int FK → puestos_cargo    | 24.585 | ✅ Correcto — ENF/EG/SG/RES/DOC sin puestos individuales |
+| `id_jornada`        | tinyint FK → jornadas     | 46.943 | ✅ Correcto — solo ENF usa jornada                       |
+| `id_tipo_cargo`     | tinyint FK → tipos_cargo  | NULL   | ✅ Nuevo — se llena en altas nuevas (estructura)         |
+| `id_etiqueta`       | int FK → cargo_etiquetas  | NULL   | ✅ Nuevo — se llena cuando se asigna etiqueta            |
+| `id_alta`           | int FK → cargos_alta      | 46.889 | ⚠️ Pendiente — cargos históricos sin evento de alta      |
+| ~~`id_puesto_tec`~~ | eliminado                 | —      | ✅ Eliminado M14 — reemplazado por `id_puesto`           |
 
 ### Estado de `new_cargo` — campos texto libre
 
@@ -78,9 +80,10 @@ y que los procesos (alta, concurso, baja, transferencia) sean eventos vinculados
 | Campo               | Tipo                                    | Estado                                                                                |
 | ------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
 | `estado`            | enum('vigente','no_vigente')            | ✅ Migrado M12 — era activo/bloqueado                                                 |
+| `tipo_cargo`        | varchar(30)                             | ✅ Nuevo — texto del tipo (jefe_eg, ministro, ejecucion, etc.)                        |
 | `situacion_revista` | enum(activo, retencion_cargo, comision) | ⚠️ 2.472 registros con valor. Mover a `dotacion` — bloqueado hasta diseñar esa tabla  |
 | `antiguedad`        | date                                    | ⚠️ 46.947 registros con fecha. Mover a `dotacion` — bloqueado hasta diseñar esa tabla |
-| `categoria_interna` | varchar(50)                             | En uso — se mantiene                                                                  |
+| `categoria_interna` | varchar(50)                             | En uso — se mantiene (texto redundante con `id_etiqueta`)                             |
 | `nivel_formacion`   | varchar                                 | No existe en BD (referencia legacy en código eliminada)                               |
 
 ### Estado de carreras (post M8)
@@ -218,30 +221,36 @@ dotacion  ← A DISEÑAR
 
 ## 7. Formato de códigos de cargo
 
-| Carrera | Tipo                   | Formato           | Ejemplo         |
-| ------- | ---------------------- | ----------------- | --------------- |
-| CPH     | Ejecución Planta       | `CPH-POF-{seq}`   | CPH-POF-000001  |
-| CPH     | Ejecución Guardia      | `CPH-POU-{seq}`   | CPH-POU-000001  |
-| CPH     | Jefe Planta            | `CPH-J-POF-{seq}` | CPH-J-PL-000001 |
-| CPH     | Jefe Guardia           | `CPH-J-POU-{seq}` | CPH-J-GU-000001 |
-| CPH     | Director               | `CPH-D-{seq}`     | CPH-D-000001    |
-| CPH     | Sub Director           | `CPH-SD-{seq}`    | CPH-SD-000001   |
-| ENF     | Ejecución              | `ENF-{seq}`       | ENF-000001      |
-| TEC     | Planta (POF)           | `TEC-POF-{seq}`   | TEC-POF-000001  |
-| TEC     | Guardia (POU)          | `TEC-POU-{seq}`   | TEC-POU-000001  |
-| EG      | Ejecución              | `EG-{seq}`        | EG-000001       |
-| EG      | Jefe                   | `EG-J-{seq}`      | EG-J-000001     |
-| AS      | Autoridades Superiores | `AS-D-{seq}`      | AS-D-000001     |
-| RG      | Regimen Gerencial      | `RG-CG-{seq}`     | RG-CG-000001    |
+| Carrera | Tipo                        | Formato           | Ejemplo          |
+| ------- | --------------------------- | ----------------- | ---------------- |
+| CPH     | Ejecución Planta            | `CPH-POF-{seq}`   | CPH-POF-000001   |
+| CPH     | Ejecución Guardia           | `CPH-POU-{seq}`   | CPH-POU-000001   |
+| CPH     | Jefe Planta                 | `CPH-J-POF-{seq}` | CPH-J-POF-000001 |
+| CPH     | Jefe Guardia                | `CPH-J-POU-{seq}` | CPH-J-POU-000001 |
+| CPH     | Director                    | `CPH-D-{seq}`     | CPH-D-000001     |
+| CPH     | Sub Director                | `CPH-SD-{seq}`    | CPH-SD-000001    |
+| ENF     | Ejecución                   | `ENF-{seq}`       | ENF-000001       |
+| TEC     | Planta (POF)                | `TEC-POF-{seq}`   | TEC-POF-000001   |
+| TEC     | Guardia (POU)               | `TEC-POU-{seq}`   | TEC-POU-000001   |
+| EG      | Ejecución                   | `EG-{seq}`        | EG-000001        |
+| EG      | Jefe EG                     | `EG-J-{seq}`      | EG-J-000001      |
+| EG      | Director EG                 | `EG-D-{seq}`      | EG-D-000001      |
+| EG      | Gerencial                   | `EG-G-{seq}`      | EG-G-000001      |
+| AS      | Ministro                    | `AS-MIN-{seq}`    | AS-MIN-000001    |
+| AS      | Subsecretaría               | `AS-SS-{seq}`     | AS-SS-000001     |
+| AS      | Dir. General                | `AS-DG-{seq}`     | AS-DG-000001     |
+| AS      | Dir. General Adjunta        | `AS-DGA-{seq}`    | AS-DGA-000001    |
+| RG      | Régimen Gerencial           | `RG-CG-{seq}`     | RG-CG-000001     |
 
 **Reglas:**
 
 - Director y Sub Director no tienen modalidad en ninguna carrera
 - Jefe tiene modalidad (planta/guardia) — solo aplica a CPH
 - SD solo aplica a CPH, solo por estructura, sin modalidad
-- EG-J solo por estructura
-- AS (Autoridades Superiores) reemplaza a EG-D
-- RG (Régimen Gerencial) reemplaza a EG-CG
+- EG tipos estructura: `jefe_eg` → `EG-J`, `director_eg` → `EG-D`, `gerencial` → `EG-G`
+- AS (Autoridades Superiores) es carrera independiente con `solo_estructura=1`, `norma='No aplica'`
+- AS tipos: `ministro`, `subsecretaria`, `dir_general`, `dir_general_adjunta`
+- RG (Régimen Gerencial) es carrera independiente
 - ENF solo por ejecución, sin modalidad en el código
 - TEC POU: Radiólogos, Hemoterapia, Anatomía Patológica, Instrumentadores Quirúrgicos
 - Prefijo GEN migrado a EG — scripts M1/M2
@@ -255,7 +264,7 @@ dotacion  ← A DISEÑAR
 | M1     | Migrar `GEN-...` → `EG-...` en `new_cargo.codigo`                                                                                               | ✅ Ejecutado                                               |
 | M2     | Actualizar carrera GEN→EG, agregar norma_referencia/excluir_alta/solo_estructura a `carreras`                                                   | ✅ Ejecutado                                               |
 | M3     | Crear tabla `jornadas` con 'Jornada completa' y 'ATP'                                                                                           | ✅ Ejecutado                                               |
-| M4     | Crear tabla `tipos_cargo` con 7 tipos                                                                                                           | ✅ Ejecutado                                               |
+| M4     | Crear tabla `tipos_cargo` con 11 tipos (CPH + EG 3 tipos + AS 4 tipos). `codigo` ampliado a VARCHAR(30).                        | ✅ Ejecutado                                               |
 | M5     | Agregar `modalidad_tec` a `puestos_cargo`, migrar puestos TEC, agregar EG y SUB DIRECTOR                                                        | ✅ Ejecutado                                               |
 | M6     | Eliminar tabla `cargos` legacy                                                                                                                  | ❌ Cancelado — 245k registros + FK desde `bajas_concursos` |
 | M7     | Migrar `cargos_alta`: agregar `documento`+`tipo_alta`, eliminar `carrera_seleccionada`/`categoria_interna`/`jornada`                            | ✅ Ejecutado                                               |

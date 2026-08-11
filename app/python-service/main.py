@@ -554,15 +554,6 @@ except ImportError:
     _NP_INT = _NP_FLOAT = type(None)
 
 
-import math as _math
-try:
-    import numpy as _np
-    _NP_INT   = _np.integer
-    _NP_FLOAT = _np.floating
-except ImportError:
-    _NP_INT = _NP_FLOAT = type(None)
-
-
 def _safe_val(v):
     if v is None: return None
     if isinstance(v, _NP_INT):   return int(v)
@@ -572,6 +563,10 @@ def _safe_val(v):
     if isinstance(v, float):
         return None if (_math.isnan(v) or _math.isinf(v)) else v
     if hasattr(v, 'isoformat'):  return v.isoformat()[:10]
+    if isinstance(v, str):
+        import re as _re
+        m = _re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', v.strip())
+        if m: return f'{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}'
     return v
 
 

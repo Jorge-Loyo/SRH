@@ -39,6 +39,7 @@ async function main() {
       { codigo: 'TEC', norma: 'Ley 6.035' },
       { codigo: 'ENF', norma: 'Ley 6.767' },
       { codigo: 'EG',  norma: 'Ley 471'   },
+      { codigo: 'AS',  norma: 'No aplica' },
     ]
     for (const { codigo, norma } of normas) {
       const { affectedRows } = await ds.query(
@@ -55,9 +56,19 @@ async function main() {
     }
     console.log(`OK excluir_alta = 1 para: ${excluidas.join(', ')}`)
 
-    // 5. Marcar carreras solo para modo estructura
+    // 5. Insertar Autoridades Superiores si no existe
+    const asRows = await ds.query(`SELECT COUNT(*) as cnt FROM carreras WHERE codigo = 'AS'`)
+    const asCnt = asRows[0]?.cnt ?? 0
+    if (!asCnt) {
+      await ds.query(`INSERT INTO carreras (codigo,nombre,activo,solo_estructura,excluir_alta,norma_referencia) VALUES ('AS','Autoridades Superiores',1,1,0,NULL)`)
+      console.log('OK carreras: AS insertada')
+    } else {
+      console.log('- AS ya existe, omitido')
+    }
+
+    // 6. Marcar carreras solo para modo estructura
     await ds.query(`UPDATE carreras SET solo_estructura = 0`) // reset
-    // CPH y EG aparecen en ambos modos; ninguna es SOLO estructura por ahora
+    await ds.query(`UPDATE carreras SET solo_estructura = 1 WHERE codigo IN ('CPH','EG','AS')`)
     console.log('OK solo_estructura configurado')
 
   } finally {

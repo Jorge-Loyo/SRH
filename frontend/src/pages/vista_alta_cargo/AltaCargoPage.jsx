@@ -266,7 +266,7 @@ const EMPTY_FORM = {
   puesto: '', puesto_es_medico: 0, especialidad: '', cargo_desde: '', cantidad: 1,
   categoria_interna: '', jornada: '',
   nro_resolucion: '', documento_origen: '',
-  tipo_cargo_estructura: '', tipo_eg: '', tipo_tec: '',
+  tipo_cargo_estructura: '', tipo_eg: '', tipo_as: '',
 }
 
 function isComplete(form, modo) {
@@ -276,17 +276,21 @@ function isComplete(form, modo) {
     if (modo === 'estructura') {
       const tipo = form.tipo_cargo_estructura
       if (!tipo) return false
-      if (tipo === 'jefe') return !!modalidad && !!puesto && !!especialidad
-      return true // director / subdirector no requieren modalidad/puesto/esp
+      if (tipo === 'jefe') return !!modalidad && !!puesto
+      return true
     }
-    return !!modalidad && !!puesto && !!especialidad
+    return !!puesto && !!especialidad  // modalidad ya fija en ejecución
   }
   if (c === 'eg') {
-    if (modo === 'estructura') return !!form.tipo_eg
+    if (modo === 'estructura') return !!form.tipo_eg && (['jefe_eg', 'gerencial'].includes(form.tipo_eg) ? !!puesto : true)
+    return !!puesto
+  }
+  if (c === 'as') {
+    if (modo === 'estructura') return !!form.tipo_as
     return true
   }
-  if (c === 'enf') return !!form.jornada
-  if (c === 'tec') return !!modalidad && !!puesto && !!form.tipo_tec
+  if (c === 'enf') return true  // modalidad fija, jornada no requerida en ejecución
+  if (c === 'tec') return !!puesto
   return true
 }
 
@@ -294,7 +298,7 @@ function buildPayload(form, documento, tipo_alta, modo, norma_referencia) {
   const {
     sigla, carrera_seleccionada, modalidad, puesto, especialidad,
     cargo_desde, cantidad, categoria_interna, jornada, nro_resolucion, documento_origen,
-    tipo_cargo_estructura, tipo_eg, tipo_tec,
+    tipo_cargo_estructura, tipo_eg, tipo_as, tipo_tec,
   } = form
   const base = {
     cargo_desde, cargo_hasta: null, antiguedad: cargo_desde,
@@ -305,26 +309,30 @@ function buildPayload(form, documento, tipo_alta, modo, norma_referencia) {
     nro_resolucion:     nro_resolucion     || null,
     documento_origen:   documento_origen   || null,
   }
+  if (carrera_seleccionada === 'tec') return { sigla, carrera_seleccionada, modalidad, puesto, especialidad, ...base }
   if (carrera_seleccionada === 'cph') {
     const tipo_cph = modo === 'estructura' ? tipo_cargo_estructura : 'ejecucion'
-    // jefe estructura necesita modalidad/puesto/esp; director/subdirector no
-    const extra = (modo === 'estructura' && tipo_cph !== 'jefe')
-      ? {}
-      : { modalidad, puesto, especialidad }
+    // jefe estructura: modalidad+puesto sin esp; director/subdirector: nada; ejecucion: modalidad+puesto+esp
+    const extra = (modo === 'estructura' && tipo_cph === 'jefe')
+      ? { modalidad, puesto }
+      : (modo === 'estructura' && tipo_cph !== 'jefe')
+        ? {}
+        : { modalidad, puesto, especialidad }
     return { sigla, carrera_seleccionada, tipo_cph, ...extra, ...base }
   }
   if (carrera_seleccionada === 'eg') {
     const tipo_eg_val = modo === 'estructura' ? tipo_eg : 'ejecucion'
-    return { sigla, carrera_seleccionada, tipo_eg: tipo_eg_val, ...base }
+    const eg_puesto = (modo === 'estructura' && ['jefe_eg', 'gerencial'].includes(tipo_eg)) ? puesto : (modo !== 'estructura' ? puesto : null)
+    return { sigla, carrera_seleccionada, tipo_eg: tipo_eg_val, puesto: eg_puesto || null, ...base }
   }
-  if (carrera_seleccionada === 'as') return { sigla, carrera_seleccionada, ...base }
+  if (carrera_seleccionada === 'as') return { sigla, carrera_seleccionada, tipo_as: form.tipo_as || null, ...base }
   if (carrera_seleccionada === 'rg') return { sigla, carrera_seleccionada, ...base }
   if (carrera_seleccionada === 'enf') return { sigla, carrera_seleccionada, jornada: jornada || null, ...base }
-  if (carrera_seleccionada === 'tec') return { sigla, carrera_seleccionada, tipo_tec, modalidad, puesto, especialidad, ...base }
+
   return { sigla, carrera_seleccionada, ...base }
 }
 
-export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) {
+export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', modalidadForzada = null }) {
   const wrap = embedded ? '' : 'px-6 py-8'
 
   const [expediente,     setExpediente]     = useState('')
@@ -366,10 +374,14 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
   useEffect(() => {
     const c = form.carrera_seleccionada
     const m = form.modalidad
-    if (!c || (c !== 'cph' && c !== 'tec')) { setPuestos([]); return }
-    const tipo = c === 'cph' ? (m ? m.toLowerCase() : null) : null
+    if (!c || !['cph', 'tec', 'eg'].includes(c)) { setPuestos([]); return }
+    const tipo = c === 'cph'
+      ? (modo === 'estructura' && form.tipo_cargo_estructura === 'jefe' ? 'jefatura' : (m ? m.toLowerCase() : null))
+      : c === 'eg'
+        ? (modo === 'estructura' && form.tipo_eg === 'jefe_eg' ? 'jefatura' : modo === 'estructura' && form.tipo_eg === 'gerencial' ? 'gerencial' : null)
+        : null
     altaCargoApi.listPuestos(c, tipo, modo).then(setPuestos).catch(() => {})
-  }, [form.carrera_seleccionada, form.modalidad, form.tipo_cargo_estructura])
+  }, [form.carrera_seleccionada, form.modalidad, form.tipo_cargo_estructura, form.tipo_eg])
 
   const tipo_alta = modo === 'estructura' ? 'estructura' : 'ejecucion'
 
@@ -422,15 +434,23 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
   const esEnf = c === 'enf'
   const esTec = c === 'tec'
   const esEg  = c === 'eg'
+  const esAs  = c === 'as'
+
+  // En ejecución, modalidad siempre es planta para CPH, ENF, TEC, EG
+  const modalidadFija = modo !== 'estructura' && ['cph', 'enf', 'tec', 'eg'].includes(c)
 
   // Modalidad aplica según requiere_modalidad del tipo seleccionado (estructura) o siempre para ejecución CPH/TEC
   const tipoCphObj = tiposCargo.find(t => t.codigo === form.tipo_cargo_estructura)
-  const mostrarModalidad = (esCph && (modo !== 'estructura' || tipoCphObj?.requiere_modalidad)) || esTec
+  const mostrarModalidad = !modalidadFija && ((esCph && (modo !== 'estructura' || tipoCphObj?.requiere_modalidad || form.tipo_cargo_estructura === 'jefe')) || esTec)
+  const modalidadesOpts = (esCph && modo === 'estructura')
+    ? modalidades.map(m => ({ value: m.nombre, label: m.nombre === 'planta' ? 'POF' : m.nombre === 'guardia' ? 'POU' : m.nombre }))
+    : modalidades.map(m => m.nombre)
 
   // Especialidades segun si el puesto seleccionado es medico o no
+  const NO_APLICA = 'No aplica'
   const espOptions = esCph
-    ? (form.puesto_es_medico ? espMedico : espNoMedico)
-    : esTec ? espTec : []
+    ? (form.puesto_es_medico ? espMedico : [NO_APLICA, ...espNoMedico])
+    : esTec ? [NO_APLICA, ...espTec] : []
 
   const puestosOptions = puestos.map(p => p.nombre)
 
@@ -525,7 +545,11 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
                 options={carreraOpts}
                 value={form.carrera_seleccionada}
                 disabled={!form.sigla}
-                onChange={v => setForm(p => ({ ...p, carrera_seleccionada: v, modalidad: '', nivel_formacion: '', puesto: '', puesto_es_medico: 0, especialidad: '', jornada: '' }))} />
+                onChange={v => {
+                  const fijar = modo !== 'estructura' && ['cph', 'enf', 'tec', 'eg'].includes(v)
+                  const mod = fijar ? (modalidadForzada || 'planta') : ''
+                  setForm(p => ({ ...p, carrera_seleccionada: v, modalidad: mod, nivel_formacion: '', puesto: '', puesto_es_medico: 0, especialidad: '', jornada: '' }))
+                }} />
             </div>
 
             {/* Fila 2 — Detalle condicional */}
@@ -545,23 +569,35 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
                     options={tiposCargo.map(t => ({ value: t.codigo, label: t.nombre }))}
                     value={form.tipo_eg}
                     disabled={false}
-                    onChange={v => setForm(p => ({ ...p, tipo_eg: v }))} />
+                    onChange={v => setForm(p => ({ ...p, tipo_eg: v, puesto: '' }))} />
                 )}
-                {esTec && (
+                {modo === 'estructura' && esAs && (
                   <ButtonGroup
-                    label="Tipo TEC"
-                    options={[
-                      { value: 'pof', label: 'POF (Planta)' },
-                      { value: 'pou', label: 'POU (Guardia)' },
-                    ]}
-                    value={form.tipo_tec}
+                    label="Tipo de cargo"
+                    options={tiposCargo.map(t => ({ value: t.codigo, label: t.nombre }))}
+                    value={form.tipo_as}
                     disabled={false}
-                    onChange={v => setForm(p => ({ ...p, tipo_tec: v }))} />
+                    onChange={v => setForm(p => ({ ...p, tipo_as: v }))} />
                 )}
+                {esEg && modo === 'estructura' && ['jefe_eg', 'gerencial'].includes(form.tipo_eg) && (
+                  <PickerField label="Puesto" value={form.puesto}
+                    disabled={false}
+                    onOpen={() => setPicker('puesto')}
+                    onClear={() => setForm(p => ({ ...p, puesto: '' }))} />
+                )}
+                {modalidadFija && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-500">Modalidad</span>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-primary-500 bg-primary-600 text-white">
+                      <CheckIcon className="w-3.5 h-3.5" /> {modalidadForzada === 'guardia' ? 'POU — Guardia' : 'POF — Planta'}
+                    </span>
+                  </div>
+                )}
+
                 {mostrarModalidad && (
                   <ButtonGroup
                     label="Modalidad"
-                    options={modalidades.map(m => m.nombre)}
+                    options={modalidadesOpts}
                     value={form.modalidad}
                     disabled={false}
                     onChange={v => setForm(p => ({ ...p, modalidad: v, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
@@ -574,7 +610,13 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
                     disabled={false}
                     onChange={v => setForm(p => ({ ...p, jornada: v }))} />
                 )}
-                {mostrarModalidad && (
+                {(esCph && modo === 'estructura' && form.tipo_cargo_estructura === 'jefe') && (
+                  <PickerField label="Puesto" value={form.puesto}
+                    disabled={!form.modalidad}
+                    onOpen={() => setPicker('puesto')}
+                    onClear={() => setForm(p => ({ ...p, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                )}
+                {(mostrarModalidad || modalidadFija) && (esTec || (esCph && modo !== 'estructura')) && (
                   <div className="grid grid-cols-2 gap-3">
                     <PickerField label="Puesto" value={form.puesto}
                       disabled={!form.modalidad}
@@ -588,33 +630,27 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion' }) 
                     )}
                   </div>
                 )}
+                {esEg && modo !== 'estructura' && (
+                  <PickerField label="Puesto" value={form.puesto}
+                    disabled={false}
+                    onOpen={() => setPicker('puesto')}
+                    onClear={() => setForm(p => ({ ...p, puesto: '' }))} />
+                )}
               </div>
             )}
 
-            {/* Fila 3 — Norma + Resolucion + Expediente origen */}
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Norma</label>
-                <input type="text"
-                  value={carreras.find(cr => cr.codigo.toLowerCase() === c)?.norma_referencia ?? ''}
-                  readOnly
-                  className="form-input text-sm w-full bg-gray-50 text-gray-400 cursor-default" />
+            {/* Fila 3 — Norma (solo si no es CPH jefe estructura) */}
+            {!(esCph && modo === 'estructura' && form.tipo_cargo_estructura === 'jefe') && (
+              <div className="grid-cols-1 max-w-xs grid gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Norma</label>
+                  <input type="text"
+                    value={carreras.find(cr => cr.codigo.toLowerCase() === c)?.norma_referencia ?? ''}
+                    readOnly
+                    className="form-input text-sm w-full bg-gray-50 text-gray-400 cursor-default" />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Nro. Resolucion</label>
-                <input type="text" value={form.nro_resolucion}
-                  onChange={e => setForm(p => ({ ...p, nro_resolucion: e.target.value }))}
-                  placeholder="Ej: 541/MSGC/26"
-                  className="form-input text-sm w-full" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5">Documento origen</label>
-                <input type="text" value={form.documento_origen}
-                  onChange={e => setForm(p => ({ ...p, documento_origen: e.target.value }))}
-                  placeholder="Ej: EX-2026-17549845"
-                  className="form-input text-sm w-full" />
-              </div>
-            </div>
+            )}
 
             {/* Fila 4 — Vigencia + boton */}
             <div className="grid grid-cols-4 gap-3 items-end">

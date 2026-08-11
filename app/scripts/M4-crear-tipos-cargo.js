@@ -9,7 +9,7 @@ async function main() {
     await ds.query(`
       CREATE TABLE IF NOT EXISTS tipos_cargo (
         id                 TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
-        codigo             VARCHAR(15)      NOT NULL,
+        codigo             VARCHAR(30)      NOT NULL,
         nombre             VARCHAR(50)      NOT NULL,
         aplica_carrera     VARCHAR(10)      NULL COMMENT 'NULL = todas, o codigo de carrera especifica',
         requiere_modalidad TINYINT(1)       NOT NULL DEFAULT 0,
@@ -29,7 +29,11 @@ async function main() {
       { codigo: 'subdirector',nombre: 'Sub Director',      aplica: 'CPH', modal: 0, struct: 1 },
       { codigo: 'jefe_eg',    nombre: 'Jefe',              aplica: 'EG',  modal: 0, struct: 1 },
       { codigo: 'director_eg',nombre: 'Director',          aplica: 'EG',  modal: 0, struct: 1 },
-      { codigo: 'gerencial',  nombre: 'Carrera Gerencial', aplica: 'EG',  modal: 0, struct: 1 },
+      { codigo: 'gerencial',        nombre: 'Carrera Gerencial',        aplica: 'EG',  modal: 0, struct: 1 },
+      { codigo: 'ministro',          nombre: 'Ministro',                 aplica: 'AS',  modal: 0, struct: 1 },
+      { codigo: 'subsecretaria',     nombre: 'SubSecretaria',            aplica: 'AS',  modal: 0, struct: 1 },
+      { codigo: 'dir_general',       nombre: 'Direccion General',        aplica: 'AS',  modal: 0, struct: 1 },
+      { codigo: 'dir_general_adjunta', nombre: 'Direccion General Adjunta', aplica: 'AS', modal: 0, struct: 1 },
     ]
 
     for (const t of tipos) {
