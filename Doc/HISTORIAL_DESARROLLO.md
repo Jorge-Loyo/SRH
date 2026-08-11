@@ -1,7 +1,7 @@
 # DISEÑO — Tabla `cargo` y estructura de datos
 
 > Documento de trabajo. Registra decisiones de diseño, estado actual y estructura objetivo.
-> Última actualización: 2026-01 (actualizado post M10-M14)
+> Última actualización: 2026-08 (actualizado post M10-M14 + Plan Dotación)
 
 ---
 
@@ -316,7 +316,7 @@ dotacion  ← A DISEÑAR
 | F8  | Panel de resultados: mostrar `tipo_alta` y `tipo_eg`/`tipo_cph` en el resumen del cargo registrado                   |
 | F9  | Reescribir export Excel en `ListaCargosPage.jsx` para resolver nombres desde FKs (prerequisito M10 fase 2)           |
 
-### Fuera de scope actual (otros módulos)
+### Fuera de scope actual (otros módulos — pre-dotación)
 
 | Dato                  | Ubicación actual                     | Destino                    |
 | --------------------- | ------------------------------------ | -------------------------- |
@@ -366,3 +366,118 @@ Antes de eliminar `carrera`, `modalidad`, `puesto`, `especialidad`:
 3. Reescribir búsqueda full-text — `puesto LIKE` / `especialidad LIKE` (B9)
 4. Reescribir export Excel en `ListaCargosPage.jsx` (F9)
 5. Reescribir `uploadController.js` para no escribir en campos texto (B10)
+
+---
+
+## 12. Plan de desarrollo — Tabla de Dotación (2026-08)
+
+> Objetivo: construir la tabla `dotacion` normalizada a partir del padrón procesado por el Dotaneitor.
+> Esta tabla será la fuente de verdad para la ocupación de cargos (quién ocupa qué cargo y desde cuándo).
+
+### 12.1 Arquitectura general
+
+```
+Cargos_Salud.xlsx
+      ↓  (Dotaneitor: normaliza + cruza + guarda)
+dot_resultado          ← tabla plana del padrón (ya existe)
+      ↓  (proceso de sincronización — a construir)
+dotacion               ← NUEVA tabla normalizada
+  ├── id_cargo  FK → new_cargo   (vinculado por id_sial)
+  ├── cuil                       (identificador del agente, sin tabla personas por ahora)
+  ├── desde / hasta              (período de ocupación)
+  ├── situacion_revista          (migrar desde new_cargo)
+  ├── antiguedad                 (migrar desde new_cargo)
+  └── campos derivados del padrón (agrupador, unificador, estado, etc.)
+```
+
+**Nota:** No existe tabla `personas` en la BD — los agentes se identifican por CUIL directamente desde `dot_resultado`.
+
+### 12.2 Tablas del Dotaneitor (ya existentes)
+
+| Tabla | Rol | Estado |
+|---|---|---|
+| `dot_resultado` | Padrón procesado plano (1 fila por cargo/agente) | Existe — se popula desde `/guardar-bd` |
+| `dot_resultado_historial` | Historial de cambios por proceso | Existe |
+| `dot_agrupador` | Tabla de referencia: cruce escalafón+puesto → agrupador | Existe |
+| `dot_unificador_puestos` | Tabla de referencia: cruce lit_cod_reg+puesto → unificador | Existe |
+| `dot_especialidades` | Tabla de referencia: CUIL → especialidad por tipo | Existe |
+
+### 12.3 Fases del plan
+
+#### Fase 1 — Diseño de la tabla `dotacion` (M15)
+
+- Crear tabla `dotacion` en BD con el esquema normalizado
+- Vincular `dot_resultado.id_sial` → `new_cargo.id_sial` (campo ya existe en ambas tablas)
+- Migrar `situacion_revista` (2.472 registros) y `antiguedad` (46.947 registros) desde `new_cargo`
+- Desbloquea M11 (pendiente desde M10)
+
+**Esquema propuesto:**
+
+```sql
+CREATE TABLE dotacion (
+  id                   INT AUTO_INCREMENT PRIMARY KEY,
+  id_cargo             INT NOT NULL,          -- FK → new_cargo.id
+  id_sial              VARCHAR(20) NULL,       -- clave de cruce con dot_resultado
+  cuil                 BIGINT NULL,            -- agente que ocupa el cargo
+  cuil_y_rol           VARCHAR(50) NULL,       -- clave compuesta del padrón
+  ayn                  VARCHAR(200) NULL,      -- apellido y nombre
+  desde                DATE NULL,             -- inicio de la ocupación (ANTIGÜEDAD del padrón)
+  hasta                DATE NULL,             -- fin (NULL = actualmente ocupado)
+  situacion_revista    ENUM('activo','retencion_cargo','comision') NULL,
+  agrupador            VARCHAR(100) NULL,
+  unificador_de_puestos VARCHAR(100) NULL,
+  jefe_escalafon       VARCHAR(50) NULL,
+  estado               VARCHAR(20) NULL,      -- Activo / Bloqueado / Retencion / Comision
+  fecha_proceso        DATETIME NULL,         -- fecha del último proceso Dotaneitor
+  fecha_creacion       DATETIME DEFAULT NOW(),
+  fecha_actualizacion  TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
+  CONSTRAINT fk_dotacion_cargo FOREIGN KEY (id_cargo) REFERENCES new_cargo(id)
+);
+```
+
+#### Fase 2 — Endpoint de sincronización (B11)
+
+- Nuevo endpoint Node: `POST /api/dotacion/sincronizar`
+- Lee `dot_resultado`, cruza con `new_cargo` por `id_sial`
+- Detecta y procesa:
+  - **Altas**: cargo en padrón que no tiene fila en `dotacion` → INSERT
+  - **Bajas**: cargo en `dotacion` activo que desaparece del padrón → setear `hasta = hoy`
+  - **Cambios**: diferencias en `situacion_revista`, `agrupador`, `estado`, etc. → UPDATE
+- Devuelve resumen: `{ vinculados, sin_match, altas, bajas, cambios }`
+- `sin_match`: cargos en `dot_resultado` sin `id_sial` en `new_cargo` — se loguean para revisión
+
+#### Fase 3 — Página de Dotación en el frontend (F10)
+
+- Nueva página `DotacionTotalPage` (o renombrar la existente) en `/dotacion`
+- Tabla principal con columnas: sigla, carrera, agrupador, unificador, cargo, agente, estado
+- Filtros: sigla, carrera, agrupador, estado (ocupado/vacante/bloqueado)
+- KPIs en header: total cargos vigentes, ocupados, vacantes, bloqueados
+- Botón **"Sincronizar desde Dotaneitor"** → llama a `POST /api/dotacion/sincronizar`
+- Muestra fecha de última sincronización (desde `dot_resultado.fecha_proceso`)
+
+#### Fase 4 — Integración con DotaneitorPage (F11)
+
+- En `DotaneitorPage`, después del paso "Guardar en BD" (paso 5), agregar paso 6: **"Sincronizar Dotación"**
+- Llama al endpoint de Fase 2 y muestra resumen del proceso
+- Badge de estado: última sincronización + cantidad de registros
+
+### 12.4 Dependencias y orden de ejecución
+
+```
+Fase 1 (M15 — BD)  →  Fase 2 (B11 — backend)  →  Fase 3 (F10 — frontend)
+                                                →  Fase 4 (F11 — integración Dotaneitor)
+```
+
+Fase 1 también desbloquea:
+- M11: migración de `situacion_revista` y `antiguedad` desde `new_cargo`
+- M10 fase 2: eliminación de campos texto en `new_cargo` (prerequisito independiente)
+
+### 12.5 Registro de avance
+
+| Fase | Tarea | Estado |
+|---|---|---|
+| Fase 1 | M15 — Crear tabla `dotacion` | ❌ Pendiente |
+| Fase 1 | M11 — Migrar `situacion_revista` y `antiguedad` | ❌ Bloqueado hasta M15 |
+| Fase 2 | B11 — Endpoint `POST /api/dotacion/sincronizar` | ❌ Pendiente |
+| Fase 3 | F10 — Página DotacionTotalPage con filtros y KPIs | ❌ Pendiente |
+| Fase 4 | F11 — Integración paso 6 en DotaneitorPage | ❌ Pendiente |
