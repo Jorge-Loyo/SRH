@@ -17,8 +17,8 @@ export default defineConfig({
   },
 
   build: {
-    // En producción, el build va a app/public/spa/ para que Express lo sirva
-    outDir: '../app/public/spa',
+    // Vercel/CI → dist; local → app/public/spa para que Express lo sirva
+    outDir: process.env.VERCEL ? 'dist' : '../app/public/spa',
     emptyOutDir: true,
   },
 })
