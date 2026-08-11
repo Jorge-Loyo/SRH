@@ -22,7 +22,8 @@ const ROUTE_TITLES = {
   '/seguridad/usuarios':    'Seguridad · Usuarios',
   '/seguridad/permisos':    'Seguridad · Permisos',
   '/concursales/bajas':           'Bajas Consolidadas',
-  '/concursales/seguimiento-cph': 'Seguimiento CPH',
+  '/concursales/seguimiento-cph':          'Seguimiento CPH',
+  '/herramientas/dotacion-padron':          'Herramientas · Dotación',
 }
 
 const SEGURIDAD_ITEMS = [
@@ -34,6 +35,7 @@ const SEGURIDAD_ITEMS = [
 ]
 
 const HERRAMIENTAS_ITEMS = [
+  { to: '/herramientas/dotacion-padron', label: 'Dotación' },
   { to: '/herramientas/tablas-vista', label: 'Tablas Vista' },
   { to: '/herramientas/tablas-admin', label: 'Tablas Admin' },
   { to: '/herramientas/dotaneitor',   label: 'Dotaneitor' },

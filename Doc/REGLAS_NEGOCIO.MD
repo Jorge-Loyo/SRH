@@ -1,7 +1,7 @@
 # REGLAS DE NEGOCIO — Sistema de Gestión de Dotación GCABA
 
 > Contrato de lógica de negocio. Fuente de verdad para requerimientos funcionales, historias de usuario y decisiones de diseño.
-> Última actualización: 2026-08
+> Última actualización: 2026-09
 
 ---
 
@@ -45,6 +45,7 @@ Las carreras definen el escalafón al que pertenece un cargo.
 | ENF | Enfermería | Ley 6.767 | No | No |
 | TEC | Técnico (CEETPS) | Ley 6.035 | No | No |
 | EG | Escalafón General | Ley 471 | No | Sí |
+| AS | Autoridades Superiores | No aplica | No | Sí |
 | SG | Suplentes de Guardia | — | Sí | No |
 | RES | Residentes | — | Sí | No |
 | DOC | Docentes | — | Sí | No |
@@ -54,6 +55,7 @@ Las carreras definen el escalafón al que pertenece un cargo.
 - **Modo ejecución** → mostrar carreras donde `excluir_alta = 0`
 - **Modo estructura** → mostrar carreras donde `solo_estructura = 1`
 - CPH y EG aparecen en **ambos modos** (`solo_estructura = 1` + `excluir_alta = 0`)
+- AS aparece **solo en modo estructura** (`solo_estructura = 1`, `excluir_alta = 0`)
 - SG, RES y DOC están **excluidas del alta** (`excluir_alta = 1`)
 
 ---
@@ -74,8 +76,13 @@ El código es el identificador permanente del cargo. Se genera en el momento del
 | TEC | Planta (POF) | `TEC-POF-{seq}` | TEC-POF-000001 |
 | TEC | Guardia (POU) | `TEC-POU-{seq}` | TEC-POU-000001 |
 | EG | Ejecución | `EG-{seq}` | EG-000001 |
-| EG | Jefe | `EG-J-{seq}` | EG-J-000001 |
-| AS | Autoridades Superiores | `AS-D-{seq}` | AS-D-000001 |
+| EG | Jefe EG | `EG-J-{seq}` | EG-J-000001 |
+| EG | Director EG | `EG-D-{seq}` | EG-D-000001 |
+| EG | Gerencial | `EG-G-{seq}` | EG-G-000001 |
+| AS | Ministro | `AS-MIN-{seq}` | AS-MIN-000001 |
+| AS | Subsecretaría | `AS-SS-{seq}` | AS-SS-000001 |
+| AS | Dir. General | `AS-DG-{seq}` | AS-DG-000001 |
+| AS | Dir. General Adjunta | `AS-DGA-{seq}` | AS-DGA-000001 |
 | RG | Régimen Gerencial | `RG-CG-{seq}` | RG-CG-000001 |
 
 ### Reglas de formato
@@ -86,8 +93,9 @@ El código es el identificador permanente del cargo. Se genera en el momento del
 - Sub Director solo aplica a CPH, solo por estructura, sin modalidad.
 - ENF es solo por ejecución, **sin modalidad** en el código.
 - TEC POU aplica a: Radiólogos, Hemoterapia, Anatomía Patológica, Instrumentadores Quirúrgicos.
-- **AS** (Autoridades Superiores) es una carrera independiente — reemplaza a `EG-D`.
-- **RG** (Régimen Gerencial) es una carrera independiente — reemplaza a `EG-CG`.
+- EG tipos estructura: `jefe_eg` → `EG-J`, `director_eg` → `EG-D`, `gerencial` → `EG-G`.
+- **AS** (Autoridades Superiores) es carrera independiente con `solo_estructura=1`, `norma=No aplica`. Tipos: `ministro`, `subsecretaria`, `dir_general`, `dir_general_adjunta`.
+- **RG** (Régimen Gerencial) es carrera independiente.
 - El prefijo `GEN` fue migrado a `EG` (script M1/M2 ejecutado).
 
 ---
@@ -98,9 +106,9 @@ El código es el identificador permanente del cargo. Se genera en el momento del
 |---|---|
 | `planta` (POF) | CPH, TEC |
 | `guardia` (POU) | CPH, TEC |
-| Sin modalidad | ENF, EG, SG, RES, DOC |
+| Sin modalidad | ENF, EG, AS, SG, RES, DOC |
 
-- ENF, EG, SG, RES y DOC **no tienen modalidad** — `id_modalidad` es NULL por diseño.
+- ENF, EG, AS, SG, RES y DOC **no tienen modalidad** — `id_modalidad` es NULL por diseño.
 - TEC se diferencia en POU (guardia) y POF (planta) — determina el formato del código.
 
 ---
@@ -121,10 +129,14 @@ Los puestos son los cargos funcionales dentro de cada carrera.
 ### CPH — Jefaturas
 - JEFE DEPARTAMENTO, JEFE DIVISION, JEFE SECCION, JEFE UNIDAD
 
+### EG — Puestos gerencial (estructura)
+- GERENTE (`tipo=gerencial`, `es_estructura=1`)
+- SUBGERENTE (`tipo=gerencial`, `es_estructura=1`)
+
 ### Reglas de filtro de puestos
 - El puesto disponible depende del **unificador** (CPH de Guardia / CPH de Planta / Jefaturas) y del **escalafón** (Médico / No Médico).
 - Sin filtros: se muestran todos los puestos CPH (jefaturas aparte).
-- ENF, EG, SG, RES, DOC **no tienen puestos individuales** — `id_puesto` es NULL por diseño.
+- ENF, AS, SG, RES, DOC **no tienen puestos individuales** — `id_puesto` es NULL por diseño.
 
 ---
 
@@ -135,7 +147,7 @@ Las especialidades se filtran según el puesto seleccionado.
 - Cada puesto tiene un conjunto fijo de especialidades válidas (mapa puesto → especialidades).
 - Si no hay puesto seleccionado, se filtra por escalafón (Médico / No Médico).
 - Fallback: si no hay puesto ni escalafón, se muestran todas las especialidades.
-- ENF, EG, SG, RES, DOC **no tienen especialidad** — `id_especialidad` es NULL por diseño.
+- ENF, EG, AS, SG, RES, DOC **no tienen especialidad** — `id_especialidad` es NULL por diseño.
 
 ---
 
@@ -162,6 +174,15 @@ El alta es el evento que da origen a uno o más cargos en la estructura.
 |---|---|
 | `ejecucion` | Alta de cargo de ejecución (planta/guardia) |
 | `estructura` | Alta de cargo de conducción/estructura (jefaturas, directores) |
+
+### Pestañas del módulo /cargos
+
+| Pestaña | Ruta | modalidadForzada |
+|---|---|---|
+| Cargo de Ejecucion POF | `/cargos` | `planta` |
+| Cargo de Ejecucion POU | `/cargos/pou` | `guardia` |
+| Cargo por Estructura | `/cargos` (tab estructura) | — |
+| Decreto | `/cargos/decreto` | — |
 
 ### Tablas de detalle por carrera
 
@@ -205,9 +226,10 @@ La situación de revista aplica **solo a cargos CPH de tipo Jefe o Director** (c
 
 ---
 
-## 10. CATEGORÍA INTERNA
+## 10. CATEGORÍA INTERNA (ETIQUETA)
 
-- Campo `categoria_interna` varchar(50) en `new_cargo`.
+- Campo `categoria_interna` varchar(50) en `new_cargo` — texto redundante con `id_etiqueta`.
+- `id_etiqueta` FK → `cargo_etiquetas.id` — normalizado desde el alta.
 - Identifica subcategorías internas del cargo (ej: "BA", "BC").
 - Se muestra como badge en la tabla y en el modal de información.
 - Se puede filtrar directamente por valor exacto.
@@ -380,9 +402,22 @@ Para todas las demás carreras, `id_jornada` es NULL por diseño.
 
 Los tipos de cargo aplican solo al **modo estructura** (`solo_estructura = 1`).
 
-- Se almacenan en la tabla `tipos_cargo`.
+- Se almacenan en la tabla `tipos_cargo` con `codigo` VARCHAR(30).
 - Cada tipo tiene: código, nombre, carrera a la que aplica, si requiere modalidad.
-- Actualmente hay 7 tipos definidos.
+- Actualmente hay 11 tipos definidos:
+
+| Código | Nombre | Carrera |
+|---|---|---|
+| `jefe` | Jefe | CPH |
+| `director` | Director | CPH |
+| `subdirector` | Sub Director | CPH |
+| `jefe_eg` | Jefe EG | EG |
+| `director_eg` | Director EG | EG |
+| `gerencial` | Gerencial | EG |
+| `ministro` | Ministro | AS |
+| `subsecretaria` | Subsecretaría | AS |
+| `dir_general` | Dir. General | AS |
+| `dir_general_adjunta` | Dir. General Adjunta | AS |
 
 ---
 
@@ -421,7 +456,24 @@ Campos previstos:
 
 ---
 
-## 20. PENDIENTES DE NEGOCIO (DEUDA TÉCNICA CON IMPACTO FUNCIONAL)
+## 20. NORMALIZACIÓN DE `new_cargo` — Estado actual
+
+| Campo FK | Tabla origen | Se llena en alta nueva | Históricos |
+|---|---|---|---|
+| `id_carrera` | `carreras` | ✅ Sí | ✅ Completo |
+| `id_modalidad` | `modalidades` | ✅ Sí | ✅ Completo |
+| `id_especialidad` | `especialidades` | ✅ Sí | ✅ Completo |
+| `id_puesto` | `puestos_cargo` | ✅ Sí (CPH, TEC, EG) | ✅ Completo |
+| `id_jornada` | `jornadas` | ✅ Sí | ✅ Completo |
+| `id_tipo_cargo` | `tipos_cargo` | ✅ Sí (estructura) | ❌ Solo nuevos |
+| `id_etiqueta` | `cargo_etiquetas` | ✅ Sí | ❌ Solo nuevos |
+| `id_alta` | `cargos_alta` | ✅ Sí | ⚠️ 46.889 sin alta |
+
+Campos texto redundantes mantenidos por compatibilidad: `carrera`, `modalidad`, `puesto`, `especialidad`, `tipo_cargo`, `categoria_interna`. Pendiente eliminar en M10 fase 2.
+
+---
+
+## 21. PENDIENTES DE NEGOCIO (DEUDA TÉCNICA CON IMPACTO FUNCIONAL)
 
 | # | Descripción | Impacto |
 |---|---|---|
