@@ -27,8 +27,12 @@ async function listNewCargo(req, res) {
     if (sigla)     { conditions.push('nc.sigla = ?');     params.push(sigla) }
     if (categoria) { conditions.push('nc.categoria_interna = ?'); params.push(categoria) }
     if (estado) {
-      if (estado === 'comision') { conditions.push("nc.situacion_revista = 'comision'") }
+      if (estado === 'comision')  { conditions.push("nc.situacion_revista = 'comision'") }
       else if (estado === 'retencion') { conditions.push("nc.situacion_revista = 'retencion_cargo'") }
+      else if (estado === 'vacante') {
+        conditions.push('nc.estado = \'vigente\'')
+        conditions.push('cd.id IS NULL')
+      }
       else { conditions.push('nc.estado = ?'); params.push(estado === 'activo' ? 'vigente' : estado === 'bloqueado' ? 'no_vigente' : estado) }
     }
     if (tipoCph) {

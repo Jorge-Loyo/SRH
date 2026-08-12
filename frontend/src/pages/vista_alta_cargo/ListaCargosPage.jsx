@@ -46,7 +46,7 @@ function SiglaPickerModal({ siglas, value, onSelect, onClose }) {
 }
 
 const ESTADOS_ENUM = ['vigente', 'no_vigente']
-const ESTADOS_FILTER = ['vigente', 'no_vigente', 'comision', 'retencion']
+const ESTADOS_FILTER = ['vigente', 'no_vigente', 'vacante', 'comision', 'retencion']
 const SR_ENUM = ['activo', 'retencion_cargo', 'comision']
 const SR_LABELS = { activo: 'Activo', retencion_cargo: 'Retención de Cargo', comision: 'Comisión' }
 const SR_STYLES = {
