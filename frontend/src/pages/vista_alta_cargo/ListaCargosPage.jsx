@@ -318,15 +318,64 @@ function CellValue({ val, col, row }) {
   return <span className={col.wide ? 'max-w-[200px] truncate block' : ''}>{val}</span>
 }
 
-const CARRERAS    = ['CPH', 'ENF', 'TEC', 'SG', 'GEN', 'RES', 'DOC']
-const MODALIDADES = ['planta', 'guardia']
+function CategoriaPickerModal({ etiquetas, value, onSelect, onClose }) {
+  const [q, setQ] = useState('')
+  const inputRef  = useRef(null)
+  const filtered  = q.trim()
+    ? etiquetas.filter(e => e.codigo.toLowerCase().includes(q.toLowerCase()) || (e.descripcion || '').toLowerCase().includes(q.toLowerCase()))
+    : etiquetas
+  useEffect(() => { setTimeout(() => inputRef.current?.focus(), 50) }, [])
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onMouseDown={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col" style={{ maxHeight: '70vh' }} onMouseDown={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <span className="text-sm font-semibold text-gray-800">Filtrar por Categoría</span>
+          <button type="button" onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><XMarkIcon className="w-4 h-4" /></button>
+        </div>
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input ref={inputRef} type="text" value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar categoría..." className="form-input text-sm w-full pl-9" />
+          </div>
+        </div>
+        <div className="overflow-y-auto flex-1 py-1">
+          {value && (
+            <button onClick={() => { onSelect(''); onClose() }} className="w-full flex items-center px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 border-b border-gray-50">
+              <XMarkIcon className="w-3.5 h-3.5 mr-2" /> Quitar filtro
+            </button>
+          )}
+          {filtered.length === 0
+            ? <p className="px-4 py-8 text-sm text-gray-400 text-center">Sin resultados</p>
+            : filtered.map(e => (
+              <button key={e.id} onClick={() => { onSelect(e.codigo); onClose() }}
+                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+                  e.codigo === value ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700 hover:bg-gray-50'
+                }`}>
+                <span className="flex flex-col items-start">
+                  <span className="font-medium">{e.codigo}</span>
+                  {e.descripcion && <span className="text-xs text-gray-400">{e.descripcion}</span>}
+                </span>
+                {e.codigo === value && <CheckIcon className="w-4 h-4 text-amber-600 shrink-0" />}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+  )
+}
+
+
+const MODALIDADES = [{ v: 'planta', l: 'POF' }, { v: 'guardia', l: 'POU' }]
 
 const ESTADO_CONFIG = [
-  { v: 'vigente',    l: 'Vigente',     cls: 'bg-green-100 text-green-700 border-green-200',    act: 'bg-green-600 text-white border-green-600'    },
-  { v: 'no_vigente', l: 'No vigente',  cls: 'bg-red-100 text-red-700 border-red-200',          act: 'bg-red-600 text-white border-red-600'        },
-  { v: 'vacante',    l: 'Vacante',     cls: 'bg-amber-100 text-amber-700 border-amber-200',    act: 'bg-amber-500 text-white border-amber-500'    },
-  { v: 'comision',   l: 'Comisión',    cls: 'bg-blue-100 text-blue-700 border-blue-200',       act: 'bg-blue-600 text-white border-blue-600'      },
-  { v: 'retencion',  l: 'Retención',   cls: 'bg-orange-100 text-orange-700 border-orange-200', act: 'bg-orange-500 text-white border-orange-500'  },
+  { v: 'vigente',    l: 'Vigente',    cls: 'bg-green-100 text-green-700 border-green-200',    act: 'bg-green-600 text-white border-green-600'   },
+  { v: 'no_vigente', l: 'No vigente', cls: 'bg-red-100 text-red-700 border-red-200',           act: 'bg-red-600 text-white border-red-600'       },
+]
+const SUBESTADO_CONFIG = [
+  { v: 'vacante',   l: 'Vacante',   cls: 'bg-amber-100 text-amber-700 border-amber-200',    act: 'bg-amber-500 text-white border-amber-500'   },
+  { v: 'comision',  l: 'Comisión',  cls: 'bg-blue-100 text-blue-700 border-blue-200',       act: 'bg-blue-600 text-white border-blue-600'     },
+  { v: 'retencion', l: 'Retención', cls: 'bg-orange-100 text-orange-700 border-orange-200', act: 'bg-orange-500 text-white border-orange-500' },
 ]
 
 function FilterChip({ label, active, onClick, activeClass, inactiveClass }) {
@@ -357,6 +406,8 @@ export default function ListaCargosPage() {
   const [categoria,  setCategoria]  = useState('')
   const [siglas,     setSiglas]     = useState([])
   const [siglaModal, setSiglaModal] = useState(false)
+  const [etiquetas,  setEtiquetas]  = useState([])
+  const [catModal,   setCatModal]   = useState(false)
   const [exporting,  setExporting]  = useState(false)
   const [infoRow,    setInfoRow]    = useState(null)   // id del cargo para modal info
   const [editRow,    setEditRow]    = useState(null)   // objeto row para modal edición
@@ -392,6 +443,7 @@ export default function ListaCargosPage() {
 
   useEffect(() => {
     altaCargoApi.listSiglas().then(data => setSiglas(data.map(s => s.sigla))).catch(() => {})
+    altaCargoApi.listEtiquetas().then(data => setEtiquetas(data)).catch(() => {})
   }, [])
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
@@ -454,6 +506,11 @@ export default function ListaCargosPage() {
           onSelect={v => { setSigla(v); setPage(1) }}
           onClose={() => setSiglaModal(false)} />
       )}
+      {catModal && (
+        <CategoriaPickerModal etiquetas={etiquetas} value={categoria}
+          onSelect={v => { setCategoria(v); setPage(1) }}
+          onClose={() => setCatModal(false)} />
+      )}
 
       {/* Filtros */}
       <div className="card p-3 space-y-2">
@@ -476,8 +533,8 @@ export default function ListaCargosPage() {
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Modalidad</span>
-              {MODALIDADES.map(m => (
-                <FilterChip key={m} label={m === 'planta' ? 'Planta' : 'Guardia'} active={modalidad === m} onClick={() => toggleModalidad(m)} />
+              {MODALIDADES.map(({ v, l }) => (
+                <FilterChip key={v} label={l} active={modalidad === v} onClick={() => toggleModalidad(v)} />
               ))}
             </div>
           </div>
@@ -492,7 +549,7 @@ export default function ListaCargosPage() {
             </div>
           )}
 
-          {/* Fila 3: Estado + Ubicación + Categoría */}
+          {/* Fila 3: Estado */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Estado</span>
@@ -500,8 +557,16 @@ export default function ListaCargosPage() {
                 <FilterChip key={v} label={l} active={estado === v} onClick={() => toggleEstado(v)}
                   activeClass={act} inactiveClass={cls} />
               ))}
+              <span className="text-[11px] text-gray-300 mx-1">|</span>
+              {SUBESTADO_CONFIG.map(({ v, l, cls, act }) => (
+                <FilterChip key={v} label={l} active={estado === v} onClick={() => toggleEstado(v)}
+                  activeClass={act} inactiveClass={cls} />
+              ))}
             </div>
+          </div>
 
+          {/* Fila 4: Ubicación + Categoría */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Ubicación</span>
               <button onClick={() => setSiglaModal(true)}
@@ -521,17 +586,14 @@ export default function ListaCargosPage() {
 
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Categoría</span>
-              <input
-                type="text" value={categoria}
-                onChange={e => { setCategoria(e.target.value.toUpperCase()); setPage(1) }}
-                placeholder="Ej: CEMAR 4"
-                maxLength={50}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors w-28 text-center ${
+              <button onClick={() => setCatModal(true)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                   categoria
-                    ? 'bg-amber-500 text-white border-amber-500 placeholder-amber-200'
-                    : 'bg-white text-gray-600 border-gray-200 placeholder-gray-300'
-                }`}
-              />
+                    ? 'bg-amber-500 text-white border-amber-500'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-amber-400 hover:text-amber-600'
+                }`}>
+                {categoria || 'Seleccionar...'}
+              </button>
               {categoria && (
                 <button onClick={() => { setCategoria(''); setPage(1) }} className="text-gray-400 hover:text-gray-600">
                   <XMarkIcon className="w-3.5 h-3.5" />
@@ -548,7 +610,7 @@ export default function ListaCargosPage() {
             <span className="text-[11px] text-gray-400">Filtros activos:</span>
             {carrera   && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{carrera}</span>}
             {modalidad && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium capitalize">{modalidad}</span>}
-            {estado    && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{ESTADO_CONFIG.find(e => e.v === estado)?.l || estado}</span>}
+            {estado    && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{[...ESTADO_CONFIG,...SUBESTADO_CONFIG].find(e => e.v === estado)?.l || estado}</span>}
             {sigla     && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{sigla}</span>}
             {categoria && <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[11px] font-medium">{categoria}</span>}
             {q         && <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[11px] font-medium truncate max-w-[160px]">"{q}"</span>}
