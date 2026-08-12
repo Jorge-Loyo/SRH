@@ -1,4 +1,5 @@
 const DotacionSyncService = require('./DotacionSyncService');
+const CargoDotacionSyncService = require('./CargoDotacionSyncService');
 const { AppDataSource } = require('../../config/data-source');
 const logger = require('../../utils/logger');
 
@@ -96,4 +97,27 @@ async function getEstado(req, res) {
   }
 }
 
-module.exports = { sincronizar, getEstado, getLista };
+async function sincronizarCargos(req, res) {
+  try {
+    const svc = new CargoDotacionSyncService(AppDataSource);
+    const resultado = await svc.sincronizar();
+    logger.info('[Dotacion] Sincronización cargo_dotacion completada', resultado);
+    return res.json(resultado);
+  } catch (e) {
+    logger.error('[Dotacion] Error en sincronizarCargos', { error: e.message });
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+async function getEstadoCargos(req, res) {
+  try {
+    const svc = new CargoDotacionSyncService(AppDataSource);
+    const estado = await svc.getEstado();
+    return res.json(estado);
+  } catch (e) {
+    logger.error('[Dotacion] Error en getEstadoCargos', { error: e.message });
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+module.exports = { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos };
