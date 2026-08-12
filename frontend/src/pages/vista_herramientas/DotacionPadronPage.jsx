@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
-import { FunnelIcon, XMarkIcon, ChevronUpIcon, ChevronDownIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
-import { apiGet } from '../../api/client'
+import { FunnelIcon, XMarkIcon, ChevronUpIcon, ChevronDownIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { apiGet, apiPost } from '../../api/client'
 import Pagination from '../../components/ui/Pagination'
 import Spinner from '../../components/ui/Spinner'
 import MultiSelectDropdown from '../../components/ui/MultiSelectDropdown'
@@ -127,6 +127,8 @@ export default function DotacionPadronPage() {
   const [error,         setError]         = useState(null)
   const [showFilters,   setShowFilters]   = useState(true)
   const [fechaProceso,  setFechaProceso]  = useState(null)
+  const [syncing,       setSyncing]       = useState(false)
+  const [syncResult,    setSyncResult]    = useState(null)
   const tableRef = useRef(null)
 
   // refs para evitar stale closures
@@ -160,6 +162,18 @@ export default function DotacionPadronPage() {
       setLoading(false)
     }
   }, [buildParams])
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true); setSyncResult(null)
+    try {
+      const result = await apiPost('/api/dotacion/cargos/sincronizar')
+      setSyncResult({ ok: true, ...result })
+    } catch (e) {
+      setSyncResult({ ok: false, error: e.message })
+    } finally {
+      setSyncing(false)
+    }
+  }, [])
 
   // carga inicial
   useEffect(() => { fetchData() }, []) // eslint-disable-line
@@ -231,6 +245,12 @@ export default function DotacionPadronPage() {
           </div>
           <div className="flex-1" />
 
+          <button onClick={handleSync} disabled={syncing}
+            className="btn-secondary flex items-center gap-1.5 text-sm disabled:opacity-50">
+            <ArrowPathIcon className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar cargos'}
+          </button>
+
           {/* Búsqueda rápida */}
           <input
             type="text" value={search} placeholder="Buscar por nombre, CUIL o ID SIAL..."
@@ -264,6 +284,28 @@ export default function DotacionPadronPage() {
                 onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Resultado sincronización */}
+      {syncResult && (
+        <div className={`flex-shrink-0 mx-4 mt-2 px-4 py-2.5 rounded-lg text-sm flex items-center justify-between ${
+          syncResult.ok ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {syncResult.ok ? (
+            <span>
+              Sincronización completada — período <strong>{syncResult.periodo}</strong> ·
+              {' '}<strong>{syncResult.insertados}</strong> nuevos ·
+              {' '}<strong>{syncResult.actualizados}</strong> actualizados ·
+              {' '}<strong>{syncResult.bajas}</strong> bajas ·
+              {' '}<strong>{syncResult.personas_insertadas}</strong> personas nuevas
+            </span>
+          ) : (
+            <span>Error: {syncResult.error}</span>
+          )}
+          <button onClick={() => setSyncResult(null)} className="ml-4 text-current opacity-60 hover:opacity-100">
+            <XMarkIcon className="w-4 h-4" />
+          </button>
         </div>
       )}
 

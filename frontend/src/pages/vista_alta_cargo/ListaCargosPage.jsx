@@ -78,6 +78,29 @@ function InfoModal({ cargoId, onClose }) {
           {!data && !error && <p className="text-sm text-gray-400 text-center py-4">Cargando...</p>}
           {data && (
             <>
+              {/* Dotación */}
+              <Section title="Dotación">
+                {data.dot_ayn ? (
+                  <>
+                    <Row label="Agente" val={<span className="font-medium">{data.dot_ayn}</span>} />
+                    <Row label="CUIL" val={<span className="font-mono text-gray-600">{data.dot_cuil}</span>} />
+                    {data.dot_especialidad && <Row label="Especialidad" val={data.dot_especialidad} />}
+                    <Row label="ID SIAL rol" val={<span className="font-mono text-xs text-gray-500">{data.dot_id_sial}</span>} />  
+                    {data.dot_reparticion && <Row label="Repartición" val={data.dot_reparticion} />}
+                    {data.dot_sit_revista && (
+                      <Row label="Sit. revista" val={
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SR_STYLES[data.dot_sit_revista] || 'bg-gray-100 text-gray-600'}`}>
+                          {SR_LABELS[data.dot_sit_revista] || data.dot_sit_revista}
+                        </span>
+                      } />
+                    )}
+                    {data.dot_periodo && <Row label="Período" val={data.dot_periodo} />}
+                  </>
+                ) : (
+                  <Row label="Estado" val={<span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Vacante</span>} />
+                )}
+              </Section>
+
               {/* Identificación */}
               <Section title="Identificación">
                 <Row label="Código"    val={<span className="font-mono font-semibold text-primary-700">{data.codigo}</span>} />
@@ -252,6 +275,7 @@ const COLS = [
   { key: 'puesto',              label: 'Puesto',          wide: true  },
   { key: 'especialidad',        label: 'Especialidad',    wide: true  },
   { key: 'estado',              label: 'Estado'                       },
+  { key: 'dot_ayn',             label: 'Ocupado por',     wide: true  },
   { key: 'antiguedad_calc',     label: 'Antigüedad'                   },
   { key: 'cargo_desde',         label: 'Desde',           date: true  },
   { key: 'cargo_hasta',         label: 'Hasta',           date: true  },
@@ -268,7 +292,16 @@ const ESTADO_STYLES = {
 
 const fmtDate = v => v ? new Date(v).toLocaleDateString('es-AR') : null
 
-function CellValue({ val, col }) {
+function CellValue({ val, col, row }) {
+  if (col.key === 'dot_ayn') {
+    if (!val) return <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Vacante</span>
+    return (
+      <span className="inline-flex flex-col gap-0.5">
+        <span className="font-medium text-gray-800 max-w-[200px] truncate block">{val}</span>
+        {row?.dot_cuil && <span className="text-[10px] text-gray-400 font-mono">{row.dot_cuil}</span>}
+      </span>
+    )
+  }
   if (!val) return <span className="text-gray-300">—</span>
   if (col.date)  return <span className="text-gray-600">{fmtDate(val)}</span>
   if (col.mono)  return <span className="font-mono font-semibold text-primary-700">{val}</span>
@@ -515,7 +548,7 @@ export default function ListaCargosPage() {
                 <tr key={row.id} className={`border-b border-gray-50 ${i % 2 ? 'bg-gray-50/50' : ''} hover:bg-primary-50/30 transition-colors`}>
                   {COLS.map(c => (
                     <td key={c.key} className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      <CellValue val={row[c.key]} col={c} />
+                      <CellValue val={row[c.key]} col={c} row={row} />
                     </td>
                   ))}
                   <td className="px-3 py-2 whitespace-nowrap">
