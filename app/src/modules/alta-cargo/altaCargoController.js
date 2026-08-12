@@ -46,7 +46,7 @@ async function createAlta(req, res) {
   } catch (err) {
     logger.error('[altaCargoController] createAlta', { error: err.message });
     if (err instanceof z.ZodError) return res.status(400).json({ error: 'Datos inválidos', details: err.errors });
-    res.status(400).json({ error: 'Error al crear el alta' });
+    res.status(400).json({ error: 'Error al crear el alta', detail: err.message });
   }
 }
 

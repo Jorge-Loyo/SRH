@@ -44,12 +44,13 @@ class AltaCargoService {
       prefix = c
     }
 
+    const escapedPrefix = prefix.replace(/-/g, '\\-')
     const [{ max_seq }] = await manager.query(
       `SELECT MAX(CAST(SUBSTRING_INDEX(codigo, '-', -1) AS UNSIGNED)) as max_seq
        FROM new_cargo
        WHERE codigo LIKE ?
          AND codigo REGEXP ?`,
-      [`${prefix}-%`, `^${prefix.replace('-', '\\-')}-[0-9]{6}$`]
+      [`${prefix}-%`, `^${escapedPrefix}-[0-9]{6}$`]
     )
     const seq = ((max_seq ?? 0) + 1).toString().padStart(6, '0')
     return `${prefix}-${seq}`
@@ -152,7 +153,7 @@ class AltaCargoService {
       let detalle = null;
 
       for (let i = 0; i < cantidad; i++) {
-        const codigo = await this.#nextCodigo(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg);
+        const codigo = await this.#nextCodigo(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as);
 
         if (carrera_seleccionada === 'cph') {
           const numero_unico = await this.#nextNumero(manager, this.cphRepo.target);
@@ -178,17 +179,20 @@ class AltaCargoService {
               cargo_desde, cargo_hasta, antiguedad, estado, situacion_revista,
               id_alta, id_carrera, id_modalidad, id_especialidad, id_puesto, id_jornada,
               categoria_interna, id_etiqueta, norma_referencia, nro_resolucion, documento_origen)
-           VALUES (?,?,?,?,?,?,?,?,?,?,'vigente',?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
-            codigo, payload.sigla, carrera_seleccionada.toUpperCase(),
-            tipo,
+            codigo,
+            payload.sigla,
+            carrera_seleccionada.toUpperCase(),
+            tipo                          ?? null,
             id_tipo_cargo,
-            payload.modalidad ?? null,
-            payload.puesto ?? null,
-            payload.especialidad ?? null,
-            payload.cargo_desde ?? null,
-            payload.cargo_hasta ?? null,
-            payload.antiguedad ?? null,
+            payload.modalidad             ?? null,
+            payload.puesto                ?? null,
+            payload.especialidad          ?? null,
+            payload.cargo_desde           ?? null,
+            payload.cargo_hasta           ?? null,
+            payload.antiguedad            ?? null,
+            'vigente',
             esEstructura ? 'activo' : null,
             savedAlta.id,
             id_carrera,
@@ -196,11 +200,11 @@ class AltaCargoService {
             id_especialidad,
             id_puesto,
             id_jornada,
-            payload.categoria_interna ?? null,
+            payload.categoria_interna     ?? null,
             id_etiqueta,
-            payload.norma_referencia  ?? null,
-            payload.nro_resolucion    ?? null,
-            payload.documento_origen  ?? null,
+            payload.norma_referencia      ?? null,
+            payload.nro_resolucion        ?? null,
+            payload.documento_origen      ?? null,
           ]
         );
         codigos.push(codigo);
