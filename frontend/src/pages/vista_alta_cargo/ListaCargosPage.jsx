@@ -418,7 +418,7 @@ export default function ListaCargosPage() {
       {/* Filtros */}
       <div className="card p-3 space-y-2.5">
         <input type="text" value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Buscar por código, sigla, puesto, especialidad..."
+          placeholder="Buscar por código, sigla, puesto, especialidad, expediente..."
           className="form-input text-sm w-full" />
         <div className="flex flex-wrap gap-x-5 gap-y-2">
 

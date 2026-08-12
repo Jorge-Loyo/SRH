@@ -18,9 +18,9 @@ async function listNewCargo(req, res) {
     const params = []
 
     if (q) {
-      conditions.push('(nc.codigo LIKE ? OR nc.sigla LIKE ? OR nc.puesto LIKE ? OR nc.especialidad LIKE ? OR nc.norma_referencia LIKE ? OR nc.nro_resolucion LIKE ?)')
+      conditions.push('(nc.codigo LIKE ? OR nc.sigla LIKE ? OR nc.puesto LIKE ? OR nc.especialidad LIKE ? OR nc.norma_referencia LIKE ? OR nc.nro_resolucion LIKE ? OR ca.documento LIKE ? OR ca.expediente LIKE ?)')
       const like = `%${q}%`
-      params.push(like, like, like, like, like, like)
+      params.push(like, like, like, like, like, like, like, like)
     }
     if (carrera)   { conditions.push('nc.carrera = ?');   params.push(carrera) }
     if (modalidad) { conditions.push('nc.modalidad = ?'); params.push(modalidad) }
