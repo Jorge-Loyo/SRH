@@ -127,6 +127,8 @@ y que los procesos (alta, concurso, baja, transferencia) sean eventos vinculados
 - [x] `tipo_cargo` VARCHAR(30), `id_tipo_cargo` tinyint FK, `id_etiqueta` int FK agregados a `new_cargo` — **HECHO**
 - [x] Pestañas POF/POU separadas en `CargosPage` con `modalidadForzada` — **HECHO**
 - [x] `AltaCargoService.js` resuelve todos los IDs normalizados antes del loop de INSERT — **HECHO**
+- [x] Códigos legacy migrados al formato normalizado (M16) — 43.871 registros actualizados — **HECHO**
+- [x] Datos de prueba eliminados — tabla `new_cargo` queda con 46.889 cargos migrados limpios — **HECHO**
 
 ### Estados del cargo
 
@@ -287,6 +289,7 @@ dotacion  ← A DISEÑAR
 | M13    | Agregar `id_jornada` FK → `jornadas`, migrar 4 registros, eliminar campo texto `jornada`                                                        | ✅ Ejecutado                                               |
 | M14    | Agregar `id_puesto` FK → `puestos_cargo`, migrar 3.567 TEC desde `id_puesto_tec`, eliminar `id_puesto_tec`                                      | ✅ Ejecutado                                               |
 | M15    | Crear tabla `dotacion` con esquema normalizado, FK → `new_cargo`, campos de sincronización con `dot_resultado`                                  | ❌ Pendiente                                               |
+| M16    | Migrar códigos legacy al formato normalizado: CPH-P→POF, CPH-G→POU, EG-P→EG, ENF-P→ENF, TEC-P→TEC-POF, SG-G→SG, etc. 43.871 registros.       | ✅ Ejecutado                                               |
 
 ---
 
@@ -296,7 +299,7 @@ dotacion  ← A DISEÑAR
 
 | Archivo                 | Cambio                                                                                                                                                                                                                                        |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AltaCargoService.js`   | `#nextCodigo` con prefijos EG (EG-J, EG-D, EG-G) y AS (AS-MIN, AS-SS, AS-DG, AS-DGA). `create()` resuelve antes del loop: `id_carrera`, `id_modalidad`, `id_especialidad`, `id_puesto`, `id_jornada`, `id_tipo_cargo`, `id_etiqueta`. INSERT incluye `tipo_cargo` + todas las FKs. |
+| `AltaCargoService.js`   | `#nextCodigo` con prefijos EG (EG-J, EG-D, EG-G) y AS (AS-MIN, AS-SS, AS-DG, AS-DGA). `create()` resuelve antes del loop: `id_carrera`, `id_modalidad`, `id_especialidad`, `id_puesto`, `id_jornada`, `id_tipo_cargo`, `id_etiqueta`. INSERT incluye `tipo_cargo` + todas las FKs. Contador usa `MAX(seq)` con REGEXP para ignorar códigos legacy. |
 | `altaCargoSchema.js`    | `expediente`→`documento`, `tipo_alta` agregado. CPH: subdirector. TEC: tipo_tec. EG: `tipo_eg` enum `[ejecucion, jefe_eg, director_eg, gerencial]`. AS: `tipo_as` string. RG: agregado.                                                       |
 | `AltaCargoEntity.ts`    | `CargosAlta` refleja nueva estructura: `tipo_alta`+`documento`, sin campos del cargo.                                                                                                                                                         |
 | `carrerasController.js` | `listCarreras` con `norma_referencia`/`excluir_alta`/`solo_estructura`. Nuevos: `listJornadas`, `listTiposCargo`, `listPuestos`. SELECTs sin `nivel_formacion`/`jornada`, con `id_jornada`/`id_puesto`. Filtro `estado` mapea valores legacy. |
