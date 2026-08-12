@@ -61,9 +61,16 @@ async function listNewCargo(req, res) {
             MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m'
           )
           ELSE NULL
-        END AS antiguedad_calc
+        END AS antiguedad_calc,
+        pd.cuil        AS dot_cuil,
+        pd.ayn         AS dot_ayn,
+        cd.situacion_revista AS dot_sit_revista,
+        cd.estado      AS dot_estado,
+        cd.codigo_repa AS dot_codigo_repa
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
+       LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
+       LEFT JOIN personas_dotacion pd ON pd.id = cd.id_persona
        ${where}
        ORDER BY nc.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
@@ -256,9 +263,23 @@ async function getNewCargoInfo(req, res) {
             MOD(TIMESTAMPDIFF(MONTH, nc.antiguedad, CURDATE()), 12), ' m'
           )
           ELSE NULL
-        END AS antiguedad_calc
+        END AS antiguedad_calc,
+        pd.cuil        AS dot_cuil,
+        pd.ayn         AS dot_ayn,
+        pd.especialidad AS dot_especialidad,
+        cd.id_sial     AS dot_id_sial,
+        cd.cuil_y_rol  AS dot_cuil_y_rol,
+        cd.situacion_revista AS dot_sit_revista,
+        cd.estado      AS dot_estado,
+        cd.codigo_repa AS dot_codigo_repa,
+        cd.periodo     AS dot_periodo,
+        cd.desde       AS dot_desde,
+        o.desc_rep     AS dot_reparticion
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
+       LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
+       LEFT JOIN personas_dotacion pd ON pd.id = cd.id_persona
+       LEFT JOIN organigramas o ON o.codigo_reparticion = cd.codigo_repa
        WHERE nc.id = ?`,
       [id]
     )
