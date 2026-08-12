@@ -30,8 +30,10 @@ async function listNewCargo(req, res) {
       if (estado === 'comision')  { conditions.push("nc.situacion_revista = 'comision'") }
       else if (estado === 'retencion') { conditions.push("nc.situacion_revista = 'retencion_cargo'") }
       else if (estado === 'vacante') {
-        conditions.push("nc.estado = 'vigente'")
-        conditions.push('cd.id_cargo IS NULL')
+        conditions.push(`nc.estado = 'vigente' AND NOT EXISTS (
+          SELECT 1 FROM cargo_dotacion cd2
+          WHERE cd2.id_cargo = nc.id AND cd2.hasta IS NULL
+        )`)
       }
       else { conditions.push('nc.estado = ?'); params.push(estado === 'activo' ? 'vigente' : estado === 'bloqueado' ? 'no_vigente' : estado) }
     }
@@ -66,15 +68,20 @@ async function listNewCargo(req, res) {
           )
           ELSE NULL
         END AS antiguedad_calc,
-        pd.cuil        AS dot_cuil,
-        pd.ayn         AS dot_ayn,
-        cd.situacion_revista AS dot_sit_revista,
-        cd.estado      AS dot_estado,
-        cd.codigo_repa AS dot_codigo_repa
+        (SELECT pd.cuil FROM cargo_dotacion cd
+          INNER JOIN personas_dotacion pd ON pd.id = cd.id_persona
+          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_cuil,
+        (SELECT pd.ayn FROM cargo_dotacion cd
+          INNER JOIN personas_dotacion pd ON pd.id = cd.id_persona
+          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_ayn,
+        (SELECT cd.situacion_revista FROM cargo_dotacion cd
+          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_sit_revista,
+        (SELECT cd.estado FROM cargo_dotacion cd
+          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_estado,
+        (SELECT cd.codigo_repa FROM cargo_dotacion cd
+          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_codigo_repa
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
-       LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
-       LEFT JOIN personas_dotacion pd ON pd.id = cd.id_persona
        ${where}
        ORDER BY nc.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
