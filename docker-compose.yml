@@ -34,6 +34,19 @@ services:
       timeout: 20s
       retries: 10
   
+  python-service:
+    build:
+      context: "."
+      dockerfile: Dockerfile
+    container_name: dotacion_python
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8092:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+
   adminer:
     image: adminer:latest
     container_name: dotacion_adminer
