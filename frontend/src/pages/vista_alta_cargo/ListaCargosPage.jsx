@@ -318,17 +318,24 @@ function CellValue({ val, col, row }) {
   return <span className={col.wide ? 'max-w-[200px] truncate block' : ''}>{val}</span>
 }
 
-const CARRERAS   = ['CPH', 'ENF', 'TEC', 'SG', 'GEN', 'RES', 'DOC']
+const CARRERAS    = ['CPH', 'ENF', 'TEC', 'SG', 'GEN', 'RES', 'DOC']
 const MODALIDADES = ['planta', 'guardia']
-const ESTADOS    = ESTADOS_FILTER
 
-function FilterChip({ label, active, onClick }) {
+const ESTADO_CONFIG = [
+  { v: 'vigente',    l: 'Vigente',     cls: 'bg-green-100 text-green-700 border-green-200',    act: 'bg-green-600 text-white border-green-600'    },
+  { v: 'no_vigente', l: 'No vigente',  cls: 'bg-red-100 text-red-700 border-red-200',          act: 'bg-red-600 text-white border-red-600'        },
+  { v: 'vacante',    l: 'Vacante',     cls: 'bg-amber-100 text-amber-700 border-amber-200',    act: 'bg-amber-500 text-white border-amber-500'    },
+  { v: 'comision',   l: 'Comisión',    cls: 'bg-blue-100 text-blue-700 border-blue-200',       act: 'bg-blue-600 text-white border-blue-600'      },
+  { v: 'retencion',  l: 'Retención',   cls: 'bg-orange-100 text-orange-700 border-orange-200', act: 'bg-orange-500 text-white border-orange-500'  },
+]
+
+function FilterChip({ label, active, onClick, activeClass, inactiveClass }) {
   return (
     <button onClick={onClick}
       className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
         active
-          ? 'bg-primary-600 text-white border-primary-600'
-          : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400 hover:text-primary-600'
+          ? (activeClass  || 'bg-primary-600 text-white border-primary-600')
+          : (inactiveClass || 'bg-white text-gray-600 border-gray-200 hover:border-primary-400 hover:text-primary-600')
       }`}>
       {label}
     </button>
@@ -449,65 +456,109 @@ export default function ListaCargosPage() {
       )}
 
       {/* Filtros */}
-      <div className="card p-3 space-y-2.5">
+      <div className="card p-3 space-y-2">
+
+        {/* Búsqueda */}
         <input type="text" value={q} onChange={e => setQ(e.target.value)}
           placeholder="Buscar por código, sigla, puesto, especialidad, expediente..."
           className="form-input text-sm w-full" />
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
 
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400 font-medium">Carrera</span>
-            {CARRERAS.map(c => <FilterChip key={c} label={c} active={carrera === c} onClick={() => toggleCarrera(c)} />)}
+        {/* Grilla de filtros */}
+        <div className="grid grid-cols-1 gap-y-2 pt-1">
+
+          {/* Fila 1: Carrera + Modalidad */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Carrera</span>
+              {CARRERAS.map(c => (
+                <FilterChip key={c} label={c} active={carrera === c} onClick={() => toggleCarrera(c)} />
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Modalidad</span>
+              {MODALIDADES.map(m => (
+                <FilterChip key={m} label={m === 'planta' ? 'Planta' : 'Guardia'} active={modalidad === m} onClick={() => toggleModalidad(m)} />
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400 font-medium">Modalidad</span>
-            {MODALIDADES.map(m => <FilterChip key={m} label={m} active={modalidad === m} onClick={() => toggleModalidad(m)} />)}
-          </div>
-
+          {/* Fila 2: Tipo CPH (solo si carrera=CPH) */}
           {carrera === 'CPH' && (
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-xs text-gray-400 font-medium">Tipo CPH</span>
-              {[{v:'comun',l:'Común'},{v:'jefe',l:'Jefe'},{v:'director',l:'Director'}].map(({v,l}) => (
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Tipo</span>
+              {[{v:'comun',l:'Común'},{v:'jefe',l:'Jefe'},{v:'director',l:'Director'},{v:'subdirector',l:'Subdirector'}].map(({v,l}) => (
                 <FilterChip key={v} label={l} active={tipoCph === v} onClick={() => toggleTipoCph(v)} />
               ))}
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs text-gray-400 font-medium">Estado</span>
-            {ESTADOS.map(e => (
-              <FilterChip key={e} label={e} active={estado === e} onClick={() => toggleEstado(e)} />
-            ))}
-          </div>
+          {/* Fila 3: Estado + Ubicación + Categoría */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Estado</span>
+              {ESTADO_CONFIG.map(({ v, l, cls, act }) => (
+                <FilterChip key={v} label={l} active={estado === v} onClick={() => toggleEstado(v)}
+                  activeClass={act} inactiveClass={cls} />
+              ))}
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-400 font-medium">Ubicación</span>
-            <button onClick={() => setSiglaModal(true)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                sigla ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400 hover:text-primary-600'
-              }`}>
-              {sigla || 'Seleccionar...'}
-            </button>
-            {sigla && <button onClick={() => { setSigla(''); setPage(1) }} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="w-3.5 h-3.5" /></button>}
-          </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Ubicación</span>
+              <button onClick={() => setSiglaModal(true)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  sigla
+                    ? 'bg-primary-600 text-white border-primary-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400 hover:text-primary-600'
+                }`}>
+                {sigla || 'Seleccionar...'}
+              </button>
+              {sigla && (
+                <button onClick={() => { setSigla(''); setPage(1) }} className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-gray-400 font-medium">Categoría</span>
-            <input
-              type="text"
-              value={categoria}
-              onChange={e => { setCategoria(e.target.value.toUpperCase()); setPage(1) }}
-              placeholder="Ej: BA"
-              maxLength={50}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors w-20 text-center ${
-                categoria ? 'bg-amber-500 text-white border-amber-500 placeholder-amber-200' : 'bg-white text-gray-600 border-gray-200'
-              }`}
-            />
-            {categoria && <button onClick={() => { setCategoria(''); setPage(1) }} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="w-3.5 h-3.5" /></button>}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Categoría</span>
+              <input
+                type="text" value={categoria}
+                onChange={e => { setCategoria(e.target.value.toUpperCase()); setPage(1) }}
+                placeholder="Ej: CEMAR 4"
+                maxLength={50}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors w-28 text-center ${
+                  categoria
+                    ? 'bg-amber-500 text-white border-amber-500 placeholder-amber-200'
+                    : 'bg-white text-gray-600 border-gray-200 placeholder-gray-300'
+                }`}
+              />
+              {categoria && (
+                <button onClick={() => { setCategoria(''); setPage(1) }} className="text-gray-400 hover:text-gray-600">
+                  <XMarkIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
         </div>
+
+        {/* Resumen de filtros activos */}
+        {(carrera || modalidad || estado || sigla || categoria || q) && (
+          <div className="flex items-center gap-2 pt-1 border-t border-gray-100">
+            <span className="text-[11px] text-gray-400">Filtros activos:</span>
+            {carrera   && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{carrera}</span>}
+            {modalidad && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium capitalize">{modalidad}</span>}
+            {estado    && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{ESTADO_CONFIG.find(e => e.v === estado)?.l || estado}</span>}
+            {sigla     && <span className="px-2 py-0.5 rounded bg-primary-50 text-primary-700 text-[11px] font-medium">{sigla}</span>}
+            {categoria && <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 text-[11px] font-medium">{categoria}</span>}
+            {q         && <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[11px] font-medium truncate max-w-[160px]">"{q}"</span>}
+            <button
+              onClick={() => { setCarrera(''); setModalidad(''); setTipoCph(''); setEstado(''); setSigla(''); setCategoria(''); setQ(''); setPage(1) }}
+              className="ml-auto text-[11px] text-red-500 hover:text-red-700 flex items-center gap-0.5">
+              <XMarkIcon className="w-3 h-3" /> Limpiar todo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Contador + acciones */}
