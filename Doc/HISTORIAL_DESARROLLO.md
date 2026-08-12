@@ -1,7 +1,7 @@
 # DISEÑO — Tabla `cargo` y estructura de datos
 
 > Documento de trabajo. Registra decisiones de diseño, estado actual y estructura objetivo.
-> Última actualización: 2026-09 (actualizado post M10-M14 + Plan Dotación + Módulo Alta Cargos)
+> Última actualización: 2026-09 (post Plan Sesión 2026-09 — M11, F10, fixes varios)
 
 ---
 
@@ -28,42 +28,44 @@ y que los procesos (alta, concurso, baja, transferencia) sean eventos vinculados
 
 ### Tablas principales
 
-| Tabla              | Rol                                          | Estado                                                                    |
-| ------------------ | -------------------------------------------- | ------------------------------------------------------------------------- |
-| `new_cargo`        | Tabla principal de cargos (46.947 registros) | En uso. Normalización en curso (M10-M14 ejecutados).                      |
-| `cargos_alta`      | Encabezado del evento de alta                | ✅ Migrada (M7) — `documento`+`tipo_alta`. Legacy `expediente` mantenido. |
-| `registro_cph`     | Detalle CPH del alta                         | Se mantiene                                                               |
-| `registro_enf`     | Detalle ENF del alta                         | Se mantiene                                                               |
-| `registro_tec_pou` | Detalle TEC guardia                          | Se mantiene                                                               |
-| `registro_tec_pof` | Detalle TEC planta                           | Se mantiene                                                               |
-| `cargos`           | Tabla legacy (periodo+codigo)                | ❌ Cancelado eliminar — 245k registros + FK desde `bajas_concursos`       |
-| `pou`              | Dotación por sigla/periodo                   | Tabla de resumen, no de cargos individuales                               |
+| Tabla               | Rol                                          | Estado                                                                                   |
+| ------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `new_cargo`         | Tabla principal de cargos (46.889 registros) | En uso. Normalizada (M10-M16 ejecutados). `antiguedad` migrada a `cargo_dotacion` (M11). |
+| `cargos_alta`       | Encabezado del evento de alta                | ✅ Migrada (M7) — `documento`+`tipo_alta`. Legacy `expediente` mantenido.                |
+| `registro_cph`      | Detalle CPH del alta                         | Se mantiene                                                                              |
+| `registro_enf`      | Detalle ENF del alta                         | Se mantiene                                                                              |
+| `registro_tec_pou`  | Detalle TEC guardia                          | Se mantiene                                                                              |
+| `registro_tec_pof`  | Detalle TEC planta                           | Se mantiene                                                                              |
+| `cargos`            | Tabla legacy (periodo+codigo)                | ❌ Cancelado eliminar — 245k registros + FK desde `bajas_concursos`                      |
+| `pou`               | Dotación por sigla/periodo                   | Tabla de resumen, no de cargos individuales                                              |
+| `personas_dotacion` | Personas únicas del padrón (CUIL UNIQUE)     | ✅ Creada M15 — 45.083 personas                                                          |
+| `cargo_dotacion`    | Vinculación cargo ↔ persona (histórica)      | ✅ Creada M15 — 46.889 registros activos, incluye `antiguedad` (M11)                     |
 
 ### Tablas de catálogo
 
-| Tabla            | Campos clave                                                                    | Estado                                   |
-| ---------------- | ------------------------------------------------------------------------------- | ---------------------------------------- |
-| `carreras`       | id_carrera, codigo, nombre, norma_referencia, excluir_alta, solo_estructura     | ✅ OK — M2/M8                            |
-| `modalidades`    | id, nombre, id_cod, activo                                                      | ✅ OK                                    |
-| `especialidades` | id, nombre, categoria, id_carrera                                               | ✅ OK                                    |
-| `puestos_cargo`  | id, nombre, carrera, tipo, es_medico, activo, es_estructura, modalidad_tec      | ✅ OK — M5/M8                            |
-| `siglas`         | id_sigla, sigla                                                                 | ✅ OK                                    |
-| `jornadas`       | id, nombre, activo                                                              | ✅ Creada M3 — 'Jornada completa', 'ATP' |
-| `tipos_cargo`    | id, codigo(VARCHAR 30), nombre, aplica_carrera, requiere_modalidad, solo_estructura, activo | ✅ Creada M4 — 11 tipos (CPH + EG + AS)   |
+| Tabla            | Campos clave                                                                                | Estado                                   |
+| ---------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `carreras`       | id_carrera, codigo, nombre, norma_referencia, excluir_alta, solo_estructura                 | ✅ OK — M2/M8                            |
+| `modalidades`    | id, nombre, id_cod, activo                                                                  | ✅ OK                                    |
+| `especialidades` | id, nombre, categoria, id_carrera                                                           | ✅ OK                                    |
+| `puestos_cargo`  | id, nombre, carrera, tipo, es_medico, activo, es_estructura, modalidad_tec                  | ✅ OK — M5/M8                            |
+| `siglas`         | id_sigla, sigla                                                                             | ✅ OK                                    |
+| `jornadas`       | id, nombre, activo                                                                          | ✅ Creada M3 — 'Jornada completa', 'ATP' |
+| `tipos_cargo`    | id, codigo(VARCHAR 30), nombre, aplica_carrera, requiere_modalidad, solo_estructura, activo | ✅ Creada M4 — 11 tipos (CPH + EG + AS)  |
 
 ### Estado de `new_cargo` — campos FK (post M10-M14 + normalización alta)
 
-| Campo FK            | Tipo                      | NULLs  | Estado                                                   |
-| ------------------- | ------------------------- | ------ | -------------------------------------------------------- |
-| `id_carrera`        | int FK → carreras         | 0      | ✅ Completo                                              |
-| `id_modalidad`      | int FK → modalidades      | 3.038  | ✅ Correcto — carreras sin modalidad (EG/ENF/SG/RES/DOC) |
-| `id_especialidad`   | int FK → especialidades   | 24.485 | ✅ Correcto — carreras donde no aplica                   |
-| `id_puesto`         | int FK → puestos_cargo    | 24.585 | ✅ Correcto — ENF/EG/SG/RES/DOC sin puestos individuales |
-| `id_jornada`        | tinyint FK → jornadas     | 46.943 | ✅ Correcto — solo ENF usa jornada                       |
-| `id_tipo_cargo`     | tinyint FK → tipos_cargo  | NULL   | ✅ Nuevo — se llena en altas nuevas (estructura)         |
-| `id_etiqueta`       | int FK → cargo_etiquetas  | NULL   | ✅ Nuevo — se llena cuando se asigna etiqueta            |
-| `id_alta`           | int FK → cargos_alta      | 46.889 | ⚠️ Pendiente — cargos históricos sin evento de alta      |
-| ~~`id_puesto_tec`~~ | eliminado                 | —      | ✅ Eliminado M14 — reemplazado por `id_puesto`           |
+| Campo FK            | Tipo                     | NULLs  | Estado                                                   |
+| ------------------- | ------------------------ | ------ | -------------------------------------------------------- |
+| `id_carrera`        | int FK → carreras        | 0      | ✅ Completo                                              |
+| `id_modalidad`      | int FK → modalidades     | 3.038  | ✅ Correcto — carreras sin modalidad (EG/ENF/SG/RES/DOC) |
+| `id_especialidad`   | int FK → especialidades  | 24.485 | ✅ Correcto — carreras donde no aplica                   |
+| `id_puesto`         | int FK → puestos_cargo   | 24.585 | ✅ Correcto — ENF/EG/SG/RES/DOC sin puestos individuales |
+| `id_jornada`        | tinyint FK → jornadas    | 46.943 | ✅ Correcto — solo ENF usa jornada                       |
+| `id_tipo_cargo`     | tinyint FK → tipos_cargo | NULL   | ✅ Nuevo — se llena en altas nuevas (estructura)         |
+| `id_etiqueta`       | int FK → cargo_etiquetas | NULL   | ✅ Nuevo — se llena cuando se asigna etiqueta            |
+| `id_alta`           | int FK → cargos_alta     | 46.889 | ⚠️ Pendiente — cargos históricos sin evento de alta      |
+| ~~`id_puesto_tec`~~ | eliminado                | —      | ✅ Eliminado M14 — reemplazado por `id_puesto`           |
 
 ### Estado de `new_cargo` — campos texto libre
 
@@ -77,28 +79,28 @@ y que los procesos (alta, concurso, baja, transferencia) sean eventos vinculados
 
 ### Estado de `new_cargo` — otros campos
 
-| Campo               | Tipo                                    | Estado                                                                                |
-| ------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
-| `estado`            | enum('vigente','no_vigente')            | ✅ Migrado M12 — era activo/bloqueado                                                 |
-| `tipo_cargo`        | varchar(30)                             | ✅ Nuevo — texto del tipo (jefe_eg, ministro, ejecucion, etc.)                        |
-| `situacion_revista` | enum(activo, retencion_cargo, comision) | ⚠️ 2.472 registros con valor. Mover a `dotacion` — bloqueado hasta diseñar esa tabla  |
-| `antiguedad`        | date                                    | ⚠️ 46.947 registros con fecha. Mover a `dotacion` — bloqueado hasta diseñar esa tabla |
-| `categoria_interna` | varchar(50)                             | En uso — se mantiene (texto redundante con `id_etiqueta`)                             |
-| `nivel_formacion`   | varchar                                 | No existe en BD (referencia legacy en código eliminada)                               |
+| Campo               | Tipo                                    | Estado                                                                                                    |
+| ------------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `estado`            | enum('vigente','no_vigente')            | ✅ Migrado M12 — era activo/bloqueado                                                                     |
+| `tipo_cargo`        | varchar(30)                             | ✅ Nuevo — texto del tipo (jefe_eg, ministro, ejecucion, etc.)                                            |
+| `situacion_revista` | enum(activo, retencion_cargo, comision) | ✅ 2.472 registros CPH estructura. Fuente de verdad: `cargo_dotacion.situacion_revista` (M11)             |
+| `antiguedad`        | date                                    | ✅ Migrada a `cargo_dotacion.antiguedad` (M11). Campo legacy mantenido en `new_cargo` por compatibilidad. |
+| `categoria_interna` | varchar(50)                             | En uso — se mantiene (texto redundante con `id_etiqueta`)                                                 |
+| `nivel_formacion`   | varchar                                 | No existe en BD (referencia legacy en código eliminada)                                                   |
 
 ### Estado de carreras (post M8 + AS)
 
-| codigo | nombre               | norma_referencia | excluir_alta | solo_estructura |
-| ------ | -------------------- | ---------------- | ------------ | --------------- |
-| CPH    | CPH                  | Ley 6.035        | 0            | 1               |
-| ENF    | Enfermería           | Ley 6.767        | 0            | 0               |
-| TEC    | Técnico              | Ley 6.035        | 0            | 0               |
-| EG     | Escalafón General    | Ley 471          | 0            | 1               |
-| AS     | Autoridades Superiores | No aplica      | 0            | 1               |
-| RG     | Régimen Gerencial    | —                | 0            | 1               |
-| SG     | Suplentes de Guardia | —                | 1            | 0               |
-| RES    | Residentes           | —                | 1            | 0               |
-| DOC    | Docentes             | —                | 1            | 0               |
+| codigo | nombre                 | norma_referencia | excluir_alta | solo_estructura |
+| ------ | ---------------------- | ---------------- | ------------ | --------------- |
+| CPH    | CPH                    | Ley 6.035        | 0            | 1               |
+| ENF    | Enfermería             | Ley 6.767        | 0            | 0               |
+| TEC    | Técnico                | Ley 6.035        | 0            | 0               |
+| EG     | Escalafón General      | Ley 471          | 0            | 1               |
+| AS     | Autoridades Superiores | No aplica        | 0            | 1               |
+| RG     | Régimen Gerencial      | —                | 0            | 1               |
+| SG     | Suplentes de Guardia   | —                | 1            | 0               |
+| RES    | Residentes             | —                | 1            | 0               |
+| DOC    | Docentes               | —                | 1            | 0               |
 
 > Lógica de filtro en frontend:
 >
@@ -236,26 +238,26 @@ dotacion  ← A DISEÑAR
 
 ## 7. Formato de códigos de cargo
 
-| Carrera | Tipo                        | Formato           | Ejemplo          |
-| ------- | --------------------------- | ----------------- | ---------------- |
-| CPH     | Ejecución Planta            | `CPH-POF-{seq}`   | CPH-POF-000001   |
-| CPH     | Ejecución Guardia           | `CPH-POU-{seq}`   | CPH-POU-000001   |
-| CPH     | Jefe Planta                 | `CPH-J-POF-{seq}` | CPH-J-POF-000001 |
-| CPH     | Jefe Guardia                | `CPH-J-POU-{seq}` | CPH-J-POU-000001 |
-| CPH     | Director                    | `CPH-D-{seq}`     | CPH-D-000001     |
-| CPH     | Sub Director                | `CPH-SD-{seq}`    | CPH-SD-000001    |
-| ENF     | Ejecución                   | `ENF-{seq}`       | ENF-000001       |
-| TEC     | Planta (POF)                | `TEC-POF-{seq}`   | TEC-POF-000001   |
-| TEC     | Guardia (POU)               | `TEC-POU-{seq}`   | TEC-POU-000001   |
-| EG      | Ejecución                   | `EG-{seq}`        | EG-000001        |
-| EG      | Jefe EG                     | `EG-J-{seq}`      | EG-J-000001      |
-| EG      | Director EG                 | `EG-D-{seq}`      | EG-D-000001      |
-| EG      | Gerencial                   | `EG-G-{seq}`      | EG-G-000001      |
-| AS      | Ministro                    | `AS-MIN-{seq}`    | AS-MIN-000001    |
-| AS      | Subsecretaría               | `AS-SS-{seq}`     | AS-SS-000001     |
-| AS      | Dir. General                | `AS-DG-{seq}`     | AS-DG-000001     |
-| AS      | Dir. General Adjunta        | `AS-DGA-{seq}`    | AS-DGA-000001    |
-| RG      | Régimen Gerencial           | `RG-CG-{seq}`     | RG-CG-000001     |
+| Carrera | Tipo                 | Formato           | Ejemplo          |
+| ------- | -------------------- | ----------------- | ---------------- |
+| CPH     | Ejecución Planta     | `CPH-POF-{seq}`   | CPH-POF-000001   |
+| CPH     | Ejecución Guardia    | `CPH-POU-{seq}`   | CPH-POU-000001   |
+| CPH     | Jefe Planta          | `CPH-J-POF-{seq}` | CPH-J-POF-000001 |
+| CPH     | Jefe Guardia         | `CPH-J-POU-{seq}` | CPH-J-POU-000001 |
+| CPH     | Director             | `CPH-D-{seq}`     | CPH-D-000001     |
+| CPH     | Sub Director         | `CPH-SD-{seq}`    | CPH-SD-000001    |
+| ENF     | Ejecución            | `ENF-{seq}`       | ENF-000001       |
+| TEC     | Planta (POF)         | `TEC-POF-{seq}`   | TEC-POF-000001   |
+| TEC     | Guardia (POU)        | `TEC-POU-{seq}`   | TEC-POU-000001   |
+| EG      | Ejecución            | `EG-{seq}`        | EG-000001        |
+| EG      | Jefe EG              | `EG-J-{seq}`      | EG-J-000001      |
+| EG      | Director EG          | `EG-D-{seq}`      | EG-D-000001      |
+| EG      | Gerencial            | `EG-G-{seq}`      | EG-G-000001      |
+| AS      | Ministro             | `AS-MIN-{seq}`    | AS-MIN-000001    |
+| AS      | Subsecretaría        | `AS-SS-{seq}`     | AS-SS-000001     |
+| AS      | Dir. General         | `AS-DG-{seq}`     | AS-DG-000001     |
+| AS      | Dir. General Adjunta | `AS-DGA-{seq}`    | AS-DGA-000001    |
+| RG      | Régimen Gerencial    | `RG-CG-{seq}`     | RG-CG-000001     |
 
 **Reglas:**
 
@@ -279,8 +281,8 @@ dotacion  ← A DISEÑAR
 | M1     | Migrar `GEN-...` → `EG-...` en `new_cargo.codigo`                                                                                               | ✅ Ejecutado                                               |
 | M2     | Actualizar carrera GEN→EG, agregar norma_referencia/excluir_alta/solo_estructura a `carreras`                                                   | ✅ Ejecutado                                               |
 | M3     | Crear tabla `jornadas` con 'Jornada completa' y 'ATP'                                                                                           | ✅ Ejecutado                                               |
-| M4     | Crear tabla `tipos_cargo` con 11 tipos (CPH + EG 3 tipos + AS 4 tipos). `codigo` ampliado a VARCHAR(30).                        | ✅ Ejecutado                                               |
-| M5     | Agregar `modalidad_tec` a `puestos_cargo`, migrar puestos TEC, agregar EG, SUB DIRECTOR y puestos gerencial (GERENTE, SUBGERENTE)                | ✅ Ejecutado                                               |
+| M4     | Crear tabla `tipos_cargo` con 11 tipos (CPH + EG 3 tipos + AS 4 tipos). `codigo` ampliado a VARCHAR(30).                                        | ✅ Ejecutado                                               |
+| M5     | Agregar `modalidad_tec` a `puestos_cargo`, migrar puestos TEC, agregar EG, SUB DIRECTOR y puestos gerencial (GERENTE, SUBGERENTE)               | ✅ Ejecutado                                               |
 | M6     | Eliminar tabla `cargos` legacy                                                                                                                  | ❌ Cancelado — 245k registros + FK desde `bajas_concursos` |
 | M7     | Migrar `cargos_alta`: agregar `documento`+`tipo_alta`, eliminar `carrera_seleccionada`/`categoria_interna`/`jornada`                            | ✅ Ejecutado                                               |
 | M8     | Correcciones: `solo_estructura=1` para CPH/EG, corregir `modalidad_tec` POU en puestos TEC                                                      | ✅ Ejecutado                                               |
@@ -288,8 +290,8 @@ dotacion  ← A DISEÑAR
 | M12    | Cambiar enum `estado`: `activo`→`vigente`, `bloqueado`→`no_vigente`. 46.947 registros migrados.                                                 | ✅ Ejecutado                                               |
 | M13    | Agregar `id_jornada` FK → `jornadas`, migrar 4 registros, eliminar campo texto `jornada`                                                        | ✅ Ejecutado                                               |
 | M14    | Agregar `id_puesto` FK → `puestos_cargo`, migrar 3.567 TEC desde `id_puesto_tec`, eliminar `id_puesto_tec`                                      | ✅ Ejecutado                                               |
-| M15    | Crear tabla `dotacion` con esquema normalizado, FK → `new_cargo`, campos de sincronización con `dot_resultado`                                  | ❌ Pendiente                                               |
-| M16    | Migrar códigos legacy al formato normalizado: CPH-P→POF, CPH-G→POU, EG-P→EG, ENF-P→ENF, TEC-P→TEC-POF, SG-G→SG, etc. 43.871 registros.       | ✅ Ejecutado                                               |
+| M15    | Crear tablas `personas_dotacion` y `cargo_dotacion` con sincronizacion desde `dot_resultado`                                                    | Ejecutado                                                  |
+| M16    | Migrar códigos legacy al formato normalizado: CPH-P→POF, CPH-G→POU, EG-P→EG, ENF-P→ENF, TEC-P→TEC-POF, SG-G→SG, etc. 43.871 registros.          | ✅ Ejecutado                                               |
 
 ---
 
@@ -297,24 +299,24 @@ dotacion  ← A DISEÑAR
 
 ### Backend
 
-| Archivo                 | Cambio                                                                                                                                                                                                                                        |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Archivo                 | Cambio                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `AltaCargoService.js`   | `#nextCodigo` con prefijos EG (EG-J, EG-D, EG-G) y AS (AS-MIN, AS-SS, AS-DG, AS-DGA). `create()` resuelve antes del loop: `id_carrera`, `id_modalidad`, `id_especialidad`, `id_puesto`, `id_jornada`, `id_tipo_cargo`, `id_etiqueta`. INSERT incluye `tipo_cargo` + todas las FKs. Contador usa `MAX(seq)` con REGEXP para ignorar códigos legacy. |
-| `altaCargoSchema.js`    | `expediente`→`documento`, `tipo_alta` agregado. CPH: subdirector. TEC: tipo_tec. EG: `tipo_eg` enum `[ejecucion, jefe_eg, director_eg, gerencial]`. AS: `tipo_as` string. RG: agregado.                                                       |
-| `AltaCargoEntity.ts`    | `CargosAlta` refleja nueva estructura: `tipo_alta`+`documento`, sin campos del cargo.                                                                                                                                                         |
-| `carrerasController.js` | `listCarreras` con `norma_referencia`/`excluir_alta`/`solo_estructura`. Nuevos: `listJornadas`, `listTiposCargo`, `listPuestos`. SELECTs sin `nivel_formacion`/`jornada`, con `id_jornada`/`id_puesto`. Filtro `estado` mapea valores legacy. |
-| `uploadController.js`   | `mapEstado()` devuelve `vigente`/`no_vigente`. UPDATE usa `id_puesto` (puestos_cargo) en lugar de `id_puesto_tec`.                                                                                                                            |
-| `altaCargoRoutes.js`    | Rutas: `GET /puestos`, `GET /jornadas`, `GET /tipos-cargo`.                                                                                                                                                                                   |
+| `altaCargoSchema.js`    | `expediente`→`documento`, `tipo_alta` agregado. CPH: subdirector. TEC: tipo_tec. EG: `tipo_eg` enum `[ejecucion, jefe_eg, director_eg, gerencial]`. AS: `tipo_as` string. RG: agregado.                                                                                                                                                            |
+| `AltaCargoEntity.ts`    | `CargosAlta` refleja nueva estructura: `tipo_alta`+`documento`, sin campos del cargo.                                                                                                                                                                                                                                                              |
+| `carrerasController.js` | `listCarreras` con `norma_referencia`/`excluir_alta`/`solo_estructura`. Nuevos: `listJornadas`, `listTiposCargo`, `listPuestos`. SELECTs sin `nivel_formacion`/`jornada`, con `id_jornada`/`id_puesto`. Filtro `estado` mapea valores legacy.                                                                                                      |
+| `uploadController.js`   | `mapEstado()` devuelve `vigente`/`no_vigente`. UPDATE usa `id_puesto` (puestos_cargo) en lugar de `id_puesto_tec`.                                                                                                                                                                                                                                 |
+| `altaCargoRoutes.js`    | Rutas: `GET /puestos`, `GET /jornadas`, `GET /tipos-cargo`.                                                                                                                                                                                                                                                                                        |
 
 ### Frontend
 
-| Archivo               | Cambio                                                                                                                                                                               |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AltaCargoPage.jsx`   | Props `modo`, `modalidadForzada`. Carrera AS con ButtonGroup `tipo_as`. EG tipos completos. Puestos gerencial. Badge modalidad fija POF/POU. `buildPayload` usa `documento`+`tipo_alta`. |
+| Archivo               | Cambio                                                                                                                                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AltaCargoPage.jsx`   | Props `modo`, `modalidadForzada`. Carrera AS con ButtonGroup `tipo_as`. EG tipos completos. Puestos gerencial. Badge modalidad fija POF/POU. `buildPayload` usa `documento`+`tipo_alta`.                  |
 | `CargosPage.jsx`      | Pestañas POF (`/cargos`, `modalidadForzada="planta"`), POU (`/cargos/pou`, `modalidadForzada="guardia"`), Estructura (`/cargos/decreto`, `modo="estructura"`). Eliminadas pestañas POU a POF y POU a POU. |
-| `App.jsx`             | Ruta `cargos/pou` agregada.                                                                                                                                                           |
-| `altaCargoApi.js`     | `listPuestos(carrera, tipo, modo)`, `listJornadas()`, `listTiposCargo(carrera)`.                                                                                                     |
-| `ListaCargosPage.jsx` | `ESTADOS_ENUM`/`ESTADOS_FILTER`/`ESTADO_STYLES` actualizados a `vigente`/`no_vigente`.                                                                                               |
+| `App.jsx`             | Ruta `cargos/pou` agregada.                                                                                                                                                                               |
+| `altaCargoApi.js`     | `listPuestos(carrera, tipo, modo)`, `listJornadas()`, `listTiposCargo(carrera)`.                                                                                                                          |
+| `ListaCargosPage.jsx` | `ESTADOS_ENUM`/`ESTADOS_FILTER`/`ESTADO_STYLES` actualizados a `vigente`/`no_vigente`.                                                                                                                    |
 
 ---
 
@@ -322,11 +324,11 @@ dotacion  ← A DISEÑAR
 
 ### BD — Migración `new_cargo`
 
-| #          | Tarea                                                                   | Riesgo                                                | Estado                                |
-| ---------- | ----------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------- |
-| M9         | Renombrar `new_cargo` → `cargo`                                         | —                                                     | ❌ Descartado                         |
-| M10 fase 2 | Eliminar campos texto: `carrera`, `modalidad`, `puesto`, `especialidad` | Alto — requiere reescribir filtros, búsqueda y export | ⚠️ Bloqueado hasta completar 12.4     |
-| M11        | Mover `situacion_revista` y `antiguedad` a tabla `dotacion`             | Alto — 46.947 registros                               | ❌ Bloqueado hasta diseñar `dotacion` |
+| #          | Tarea                                                                   | Riesgo                                                | Estado                            |
+| ---------- | ----------------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------- |
+| M9         | Renombrar `new_cargo` → `cargo`                                         | —                                                     | ❌ Descartado                     |
+| M10 fase 2 | Eliminar campos texto: `carrera`, `modalidad`, `puesto`, `especialidad` | Alto — requiere reescribir filtros, búsqueda y export | ⚠️ Bloqueado hasta completar 12.4 |
+| M11        | Migrar `antiguedad` a `cargo_dotacion`, fuente de verdad actualizada    | -                                                     | Ejecutado                         |
 
 ### Backend — pendiente
 
@@ -422,13 +424,13 @@ dotacion               ← NUEVA tabla normalizada
 
 ### 12.2 Tablas del Dotaneitor (ya existentes)
 
-| Tabla | Rol | Estado |
-|---|---|---|
-| `dot_resultado` | Padrón procesado plano (1 fila por cargo/agente) | Existe — se popula desde `/guardar-bd` |
-| `dot_resultado_historial` | Historial de cambios por proceso | Existe |
-| `dot_agrupador` | Tabla de referencia: cruce escalafón+puesto → agrupador | Existe |
-| `dot_unificador_puestos` | Tabla de referencia: cruce lit_cod_reg+puesto → unificador | Existe |
-| `dot_especialidades` | Tabla de referencia: CUIL → especialidad por tipo | Existe |
+| Tabla                     | Rol                                                        | Estado                                 |
+| ------------------------- | ---------------------------------------------------------- | -------------------------------------- |
+| `dot_resultado`           | Padrón procesado plano (1 fila por cargo/agente)           | Existe — se popula desde `/guardar-bd` |
+| `dot_resultado_historial` | Historial de cambios por proceso                           | Existe                                 |
+| `dot_agrupador`           | Tabla de referencia: cruce escalafón+puesto → agrupador    | Existe                                 |
+| `dot_unificador_puestos`  | Tabla de referencia: cruce lit_cod_reg+puesto → unificador | Existe                                 |
+| `dot_especialidades`      | Tabla de referencia: CUIL → especialidad por tipo          | Existe                                 |
 
 ### 12.3 Fases del plan
 
@@ -497,15 +499,16 @@ Fase 1 (M15 — BD)  →  Fase 2 (B11 — backend)  →  Fase 3 (F10 — fronten
 ```
 
 Fase 1 también desbloquea:
+
 - M11: migración de `situacion_revista` y `antiguedad` desde `new_cargo`
 - M10 fase 2: eliminación de campos texto en `new_cargo` (prerequisito independiente)
 
 ### 12.5 Registro de avance
 
-| Fase | Tarea | Estado |
-|---|---|---|
-| Fase 1 | M15 — Crear tabla `dotacion` | ❌ Pendiente |
-| Fase 1 | M11 — Migrar `situacion_revista` y `antiguedad` | ❌ Bloqueado hasta M15 |
-| Fase 2 | B11 — Endpoint `POST /api/dotacion/sincronizar` | ❌ Pendiente |
-| Fase 3 | F10 — Página DotacionTotalPage con filtros y KPIs | ❌ Pendiente |
-| Fase 4 | F11 — Integración paso 6 en DotaneitorPage | ❌ Pendiente |
+| Fase   | Tarea                                                     | Estado    |
+| ------ | --------------------------------------------------------- | --------- |
+| Fase 1 | M15 - Crear tablas `personas_dotacion` y `cargo_dotacion` | Ejecutado |
+| Fase 1 | M11 - Migrar `antiguedad` a `cargo_dotacion`              | Ejecutado |
+| Fase 2 | B11 - Endpoint POST /api/dotacion/cargos/sincronizar      | Ejecutado |
+| Fase 3 | F10 - Panel KPIs en DotacionTotalPage (/dotacion)         | Ejecutado |
+| Fase 4 | F11 - Integracion paso 6 en DotaneitorPage                | Pendiente |

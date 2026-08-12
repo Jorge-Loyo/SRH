@@ -44,8 +44,9 @@ const DirectorHomePage = lazy(() => import('./pages/vista_director/DirectorHomeP
 // Alta de Cargo
 const CargosPage      = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
 const AltaCargoPage   = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
-const ListaCargosPage = lazy(() => import('./pages/vista_alta_cargo/ListaCargosPage.jsx'))
-const SubirDataPage   = lazy(() => import('./pages/vista_alta_cargo/SubirDataPage.jsx'))
+const ListaCargosPage   = lazy(() => import('./pages/vista_alta_cargo/ListaCargosPage.jsx'))
+const DotacionKpisPage  = lazy(() => import('./pages/vista_alta_cargo/DotacionKpisPage.jsx'))
+const SubirDataPage     = lazy(() => import('./pages/vista_alta_cargo/SubirDataPage.jsx'))
 
 // Seguridad (solo admin)
 const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.jsx'))
@@ -182,6 +183,9 @@ export default function App() {
                 } />
                 <Route path="cargos/lista" element={
                   <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><ListaCargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/kpis" element={
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><DotacionKpisPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/subir" element={
                   <ProtectedRoute roles={EDIT_ROLES} moduleKey="SubirData"><SubirDataPage /></ProtectedRoute>

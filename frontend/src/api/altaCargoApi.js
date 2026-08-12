@@ -20,6 +20,7 @@ export const altaCargoApi = {
   exportNewCargo:    (params = {}) => apiGet(`${BASE}/new-cargo/export`, params),
   getNewCargoInfo:   (id)          => apiGet(`${BASE}/new-cargo/${id}`),
   updateNewCargo:    (id, body)    => apiPatch(`${BASE}/new-cargo/${id}`, body),
+  getDotacionKpis:   (params = {}) => apiGet(`${BASE}/dotacion-kpis`, params),
   uploadDotacion:    (file) => {
     const fd = new FormData()
     fd.append('file', file)

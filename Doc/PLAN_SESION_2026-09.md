@@ -9,7 +9,7 @@
 
 Tenemos dos universos de datos que deben convivir:
 
-- **Datos migrados masivamente** — 46.947 cargos históricos cargados por scripts (M1-M14)
+- **Datos migrados masivamente** — 46.889 cargos históricos cargados por scripts (M1-M14)
 - **Datos generados por la aplicación** — cargos nuevos creados desde el formulario de altas
 
 El objetivo de hoy es limpiar los datos de prueba, validar que el formulario genera cargos
@@ -69,25 +69,9 @@ Así los migrados con formato legacy no interfieren con el contador de los nuevo
 
 ## BLOQUE 2 — Validar flujo de creación de cargos
 
-> Probar el formulario de altas con datos reales y verificar que todos los campos
-> normalizados se graben correctamente en `new_cargo`.
+> ✅ COMPLETADO — 16/16 casos OK, 7 bugs corregidos
 
-### Campos a verificar por carrera
-
-| Campo | CPH | ENF | TEC | EG | AS |
-|---|---|---|---|---|---|
-| `codigo` | CPH-POF/POU/J/D/SD | ENF | TEC-POF/POU | EG/EG-J/EG-D/EG-G | AS-MIN/SS/DG/DGA |
-| `id_carrera` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `id_modalidad` | ✓ | NULL | ✓ | NULL | NULL |
-| `id_puesto` | ✓ | NULL | ✓ | ✓ (jefe/gerencial) | NULL |
-| `id_especialidad` | ✓ | NULL | NULL | NULL | NULL |
-| `id_jornada` | NULL | ✓ | NULL | NULL | NULL |
-| `id_tipo_cargo` | ✓ (estructura) | NULL | NULL | ✓ (estructura) | ✓ |
-| `id_etiqueta` | opcional | opcional | opcional | opcional | opcional |
-| `id_alta` | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `tipo_cargo` | texto tipo | NULL | NULL | texto tipo | texto tipo |
-
-### Casos de prueba a ejecutar
+### Casos de prueba ejecutados
 
 1. CPH ejecución POF — con puesto + especialidad + etiqueta
 2. CPH ejecución POU — con puesto + especialidad
@@ -106,176 +90,213 @@ Así los migrados con formato legacy no interfieren con el contador de los nuevo
 15. AS dir_general
 16. AS dir_general_adjunta
 
-### Query de verificación post-alta
+### Limpieza post-bloque 2
 
-```sql
-SELECT
-  nc.id, nc.codigo, nc.carrera, nc.tipo_cargo,
-  nc.id_carrera, nc.id_modalidad, nc.id_puesto, nc.id_especialidad,
-  nc.id_jornada, nc.id_tipo_cargo, nc.id_etiqueta, nc.id_alta,
-  nc.estado, nc.sigla, nc.cargo_desde
-FROM new_cargo nc
-WHERE nc.id_alta IS NOT NULL
-ORDER BY nc.id DESC
-LIMIT 20;
-```
+- 16 cargos de prueba sin `id_sial` eliminados con `limpiar-pruebas-b2.js`
+- `new_cargo` queda en **46.889 registros**, todos con `id_sial`
 
 ---
 
 ## BLOQUE 3 — Tabla `new_cargo` normalizada y optimizada
 
-> Revisar el estado actual de la tabla y definir qué falta para considerarla "lista".
+> ✅ COMPLETADO
 
-### Estado actual de campos FK
-
-| Campo | Estado | Acción |
-|---|---|---|
-| `id_carrera` | Completo (0 NULLs) | OK |
-| `id_modalidad` | Completo (NULLs correctos) | OK |
-| `id_especialidad` | Completo (NULLs correctos) | OK |
-| `id_puesto` | Completo (NULLs correctos) | OK |
-| `id_jornada` | Completo (NULLs correctos) | OK |
-| `id_tipo_cargo` | Solo nuevos | Históricos sin mapear — aceptable |
-| `id_etiqueta` | Solo nuevos | Históricos sin mapear — aceptable |
-| `id_alta` | 46.889 NULLs | Históricos sin evento de alta — aceptable |
-
-### Campos texto redundantes (pendiente M10 fase 2)
-
-| Campo | Usado en | Bloqueo para eliminar |
-|---|---|---|
-| `carrera` | Filtros WHERE, display | Reescribir B8 |
-| `modalidad` | Filtros WHERE, display | Reescribir B8 |
-| `puesto` | Búsqueda LIKE | Reescribir B9 |
-| `especialidad` | Búsqueda LIKE | Reescribir B9 |
-
-### Índices a revisar
+### Índices creados
 
 ```sql
--- Verificar índices existentes
-SHOW INDEX FROM new_cargo;
-
--- Índices sugeridos si no existen:
--- idx_new_cargo_carrera_estado  (id_carrera, estado)
--- idx_new_cargo_sigla           (sigla)
--- idx_new_cargo_id_alta         (id_alta)
--- idx_new_cargo_codigo          (codigo) -- probablemente ya existe UNIQUE
+CREATE INDEX idx_estado       ON new_cargo(estado);
+CREATE INDEX idx_id_tipo_cargo ON new_cargo(id_tipo_cargo);
+CREATE INDEX idx_id_etiqueta  ON new_cargo(id_etiqueta);
 ```
+
+### Búsqueda por expediente
+
+Agregado `ca.documento LIKE ?` y `ca.expediente LIKE ?` en `listNewCargo`.
 
 ---
 
 ## BLOQUE 4 — Vinculación cargos ↔ dotación
 
-> Diseñar la tabla puente que vincula cargos con personas (datos del Dotaneitor).
+> ✅ COMPLETADO
 
-### Fuente de datos: `dot_resultado`
+### M15 — Tablas creadas
 
-El Dotaneitor procesa `Cargos_Salud.xlsx` y guarda en `dot_resultado` una fila por cargo/agente con:
+- `personas_dotacion` — CUIL UNIQUE, datos personales
+- `cargo_dotacion` — FK → `new_cargo`, FK → `personas_dotacion`, `id_sial`, `codigo_repa`,
+  `periodo`, `desde`/`hasta`, `situacion_revista`, `estado`
 
-| Campo clave | Descripción |
+### Sincronización
+
+- **46.889 cargos** sincronizados, **45.083 personas únicas**
+- Endpoints: `POST /api/dotacion/cargos/sincronizar` y `GET /api/dotacion/cargos/estado`
+- Cruce clave: `dot_resultado.id_sial` = `new_cargo.id_sial` (100% match)
+
+### Distribución de situaciones (estado actual)
+
+| Situación | Cantidad |
 |---|---|
-| `id_sial` | Identificador SIAL del cargo — clave de cruce con `new_cargo.id_sial` |
-| `cuil` | CUIL del agente que ocupa el cargo |
-| `ayn` | Apellido y nombre |
-| `desde` | Fecha de antigüedad (inicio en el cargo) |
-| `situacion_revista` | activo / retencion_cargo / comision |
-| `agrupador` | Agrupador del escalafón |
-| `unificador_de_puestos` | Unificador de puestos |
-| `estado` | Activo / Bloqueado / Retencion / Comision |
-| `fecha_proceso` | Fecha del último proceso Dotaneitor |
+| Ocupado activo | 45.100 |
+| Retención de cargo | 1.766 |
+| Comisión | 23 |
+| Vacante | 0 |
+| **Total vigentes** | **46.889** |
+| No vigentes | 0 |
 
-### Tabla `dotacion` — esquema propuesto (M15)
+### Fix — estado persona ≠ estado cargo
 
-```sql
-CREATE TABLE dotacion (
-  id                    INT AUTO_INCREMENT PRIMARY KEY,
-  id_cargo              INT NOT NULL,
-  id_sial               VARCHAR(20) NULL,
-  cuil                  BIGINT NULL,
-  cuil_y_rol            VARCHAR(50) NULL,
-  ayn                   VARCHAR(200) NULL,
-  desde                 DATE NULL,
-  hasta                 DATE NULL,
-  situacion_revista     ENUM('activo','retencion_cargo','comision') NULL,
-  agrupador             VARCHAR(100) NULL,
-  unificador_de_puestos VARCHAR(100) NULL,
-  jefe_escalafon        VARCHAR(50) NULL,
-  estado                VARCHAR(20) NULL,
-  fecha_proceso         DATETIME NULL,
-  fecha_creacion        DATETIME DEFAULT NOW(),
-  fecha_actualizacion   TIMESTAMP DEFAULT NOW() ON UPDATE NOW(),
-  CONSTRAINT fk_dotacion_cargo FOREIGN KEY (id_cargo) REFERENCES new_cargo(id)
-);
+**Problema detectado**: 256 cargos estaban marcados `no_vigente` porque en alguna migración
+inicial se usó `dot_resultado.estado` (estado de la **persona**) para setear `new_cargo.estado`
+(estado del **cargo**). Un cargo con persona `Bloqueada` sigue siendo vigente si tiene `codigo_repa`.
+
+**Corrección aplicada**: `fix-no-vigente-bloqueados.js` — 256 cargos corregidos a `vigente`.
+
+**Guardia permanente en `CargoDotacionSyncService`**: al inicio de cada sincronización detecta
+y corrige automáticamente cargos `no_vigente` con `codigo_repa` en el padrón. El resultado
+incluye `cargos_corregidos` y el frontend muestra un badge ámbar si el valor es > 0.
+
+**Invariante documentada**: `CargoDotacionSyncService` nunca modifica `new_cargo.estado`.
+El estado del cargo se gestiona exclusivamente por edición manual.
+
+### Performance
+
+LEFT JOINs con `cargo_dotacion` en 46.889 filas causaban 1.4s.
+Solución: subqueries correlacionadas solo para las 10 filas de la página actual.
+
+---
+
+## FRONTEND — ListaCargosPage (`/cargos/lista`)
+
+> ✅ COMPLETADO
+
+### Rediseño de filtros
+
+- `MODALIDADES` como `[{v,l}]` con labels POF/POU
+- `ESTADO_CONFIG` (Vigente/No vigente) + `SUBESTADO_CONFIG` separados por divisor `|`
+- `SUBESTADO_CONFIG`: Ocupado / Vacante / Comisión / Retención
+- `CategoriaPickerModal` — busca por código y descripción, carga desde `listEtiquetas()`
+- Panel reorganizado en 4 filas: Carrera+Modalidad / Tipo CPH / Estado / Ubicación+Categoría
+- Resumen de filtros activos con labels correctos
+
+### Columna "Situación"
+
+Nueva columna `dot_ocupacion` entre "Estado" y "Ocupado por" con badges:
+- 🟢 **Ocupado** — vigente con persona en situación normal
+- 🟡 **Vacante** — vigente sin ocupante
+- 🔵 **Comisión** — ocupante en comisión
+- 🟠 **Retención** — ocupante en retención de cargo
+- `—` — para cargos no vigentes
+
+Calculado en el backend con `CASE/EXISTS` sobre `cargo_dotacion`, sin costo extra
+(reutiliza las subqueries correlacionadas ya existentes).
+
+### Fix race condition filtros
+
+Dos `useEffect` independientes (filtros + página) causaban que al activar un filtro
+el segundo `useEffect` sobreescribiera el resultado con los datos sin filtrar.
+Solución: unificado en un solo `useEffect` con debounce solo para el campo de texto `q`.
+
+### Carreras disponibles
+
+```js
+const CARRERAS = ['CPH', 'CPS', 'CPT', 'CPB', 'CPO', 'CPA']
 ```
-
-### Lógica de sincronización (endpoint B11)
-
-```
-dot_resultado.id_sial  →  new_cargo.id_sial  →  new_cargo.id  →  dotacion.id_cargo
-```
-
-- **Cargo ocupado**: `new_cargo` tiene `id_sial` que aparece en `dot_resultado` con CUIL
-- **Cargo vacante**: `new_cargo` vigente sin fila en `dotacion` (o con `hasta IS NOT NULL`)
-- **Sin match**: `dot_resultado` con `id_sial` que no existe en `new_cargo` → loguear para revisión
 
 ---
 
 ## BLOQUE 5 — Vinculación con el organigrama
 
-> Conectar los cargos del sistema con los datos del organigrama para verificar veracidad.
+> ✅ COMPLETADO
 
-### Campos de cruce disponibles
+### Cruce disponible
 
-| Campo en `new_cargo` | Campo en organigrama | Descripción |
-|---|---|---|
-| `sigla` | código de repartición | Efector/dependencia |
-| `id_sial` | id_sial | Identificador SIAL del cargo |
-| `codigo` | código de cargo del sistema | Generado en el alta |
-
-### Campos a obtener del organigrama por cargo
-
-| Campo | Descripción |
+| Cruce | Match |
 |---|---|
-| Código de repartición | Identifica la dependencia en el organigrama |
-| ID SIAL | Identificador del cargo en el sistema SIAL |
-| DNI | Documento del agente asignado |
-| Plus salarial | Complemento salarial del cargo |
-| Código de cargo del sistema | El `codigo` generado en el alta (`CPH-POF-000001`, etc.) |
+| `new_cargo.sigla` → `organigramas.sigla` | **61/61 — 100%** ✅ |
+| `cargo_dotacion.codigo_repa` → `organigramas.codigo_reparticion` | **3.987/4.071 — 98%** |
+| Sin match (5.078 cargos) | Residentes y Sup. Guardia — subreparticiones sin nodo propio, esperado |
 
-### Validaciones cruzadas organigrama ↔ sistema
+### Punto 1 — `getNewCargoInfo` con datos de organigrama
 
-1. Cargo en organigrama con `id_sial` → buscar en `new_cargo` por `id_sial` → verificar que `estado = vigente`
-2. Cargo en `new_cargo` vigente → verificar que existe en organigrama
-3. Agente en organigrama (DNI/CUIL) → buscar en `dotacion` → verificar que el cargo coincide
-4. Plus salarial del organigrama → comparar con `id_tipo_cargo` del cargo (jefe, director, etc.)
+- JOIN `organigramas os` por `sigla` (efector del cargo) → `org_desc_rep`, `org_path`, `org_lvl`, `org_tipo`
+- JOIN `organigramas o` por `codigo_repa` (repartición del ocupante) → `dot_reparticion`, `dot_path`
+- `InfoModal` tiene nueva sección **Organigrama** con repartición, tipo, nivel y jerarquía completa
+  formateada como `Ministerio › SS › DG › ...`
 
-### Estructura de vinculación completa
+### Punto 2 — Columna Repartición en lista
 
-```
-organigrama
-  └── codigo_reparticion, id_sial, dni, plus_salarial
-        ↓ (cruce por id_sial)
-new_cargo
-  └── id, codigo, sigla, id_carrera, id_tipo_cargo, estado
-        ↓ (cruce por new_cargo.id)
-dotacion
-  └── id_cargo, cuil, ayn, desde, situacion_revista, estado
-```
+- `listNewCargo` agrega `org_desc_rep` via JOIN por sigla (subquery con `ORDER BY lvl ASC LIMIT 1`
+  para evitar multiplicación de filas)
+- Nueva columna **Repartición** en `COLS` entre Sigla y Carrera
+
+### Punto 3 — Página KPIs (`/cargos/kpis`)
+
+- Endpoint `GET /api/cargos/alta/dotacion-kpis` con filtro opcional `?sigla=`
+- 5 queries en paralelo: globales, por carrera, por modalidad, por situación, por efector
+- **Página `DotacionKpisPage`**:
+  - 7 KPI cards: total vigentes, ocupados, retención, comisión, vacantes, personas únicas, efectores
+  - Barra de distribución global proporcional con leyenda
+  - Grid 3 columnas: por carrera (mini-barras apiladas) / por modalidad / situación detalle
+  - Tabla top efectores con sigla, nombre, totales por situación y mini-barra
+  - Selector de efector para filtrar toda la página
 
 ---
 
-## ORDEN DE EJECUCIÓN
+## FIXES POST-SESIÓN
 
-1. **Bloque 1** — Limpiar datos de prueba (script SQL)
-2. **Bloque 2** — Probar formulario de altas con los 16 casos, verificar con query
-3. **Bloque 3** — Revisar índices y estado de la tabla
-4. **Bloque 4** — Ejecutar M15 (crear tabla `dotacion`), probar sincronización
-5. **Bloque 5** — Definir estructura de cruce con organigrama
+### Fix — `listNewCargo` no cargaba la tabla
+
+**Problema**: JOIN directo `LEFT JOIN organigramas os ON os.sigla = nc.sigla` multiplicaba filas
+cuando una sigla tenía más de un registro en `organigramas`. El `COUNT(*)` del total no coincidía
+con los resultados reales y la tabla aparecía vacía.
+
+**Solución**: convertido a subquery correlacionada con `ORDER BY lvl ASC LIMIT 1`, igual que
+como ya estaba resuelto en `getNewCargoInfo`.
+
+### Fix — `useCallback` en `ListaCargosPage` bloqueaba el fetch inicial
+
+**Problema**: `load` definido con `useCallback([], [])` + `useEffect([..., load])` causaba que
+en algunos casos el effect no disparara el fetch al montar el componente. El request a
+`/api/cargos/alta/new-cargo` nunca aparecía en los logs del servidor.
+
+**Solución**: eliminado `useCallback`, lógica de fetch inlinada directamente en el `useEffect`.
+Dependencias simplificadas a `[page, q, carrera, modalidad, tipoCph, sigla, estado, categoria]`.
+
+### Fix — Sección "Herramientas" eliminada del sidebar
+
+El grupo "Herramientas" (Dotación, Dotaneitor, Tablas Vista, Tablas Admin) fue removido del
+menú lateral. Las rutas `/herramientas/*` siguen activas y accesibles desde el engranaje del header.
+
+### Fix — Duplicate entry en `createAlta` (código duplicado)
+
+**Problema**: `#nextCodigo` calculaba el `MAX(seq)` con REGEXP usando `\\-` como escape del guión,
+que en algunas versiones de MySQL no funciona correctamente y devuelve `null` → genera siempre
+el mismo código base → `Duplicate entry` al insertar.
+
+Además, con `cantidad > 1`, el loop llamaba `#nextCodigo` N veces dentro de la misma transacción;
+como los INSERTs anteriores no eran visibles para el `SELECT MAX`, todos obtenían el mismo seq.
+
+**Solución**:
+- Escape cambiado de `\\-` a `[-]` en el REGEXP (más portable en MySQL).
+- `#nextCodigo` refactorizado a `#nextCodigoBase` (devuelve `{prefix, maxSeq}`) +
+  `#nextCodigos(cantidad)` que calcula todos los códigos del lote de una sola vez
+  incrementando el secuencial manualmente, antes de entrar al loop de inserts.
+
+---
+
+## PENDIENTES
+
+- [x] **M11** — Migrar `situacion_revista` y `antiguedad` desde `new_cargo` a `cargo_dotacion`
+- [x] **F10** — Panel KPIs en `DotacionTotalPage` (`/dotacion`)
 
 ---
 
 ## CRITERIOS DE ÉXITO
 
 - [x] Tabla `new_cargo` sin datos de prueba — 46.889 migrados con códigos normalizados
-- [ ] Los 16 casos de prueba generan cargos con todos los campos FK correctos
-- [ ] Tabla `dotacion` creada y sincronizada con `dot_resultado`
-- [ ] Al menos 1 cargo vinculado end-to-end: `new_cargo` → `dotacion` → organigrama
+- [x] Los 16 casos de prueba generan cargos con todos los campos FK correctos
+- [x] Tablas `personas_dotacion` y `cargo_dotacion` creadas y sincronizadas
+- [x] Columna "Situación" en lista de cargos (Ocupado/Vacante/Comisión/Retención)
+- [x] Filtros por situación funcionando correctamente
+- [x] Guardia automática contra confusión estado-persona vs estado-cargo
+- [x] Al menos 1 cargo vinculado end-to-end: `new_cargo` → `cargo_dotacion` → organigrama
+- [x] Página KPIs `/cargos/kpis` con distribución por carrera, modalidad, situación y efector

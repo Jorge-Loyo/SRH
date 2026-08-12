@@ -15,7 +15,7 @@ class AltaCargoService {
     return (result?.max ?? 0) + 1;
   }
 
-  async #nextCodigo(manager, carrera, modalidadCod, tipo) {
+  async #nextCodigoBase(manager, carrera, modalidadCod, tipo) {
     const c = carrera.toUpperCase()
     const m = modalidadCod ? modalidadCod.toUpperCase() : null
     let prefix
@@ -44,7 +44,7 @@ class AltaCargoService {
       prefix = c
     }
 
-    const escapedPrefix = prefix.replace(/-/g, '\\-')
+    const escapedPrefix = prefix.replace(/-/g, '[-]')
     const [{ max_seq }] = await manager.query(
       `SELECT MAX(CAST(SUBSTRING_INDEX(codigo, '-', -1) AS UNSIGNED)) as max_seq
        FROM new_cargo
@@ -52,8 +52,14 @@ class AltaCargoService {
          AND codigo REGEXP ?`,
       [`${prefix}-%`, `^${escapedPrefix}-[0-9]{6}$`]
     )
-    const seq = ((max_seq ?? 0) + 1).toString().padStart(6, '0')
-    return `${prefix}-${seq}`
+    return { prefix, maxSeq: max_seq ?? 0 }
+  }
+
+  async #nextCodigos(manager, carrera, modalidadCod, tipo, cantidad) {
+    const { prefix, maxSeq } = await this.#nextCodigoBase(manager, carrera, modalidadCod, tipo)
+    return Array.from({ length: cantidad }, (_, i) =>
+      `${prefix}-${(maxSeq + i + 1).toString().padStart(6, '0')}`
+    )
   }
 
   // ─── CREATE ──────────────────────────────────────────────────────────────────
@@ -149,11 +155,11 @@ class AltaCargoService {
         id_etiqueta = etRow?.id ?? null;
       }
 
-      const codigos = [];
+      const codigos = await this.#nextCodigos(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as, cantidad);
       let detalle = null;
 
       for (let i = 0; i < cantidad; i++) {
-        const codigo = await this.#nextCodigo(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as);
+        const codigo = codigos[i];
 
         if (carrera_seleccionada === 'cph') {
           const numero_unico = await this.#nextNumero(manager, this.cphRepo.target);
@@ -207,7 +213,6 @@ class AltaCargoService {
             payload.documento_origen      ?? null,
           ]
         );
-        codigos.push(codigo);
         logger.info('[AltaCargoService] new_cargo insertado', { codigo, id_alta: savedAlta.id, id_carrera, id_modalidad, id_puesto, id_jornada, id_especialidad });
       }
 

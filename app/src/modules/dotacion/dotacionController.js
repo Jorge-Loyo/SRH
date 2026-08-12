@@ -120,4 +120,70 @@ async function getEstadoCargos(req, res) {
   }
 }
 
-module.exports = { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos };
+async function getKpis(req, res) {
+  try {
+    const db = AppDataSource;
+    const sigla = (req.query.sigla || '').trim().toUpperCase() || null;
+    const siglaWhere = sigla ? 'WHERE siglas = ?' : '';
+    const sp = sigla ? [sigla] : [];
+
+    const [[globales], porEscalafon, porSitRevista, porSexo, porEfector] = await Promise.all([
+      db.query(`
+        SELECT
+          COUNT(*)                                                        AS total,
+          SUM(situacion_de_revista = 'Activo')                           AS activos,
+          SUM(situacion_de_revista LIKE 'Retenci%n de Cargo')            AS retencion,
+          SUM(situacion_de_revista = 'Comisi%n')                         AS comision,
+          SUM(sexo = 'F')                                                AS mujeres,
+          SUM(sexo = 'M')                                                AS varones,
+          COUNT(DISTINCT siglas)                                         AS efectores
+        FROM dot_resultado ${siglaWhere}
+      `, sp),
+
+      db.query(`
+        SELECT escalafon, COUNT(*) AS total
+        FROM dot_resultado ${siglaWhere}
+        GROUP BY escalafon ORDER BY total DESC
+      `, sp),
+
+      db.query(`
+        SELECT situacion_de_revista AS situacion, COUNT(*) AS total
+        FROM dot_resultado ${siglaWhere}
+        GROUP BY situacion_de_revista ORDER BY total DESC
+      `, sp),
+
+      db.query(`
+        SELECT COALESCE(sexo, 'Sin dato') AS sexo, COUNT(*) AS total
+        FROM dot_resultado ${siglaWhere}
+        GROUP BY sexo ORDER BY total DESC
+      `, sp),
+
+      db.query(`
+        SELECT siglas AS sigla, COUNT(*) AS total,
+          SUM(situacion_de_revista = 'Activo') AS activos,
+          SUM(situacion_de_revista LIKE 'Retenci%n de Cargo') AS retencion,
+          SUM(situacion_de_revista LIKE 'Comisi%n') AS comision
+        FROM dot_resultado ${siglaWhere}
+        GROUP BY siglas ORDER BY total DESC LIMIT 20
+      `, sp),
+    ]);
+
+    const toN = v => parseInt(v ?? 0, 10);
+    const norm = rows => rows.map(r =>
+      Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v]))
+    );
+
+    res.json({
+      globales: Object.fromEntries(Object.entries(globales).map(([k, v]) => [k, toN(v)])),
+      porEscalafon:   norm(porEscalafon),
+      porSitRevista:  norm(porSitRevista),
+      porSexo:        norm(porSexo),
+      porEfector:     norm(porEfector),
+    });
+  } catch (e) {
+    logger.error('[Dotacion] Error en getKpis', { error: e.message });
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+module.exports = { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, getKpis };
