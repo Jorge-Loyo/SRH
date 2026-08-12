@@ -46,6 +46,7 @@ Las carreras definen el escalafón al que pertenece un cargo.
 | TEC | Técnico (CEETPS) | Ley 6.035 | No | No |
 | EG | Escalafón General | Ley 471 | No | Sí |
 | AS | Autoridades Superiores | No aplica | No | Sí |
+| RG | Régimen Gerencial | — | No | Sí |
 | SG | Suplentes de Guardia | — | Sí | No |
 | RES | Residentes | — | Sí | No |
 | DOC | Docentes | — | Sí | No |
@@ -177,12 +178,11 @@ El alta es el evento que da origen a uno o más cargos en la estructura.
 
 ### Pestañas del módulo /cargos
 
-| Pestaña | Ruta | modalidadForzada |
-|---|---|---|
-| Cargo de Ejecucion POF | `/cargos` | `planta` |
-| Cargo de Ejecucion POU | `/cargos/pou` | `guardia` |
-| Cargo por Estructura | `/cargos` (tab estructura) | — |
-| Decreto | `/cargos/decreto` | — |
+| Pestaña | Ruta | modalidadForzada | modo |
+|---|---|---|---|
+| Cargo de Ejecucion POF | `/cargos` | `planta` | `ejecucion` |
+| Cargo de Ejecucion POU | `/cargos/pou` | `guardia` | `ejecucion` |
+| Cargo por Estructura | `/cargos/decreto` | — | `estructura` |
 
 ### Tablas de detalle por carrera
 
@@ -418,6 +418,7 @@ Los tipos de cargo aplican solo al **modo estructura** (`solo_estructura = 1`).
 | `subsecretaria` | Subsecretaría | AS |
 | `dir_general` | Dir. General | AS |
 | `dir_general_adjunta` | Dir. General Adjunta | AS |
+| `rg` | Régimen Gerencial | RG |
 
 ---
 
