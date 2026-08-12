@@ -299,6 +299,11 @@ export default function DotacionPadronPage() {
               {' '}<strong>{syncResult.actualizados}</strong> actualizados ·
               {' '}<strong>{syncResult.bajas}</strong> bajas ·
               {' '}<strong>{syncResult.personas_insertadas}</strong> personas nuevas
+              {syncResult.cargos_corregidos > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-xs font-medium">
+                  ⚠ {syncResult.cargos_corregidos} cargo{syncResult.cargos_corregidos !== 1 ? 's' : ''} corregido{syncResult.cargos_corregidos !== 1 ? 's' : ''} a vigente
+                </span>
+              )}
             </span>
           ) : (
             <span>Error: {syncResult.error}</span>

@@ -7,6 +7,14 @@
  *   2. UPSERT personas_dotacion por cuil
  *   3. Cierra filas activas en cargo_dotacion que desaparecieron del padrón
  *   4. Inserta nuevas ocupaciones o actualiza cambios en las activas
+ *
+ * INVARIANTE CRÍTICA:
+ *   - dot_resultado.estado ('Activo'/'Bloqueado'/'Comision') es el estado de la PERSONA,
+ *     NO del cargo. Un cargo con persona 'Bloqueada' sigue siendo vigente si tiene codigo_repa.
+ *   - Este servicio NUNCA modifica new_cargo.estado. El estado del cargo se gestiona
+ *     exclusivamente a través de la interfaz de edición manual.
+ *   - cargo_dotacion.estado almacena el estado de la persona (para trazabilidad),
+ *     no el estado del cargo.
  */
 class CargoDotacionSyncService {
   constructor(dataSource) {
@@ -23,7 +31,26 @@ class CargoDotacionSyncService {
       FROM dot_resultado
     `);
 
-    // Padrón completo cruzado con new_cargo (100% match por id_sial)
+    // Guardia: detectar cargos no_vigente que tienen codigo_repa en el padrón
+    // (estado de la persona ≠ estado del cargo — ver invariante en el header)
+    const [{ inconsistentes }] = await this.ds.query(`
+      SELECT COUNT(*) AS inconsistentes
+      FROM dot_resultado dr
+      INNER JOIN new_cargo nc ON nc.id_sial = dr.id_sial
+      WHERE nc.estado = 'no_vigente'
+        AND dr.codigo_repa IS NOT NULL AND dr.codigo_repa != ''
+    `);
+    if (inconsistentes > 0) {
+      // Corregir automáticamente: si tiene codigo_repa en el padrón, el cargo está vigente
+      await this.ds.query(`
+        UPDATE new_cargo nc
+        INNER JOIN dot_resultado dr ON dr.id_sial = nc.id_sial
+        SET nc.estado = 'vigente'
+        WHERE nc.estado = 'no_vigente'
+          AND dr.codigo_repa IS NOT NULL AND dr.codigo_repa != ''
+      `);
+    }
+
     const padron = await this.ds.query(`
       SELECT
         dr.id_sial,
@@ -39,7 +66,8 @@ class CargoDotacionSyncService {
         dr.codigo_repa,
         dr.situacion_de_revista,
         dr.estado,
-        dr.fecha_proceso
+        dr.fecha_proceso,
+        nc.antiguedad
       FROM dot_resultado dr
       INNER JOIN new_cargo nc ON nc.id_sial = dr.id_sial
     `);
@@ -105,19 +133,21 @@ class CargoDotacionSyncService {
       const sitRev = this._mapSitRev(row.situacion_de_revista);
       const existing = activosMap.get(row.id_sial);
 
+      const ncAnt = row.antiguedad ? row.antiguedad.toISOString?.().slice(0,10) ?? row.antiguedad : null;
+
       if (!existing) {
         await this.ds.query(`
           INSERT INTO cargo_dotacion
             (id_cargo, id_persona, id_sial, cuil_y_rol, codigo_repa,
-             periodo, situacion_revista, estado, fecha_proceso)
-          VALUES (?,?,?,?,?,?,?,?,?)
+             periodo, antiguedad, situacion_revista, estado, fecha_proceso)
+          VALUES (?,?,?,?,?,?,?,?,?,?)
         `, [row.id_cargo, id_persona, row.id_sial, row.cuil_y_rol,
             row.codigo_repa ? parseInt(row.codigo_repa) : null,
-            periodo, sitRev, row.estado, row.fecha_proceso]);
+            periodo, ncAnt, sitRev, row.estado, row.fecha_proceso]);
         insertados++;
       } else {
         const [cur] = await this.ds.query(
-          'SELECT situacion_revista, estado, codigo_repa FROM cargo_dotacion WHERE id = ?',
+          'SELECT situacion_revista, estado, codigo_repa, antiguedad FROM cargo_dotacion WHERE id = ?',
           [existing.id]
         );
         const hayCambio =
@@ -142,12 +172,13 @@ class CargoDotacionSyncService {
     return {
       periodo,
       fecha_proceso,
-      total_padron:        padron.length,
-      personas_insertadas: personasInsertadas,
+      total_padron:          padron.length,
+      personas_insertadas:   personasInsertadas,
       personas_actualizadas: personasActualizadas,
       insertados,
       actualizados,
       bajas,
+      cargos_corregidos:     parseInt(inconsistentes, 10), // no_vigente con codigo_repa → forzados a vigente
     };
   }
 

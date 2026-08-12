@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import * as XLSX from 'xlsx'
 import { MagnifyingGlassIcon, XMarkIcon, CheckIcon, InformationCircleIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
 import { altaCargoApi } from '../../api/altaCargoApi'
@@ -78,6 +78,26 @@ function InfoModal({ cargoId, onClose }) {
           {!data && !error && <p className="text-sm text-gray-400 text-center py-4">Cargando...</p>}
           {data && (
             <>
+              {/* Organigrama */}
+              <Section title="Organigrama">
+                {data.org_desc_rep ? (
+                  <>
+                    <Row label="Repartición" val={<span className="font-medium text-gray-800">{data.org_desc_rep}</span>} />
+                    {data.org_tipo && <Row label="Tipo" val={<span className="capitalize text-gray-600">{data.org_tipo}</span>} />}
+                    {data.org_lvl  && <Row label="Nivel" val={<span className="text-gray-600">{data.org_lvl}</span>} />}
+                    {data.org_path && (
+                      <Row label="Jerarquía" val={
+                        <span className="text-[11px] text-gray-400 leading-relaxed">
+                          {data.org_path.replace(/\\/g, ' › ').replace(/^ › /, '')}
+                        </span>
+                      } />
+                    )}
+                  </>
+                ) : (
+                  <Row label="Estado" val={<span className="text-xs text-gray-400">Sin datos de organigrama</span>} />
+                )}
+              </Section>
+
               {/* Dotación */}
               <Section title="Dotación">
                 {data.dot_ayn ? (
@@ -270,11 +290,13 @@ function EditModal({ row, onClose, onSaved }) {
 const COLS = [
   { key: 'codigo',              label: 'Código',          mono: true  },
   { key: 'sigla',               label: 'Sigla'                        },
+  { key: 'org_desc_rep',        label: 'Repartición',      wide: true  },
   { key: 'carrera',             label: 'Carrera'                      },
   { key: 'modalidad',           label: 'Modalidad'                    },
   { key: 'puesto',              label: 'Puesto',          wide: true  },
   { key: 'especialidad',        label: 'Especialidad',    wide: true  },
   { key: 'estado',              label: 'Estado'                       },
+  { key: 'dot_ocupacion',       label: 'Situación'                     },
   { key: 'dot_ayn',             label: 'Ocupado por',     wide: true  },
   { key: 'antiguedad_calc',     label: 'Antigüedad'                   },
   { key: 'cargo_desde',         label: 'Desde',           date: true  },
@@ -292,7 +314,20 @@ const ESTADO_STYLES = {
 
 const fmtDate = v => v ? new Date(v).toLocaleDateString('es-AR') : null
 
+const OCUPACION_CONFIG = {
+  activo:    { l: 'Ocupado',   cls: 'bg-green-100 text-green-700'   },
+  vacante:   { l: 'Vacante',   cls: 'bg-amber-100 text-amber-700'   },
+  comision:  { l: 'Comisión',  cls: 'bg-blue-100 text-blue-700'     },
+  retencion: { l: 'Retención', cls: 'bg-orange-100 text-orange-700' },
+}
+
 function CellValue({ val, col, row }) {
+  if (col.key === 'dot_ocupacion') {
+    if (!val) return <span className="text-gray-300">—</span>
+    const cfg = OCUPACION_CONFIG[val]
+    if (!cfg) return <span>{val}</span>
+    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>{cfg.l}</span>
+  }
   if (col.key === 'dot_ayn') {
     if (!val) return <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Vacante</span>
     return (
@@ -366,6 +401,7 @@ function CategoriaPickerModal({ etiquetas, value, onSelect, onClose }) {
 }
 
 
+const CARRERAS = ['CPH', 'CPS', 'CPT', 'CPB', 'CPO', 'CPA']
 const MODALIDADES = [{ v: 'planta', l: 'POF' }, { v: 'guardia', l: 'POU' }]
 
 const ESTADO_CONFIG = [
@@ -373,6 +409,7 @@ const ESTADO_CONFIG = [
   { v: 'no_vigente', l: 'No vigente', cls: 'bg-red-100 text-red-700 border-red-200',           act: 'bg-red-600 text-white border-red-600'       },
 ]
 const SUBESTADO_CONFIG = [
+  { v: 'activo',    l: 'Ocupado',   cls: 'bg-green-100 text-green-700 border-green-200',    act: 'bg-green-600 text-white border-green-600'   },
   { v: 'vacante',   l: 'Vacante',   cls: 'bg-amber-100 text-amber-700 border-amber-200',    act: 'bg-amber-500 text-white border-amber-500'   },
   { v: 'comision',  l: 'Comisión',  cls: 'bg-blue-100 text-blue-700 border-blue-200',       act: 'bg-blue-600 text-white border-blue-600'     },
   { v: 'retencion', l: 'Retención', cls: 'bg-orange-100 text-orange-700 border-orange-200', act: 'bg-orange-500 text-white border-orange-500' },
@@ -414,32 +451,31 @@ export default function ListaCargosPage() {
   const debounceRef = useRef(null)
   const LIMIT = 10
 
-  const load = useCallback((pg, search, car, mod, tipo, sig, est, cat) => {
-    setLoading(true); setError(null)
-    const params = { page: pg, limit: LIMIT }
-    if (search) params.q         = search
-    if (car)    params.carrera   = car
-    if (mod)    params.modalidad = mod
-    if (tipo)   params.tipoCph   = tipo
-    if (sig)    params.sigla     = sig
-    if (est)    params.estado    = est
-    if (cat)    params.categoria = cat
-    altaCargoApi.listNewCargo(params)
-      .then(data => { setRows(data.rows); setTotal(data.total) })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
+  const filtersRef = useRef({ q, carrera, modalidad, tipoCph, sigla, estado, categoria })
 
   useEffect(() => {
+    const prev = filtersRef.current
+    const qChanged = prev.q !== q
+    filtersRef.current = { q, carrera, modalidad, tipoCph, sigla, estado, categoria }
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => { setPage(1); load(1, q, carrera, modalidad, tipoCph, sigla, estado, categoria) }, 350)
+    const delay = qChanged ? 350 : 0
+    debounceRef.current = setTimeout(() => {
+      setLoading(true); setError(null)
+      const params = { page, limit: LIMIT }
+      if (q)        params.q         = q
+      if (carrera)  params.carrera   = carrera
+      if (modalidad) params.modalidad = modalidad
+      if (tipoCph)  params.tipoCph   = tipoCph
+      if (sigla)    params.sigla     = sigla
+      if (estado)   params.estado    = estado
+      if (categoria) params.categoria = categoria
+      altaCargoApi.listNewCargo(params)
+        .then(data => { setRows(data.rows); setTotal(data.total) })
+        .catch(e => setError(e.message))
+        .finally(() => setLoading(false))
+    }, delay)
     return () => clearTimeout(debounceRef.current)
-  }, [q, carrera, modalidad, tipoCph, sigla, estado, categoria, load])
-
-  useEffect(() => {
-    load(page, q, carrera, modalidad, tipoCph, sigla, estado, categoria)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page])
+  }, [page, q, carrera, modalidad, tipoCph, sigla, estado, categoria])
 
   useEffect(() => {
     altaCargoApi.listSiglas().then(data => setSiglas(data.map(s => s.sigla))).catch(() => {})
@@ -448,10 +484,10 @@ export default function ListaCargosPage() {
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
 
-  function toggleCarrera(c)   { setCarrera(p  => p === c ? '' : c); setTipoCph(''); setPage(1) }
-  function toggleModalidad(m) { setModalidad(p => p === m ? '' : m); setPage(1) }
-  function toggleTipoCph(t)   { setTipoCph(p  => p === t ? '' : t); setPage(1) }
-  function toggleEstado(e)    { setEstado(p   => p === e ? '' : e); setPage(1) }
+  function toggleCarrera(c)   { setPage(1); setCarrera(p  => p === c ? '' : c); setTipoCph('') }
+  function toggleModalidad(m) { setPage(1); setModalidad(p => p === m ? '' : m) }
+  function toggleTipoCph(t)   { setPage(1); setTipoCph(p  => p === t ? '' : t) }
+  function toggleEstado(e)    { setPage(1); setEstado(p   => p === e ? '' : e) }
 
   async function handleExport() {
     setExporting(true)
