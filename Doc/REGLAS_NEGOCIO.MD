@@ -98,6 +98,7 @@ El código es el identificador permanente del cargo. Se genera en el momento del
 - **AS** (Autoridades Superiores) es carrera independiente con `solo_estructura=1`, `norma=No aplica`. Tipos: `ministro`, `subsecretaria`, `dir_general`, `dir_general_adjunta`.
 - **RG** (Régimen Gerencial) es carrera independiente.
 - El prefijo `GEN` fue migrado a `EG` (script M1/M2 ejecutado).
+- Los códigos legacy (`CPH-P`, `CPH-G`, `EG-P`, `ENF-P`, `TEC-P`, `SG-G`) fueron migrados al formato normalizado (script M16 ejecutado). El secuencial continúa desde el último número existente.
 
 ---
 

@@ -44,10 +44,14 @@ class AltaCargoService {
       prefix = c
     }
 
-    const [{ total }] = await manager.query(
-      `SELECT COUNT(*) as total FROM new_cargo WHERE codigo LIKE ?`, [`${prefix}-%`]
+    const [{ max_seq }] = await manager.query(
+      `SELECT MAX(CAST(SUBSTRING_INDEX(codigo, '-', -1) AS UNSIGNED)) as max_seq
+       FROM new_cargo
+       WHERE codigo LIKE ?
+         AND codigo REGEXP ?`,
+      [`${prefix}-%`, `^${prefix.replace('-', '\\-')}-[0-9]{6}$`]
     )
-    const seq = (parseInt(total, 10) + 1).toString().padStart(6, '0')
+    const seq = ((max_seq ?? 0) + 1).toString().padStart(6, '0')
     return `${prefix}-${seq}`
   }
 
