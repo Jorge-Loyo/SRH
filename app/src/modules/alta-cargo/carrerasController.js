@@ -470,12 +470,13 @@ async function getDotacionKpis(req, res) {
     const where = conds.length ? 'WHERE ' + conds.join(' AND ') : ''
 
     // Fecha del último proceso (para mostrar en el header)
-    const [[meta]] = await db.query(
+    const metaArr = await db.query(
       `SELECT MAX(fecha_proceso) AS ultimo_proceso, COUNT(DISTINCT DATE(fecha_proceso)) AS total_procesos FROM dot_resultado`
     )
+    const meta = metaArr[0] ?? {}
 
     const [
-      [globales],
+      globalesArr,
       porAgrupador,
       porEscalafon,
       porUniverso,
@@ -573,6 +574,8 @@ async function getDotacionKpis(req, res) {
     const norm = rows => rows.map(r => Object.fromEntries(
       Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v])
     ))
+
+    const globales = globalesArr[0] ?? {}
 
     res.json({
       meta: {
