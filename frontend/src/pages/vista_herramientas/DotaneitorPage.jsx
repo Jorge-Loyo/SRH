@@ -762,12 +762,19 @@ function HistorialPanel({ onClose }) {
                 <div>
                   <p className="text-xs font-medium text-gray-700">{fmt(p.fecha)}</p>
                   <div className="flex gap-3 mt-0.5">
-                    {p.insertados > 0 && <span className="text-[10px] text-green-600">+{p.insertados} nuevos</span>}
-                    {p.registros_actualizados > 0 && <span className="text-[10px] text-blue-600">~{p.registros_actualizados} actualizados</span>}
-                    {p.eliminados > 0 && <span className="text-[10px] text-red-500">-{p.eliminados} eliminados</span>}
-                    {!p.insertados && !p.registros_actualizados && !p.eliminados && (
-                      <span className="text-[10px] text-gray-400">Sin cambios</span>
-                    )}
+                    {p.es_carga_inicial
+                      ? <span className="text-[10px] text-gray-500">Carga inicial — {p.insertados} registros</span>
+                      : (
+                        <>
+                          {p.insertados > 0 && <span className="text-[10px] text-green-600">+{p.insertados} nuevos</span>}
+                          {p.registros_actualizados > 0 && <span className="text-[10px] text-blue-600">~{p.registros_actualizados} actualizados</span>}
+                          {p.eliminados > 0 && <span className="text-[10px] text-red-500">-{p.eliminados} eliminados</span>}
+                          {!p.insertados && !p.registros_actualizados && !p.eliminados && (
+                            <span className="text-[10px] text-gray-400">Sin cambios</span>
+                          )}
+                        </>
+                      )
+                    }
                   </div>
                 </div>
                 <span className="text-gray-300 text-xs">{expanded === i ? '▲' : '▼'}</span>

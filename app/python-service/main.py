@@ -758,12 +758,13 @@ async def guardar_bd(body: SessionBody):
             fmt = ', '.join(['%s'] * len(deletes))
             cur.execute('DELETE FROM dot_resultado WHERE id_sial IN (' + fmt + ')', list(deletes))
 
+        es_carga_inicial = 1 if not actuales else 0
         if historial:
             cur.executemany(
                 'INSERT INTO dot_resultado_historial'
-                ' (proceso_id,fecha_proceso,accion,id_sial,cuil_y_rol,ayn,campo,valor_anterior,valor_nuevo)'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-                historial,
+                ' (proceso_id,fecha_proceso,accion,id_sial,cuil_y_rol,ayn,campo,valor_anterior,valor_nuevo,es_carga_inicial)'
+                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                [h + (es_carga_inicial,) for h in historial],
             )
 
         conn.commit()
@@ -796,7 +797,8 @@ def historial(limit: int = Query(10, ge=1, le=50)):
                SUM(accion='insert')  AS insertados,
                SUM(accion='delete')  AS eliminados,
                SUM(accion='update')  AS campos_modificados,
-               COUNT(DISTINCT CASE WHEN accion='update' THEN id_sial END) AS registros_actualizados
+               COUNT(DISTINCT CASE WHEN accion='update' THEN id_sial END) AS registros_actualizados,
+               MAX(es_carga_inicial) AS es_carga_inicial
         FROM dot_resultado_historial
         GROUP BY proceso_id
         ORDER BY fecha DESC
