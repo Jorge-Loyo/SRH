@@ -587,19 +587,19 @@ def _cols_watch_presentes(cols_presentes):
 
 
 def _es_historico(fecha_asignada: str | None) -> bool:
-    """True si la fecha es anterior a la fecha del proceso vigente en dot_resultado."""
+    """True si fecha_asignada es anterior a la fecha asignada del snapshot más reciente."""
     if not fecha_asignada:
         return False
     conn = db_connect()
     cur  = conn.cursor()
-    cur.execute('SELECT DATE(MAX(fecha_proceso)) FROM dot_resultado')
+    cur.execute('SELECT MAX(fecha_asignada) FROM dot_resultado_historico')
     row = cur.fetchone()
     cur.close(); conn.close()
-    fecha_vigente = row[0]  # date o None
-    if fecha_vigente is None:
+    max_fecha = row[0]  # date o None
+    if max_fecha is None:
         return False
     from datetime import date
-    return date.fromisoformat(fecha_asignada) < fecha_vigente
+    return date.fromisoformat(fecha_asignada) <= max_fecha
 
 
 @app.post('/diff')
