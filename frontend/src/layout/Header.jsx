@@ -39,6 +39,7 @@ const HERRAMIENTAS_ITEMS = [
   { to: '/herramientas/tablas-vista', label: 'Tablas Vista' },
   { to: '/herramientas/tablas-admin', label: 'Tablas Admin' },
   { to: '/herramientas/dotaneitor',   label: 'Dotaneitor' },
+  { to: '/cargos/kpis',               label: 'KPIs Dotación' },
 ]
 
 function HeaderMenu({ title, items, navigate, icon }) {
