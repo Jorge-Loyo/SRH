@@ -578,6 +578,102 @@ def _sid(v):
     return str(v)
 
 
+@app.post('/diff')
+async def diff(body: SessionBody):
+    """Calcula las diferencias entre el resultado procesado y dot_resultado actual.
+    No escribe nada en BD. Devuelve nuevos, eliminados y modificados con detalle."""
+    s = get_session(body.session_id)
+    if not s['cruzado'] or s['automation'] is None:
+        raise HTTPException(400, 'Primero completa el paso Cruzar')
+
+    def _run():
+        df = s['automation'].resultado_df.copy()
+        df = df.rename(columns=COL_MAP)
+        cols_presentes = [c for c in BD_COLS if c in df.columns]
+        df = df[cols_presentes].copy()
+        df['id_sial'] = df['id_sial'].apply(_sid)
+
+        COLS_WATCH = ['ayn', 'siglas', 'escalafon', 'codigo_de_registro',
+                      'literal_puesto', 'especialidad', 'unificador_de_puestos',
+                      'agrupador', 'estado', 'situacion_de_revista', 'universo_totalizador']
+        watch_presentes = [c for c in COLS_WATCH if c in cols_presentes]
+        cols_cmp = list(dict.fromkeys(['id_sial', 'cuil_y_rol', 'ayn'] + watch_presentes))
+        cols_cmp = [c for c in cols_cmp if c in cols_presentes]
+
+        conn = db_connect()
+        cur  = conn.cursor(dictionary=True)
+        cur.execute('SELECT ' + ', '.join('`' + c + '`' for c in cols_cmp) + ' FROM dot_resultado')
+        actuales = {str(r['id_sial']): r for r in cur.fetchall()}
+        cur.close()
+        conn.close()
+
+        nuevos_ids   = {r for r in df['id_sial'].dropna()}
+        actuales_ids = set(actuales.keys())
+
+        # Nuevos
+        nuevos = []
+        for _, row in df[df['id_sial'].isin(nuevos_ids - actuales_ids)].iterrows():
+            nuevos.append({
+                'id_sial':    str(row.get('id_sial') or ''),
+                'cuil_y_rol': str(row.get('cuil_y_rol') or ''),
+                'ayn':        str(row.get('ayn') or ''),
+                'siglas':     str(row.get('siglas') or ''),
+                'escalafon':  str(row.get('escalafon') or ''),
+                'literal_puesto': str(row.get('literal_puesto') or ''),
+                'especialidad':   str(row.get('especialidad') or ''),
+            })
+
+        # Eliminados
+        eliminados = []
+        for id_s in (actuales_ids - nuevos_ids):
+            ant = actuales[id_s]
+            eliminados.append({
+                'id_sial':    id_s,
+                'cuil_y_rol': str(ant.get('cuil_y_rol') or ''),
+                'ayn':        str(ant.get('ayn') or ''),
+                'siglas':     str(ant.get('siglas') or ''),
+                'escalafon':  str(ant.get('escalafon') or ''),
+                'literal_puesto': str(ant.get('literal_puesto') or ''),
+                'especialidad':   str(ant.get('especialidad') or ''),
+            })
+
+        # Modificados — agrupados por persona
+        modificados_map = {}
+        for _, row in df[df['id_sial'].isin(nuevos_ids & actuales_ids)].iterrows():
+            id_s = str(row['id_sial'])
+            ant  = actuales.get(id_s, {})
+            cambios = []
+            for col in watch_presentes:
+                v_ant = str(_safe_val(ant.get(col)) or '')
+                v_new = str(_safe_val(row.get(col)) or '')
+                if v_ant != v_new:
+                    cambios.append({'campo': col, 'antes': v_ant or None, 'despues': v_new or None})
+            if cambios:
+                modificados_map[id_s] = {
+                    'id_sial':    id_s,
+                    'cuil_y_rol': str(row.get('cuil_y_rol') or ''),
+                    'ayn':        str(row.get('ayn') or ''),
+                    'siglas':     str(row.get('siglas') or ''),
+                    'cambios':    cambios,
+                }
+
+        return {
+            'nuevos':      nuevos,
+            'eliminados':  eliminados,
+            'modificados': list(modificados_map.values()),
+            'total_nuevos':      len(nuevos),
+            'total_eliminados':  len(eliminados),
+            'total_modificados': len(modificados_map),
+            'total_campos_modificados': sum(len(m['cambios']) for m in modificados_map.values()),
+        }
+
+    try:
+        return await asyncio.to_thread(_run)
+    except Exception as e:
+        import traceback
+        raise HTTPException(500, str(e) + ' | ' + traceback.format_exc())
+
+
 @app.post('/guardar-bd')
 async def guardar_bd(body: SessionBody):
     s = get_session(body.session_id)
