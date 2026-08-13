@@ -185,7 +185,7 @@ export default function App() {
                   <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><ListaCargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/kpis" element={
-                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><DotacionKpisPage /></ProtectedRoute>
+                  <ProtectedRoute roles={GESTION_ROLES}><DotacionKpisPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/subir" element={
                   <ProtectedRoute roles={EDIT_ROLES} moduleKey="SubirData"><SubirDataPage /></ProtectedRoute>
