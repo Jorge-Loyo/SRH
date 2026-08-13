@@ -1,17 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { altaCargoApi } from '../../api/altaCargoApi'
 
-const fmt = n => (n ?? 0).toLocaleString('es-AR')
-const pct = (n, total) => total ? Math.round((n / total) * 100) : 0
+const fmt  = n  => (n ?? 0).toLocaleString('es-AR')
+const pct  = (n, t) => t ? Math.round((n / t) * 100) : 0
+const fmtFecha = iso => iso ? new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+const fmtDate  = iso => iso ? String(iso).slice(0, 10) : ''
 
-const SITUACION_CFG = [
-  { key: 'ocupados',  label: 'Ocupado',   cls: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50'  },
-  { key: 'retencion', label: 'Retención', cls: 'bg-orange-400', text: 'text-orange-700', bg: 'bg-orange-50' },
-  { key: 'comision',  label: 'Comisión',  cls: 'bg-blue-400',   text: 'text-blue-700',   bg: 'bg-blue-50'   },
-  { key: 'vacantes',  label: 'Vacante',   cls: 'bg-amber-400',  text: 'text-amber-700',  bg: 'bg-amber-50'  },
-]
-
-const MODALIDAD_LABELS = { planta: 'POF', guardia: 'POU', sin_modalidad: 'Sin modalidad' }
+// ─── Componentes base ─────────────────────────────────────────────────────────
 
 function KpiCard({ label, value, sub, color = 'text-primary-700' }) {
   return (
@@ -23,189 +18,243 @@ function KpiCard({ label, value, sub, color = 'text-primary-700' }) {
   )
 }
 
-function BarRow({ label, value, total, colorCls, pctOverride }) {
-  const p = pctOverride ?? pct(value, total)
+function BarRow({ label, value, total, colorCls = 'bg-primary-500' }) {
+  const p = pct(value, total)
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-600 w-32 shrink-0 truncate">{label}</span>
+      <span className="text-xs text-gray-600 w-40 shrink-0 truncate" title={label}>{label}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
         <div className={`h-2 rounded-full ${colorCls}`} style={{ width: `${p}%` }} />
       </div>
-      <span className="text-xs text-gray-500 w-16 text-right shrink-0">{fmt(value)} <span className="text-gray-300">({p}%)</span></span>
+      <span className="text-xs text-gray-500 w-20 text-right shrink-0">{fmt(value)} <span className="text-gray-300">({p}%)</span></span>
     </div>
   )
 }
+
+const ESTADO_CFG = {
+  Activo:    { cls: 'bg-green-500',  text: 'text-green-700',  bg: 'bg-green-50'  },
+  Bloqueado: { cls: 'bg-red-400',    text: 'text-red-700',    bg: 'bg-red-50'    },
+  Comision:  { cls: 'bg-blue-400',   text: 'text-blue-700',   bg: 'bg-blue-50'   },
+}
+const JEFATURA_COLORS = ['bg-violet-500', 'bg-indigo-400', 'bg-sky-400', 'bg-teal-400', 'bg-emerald-400']
+
+// ─── Página ───────────────────────────────────────────────────────────────────
 
 export default function DotacionKpisPage() {
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
   const [sigla,   setSigla]   = useState('')
-  const [siglas,  setSiglas]  = useState([])
+  const [desde,   setDesde]   = useState('')
+  const [hasta,   setHasta]   = useState('')
 
-  const load = useCallback(async (s) => {
+  const load = useCallback(async (s, d, h) => {
     setLoading(true); setError(null)
     try {
-      const params = s ? { sigla: s } : {}
+      const params = {}
+      if (s) params.sigla = s
+      if (d) params.desde = d
+      if (h) params.hasta = h
       const r = await altaCargoApi.getDotacionKpis(params)
       setData(r)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }, [])
 
-  useEffect(() => {
-    altaCargoApi.listSiglas().then(d => setSiglas(d.map(s => s.sigla))).catch(() => {})
-    load('')
-  }, [load])
+  useEffect(() => { load('', '', '') }, [load])
 
-  const g = data?.globales ?? {}
-  const total = g.total_vigentes ?? 0
+  const applyFilters = () => load(sigla, desde, hasta)
+  const clearFilters = () => { setSigla(''); setDesde(''); setHasta(''); load('', '', '') }
+
+  const g     = data?.globales ?? {}
+  const total = g.total ?? 0
+  const meta  = data?.meta ?? {}
 
   return (
     <div className="w-full space-y-4">
 
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-base font-semibold text-gray-800">Dotación — KPIs</h1>
-          <p className="text-xs text-gray-400">Vinculación organigrama · cargos · dotación</p>
+          <h1 className="text-base font-semibold text-gray-800">Dotación — KPIs del Padrón</h1>
+          <p className="text-xs text-gray-400">
+            Fuente: padrón SIAL procesado por Dotaneitor
+            {meta.ultimo_proceso && <> · Último proceso: <span className="font-medium text-gray-500">{fmtFecha(meta.ultimo_proceso)}</span></>}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Efector:</span>
-          <select value={sigla} onChange={e => { setSigla(e.target.value); load(e.target.value) }}
-            className="form-input text-sm py-1 w-48">
-            <option value="">Todos los efectores</option>
-            {siglas.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+
+        {/* Filtros */}
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[10px] text-gray-400 uppercase tracking-wider">Efector</label>
+            <select value={sigla} onChange={e => setSigla(e.target.value)}
+              className="form-input text-sm py-1 w-44">
+              <option value="">Todos</option>
+              {(data?.siglasDisponibles ?? []).map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[10px] text-gray-400 uppercase tracking-wider">Proceso desde</label>
+            <select value={desde} onChange={e => setDesde(e.target.value)}
+              className="form-input text-sm py-1 w-36">
+              <option value="">Cualquier fecha</option>
+              {(data?.procesosDisponibles ?? []).map(p => (
+                <option key={p.fecha} value={p.fecha}>{p.fecha} ({fmt(p.registros)} reg.)</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[10px] text-gray-400 uppercase tracking-wider">Hasta</label>
+            <select value={hasta} onChange={e => setHasta(e.target.value)}
+              className="form-input text-sm py-1 w-36">
+              <option value="">Cualquier fecha</option>
+              {(data?.procesosDisponibles ?? []).map(p => (
+                <option key={p.fecha} value={p.fecha}>{p.fecha}</option>
+              ))}
+            </select>
+          </div>
+          <button onClick={applyFilters} disabled={loading}
+            className="px-3 py-1.5 text-sm rounded-lg bg-primary-700 text-white hover:bg-primary-800 disabled:opacity-50">
+            Aplicar
+          </button>
+          {(sigla || desde || hasta) && (
+            <button onClick={clearFilters}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50">
+              Limpiar
+            </button>
+          )}
         </div>
       </div>
 
       {error && <p className="text-sm text-red-500 text-center py-4">{error}</p>}
-
-      {loading && !data && (
-        <div className="text-center py-12 text-gray-400 text-sm">Cargando...</div>
-      )}
+      {loading && !data && <div className="text-center py-12 text-gray-400 text-sm">Cargando...</div>}
 
       {data && (
         <>
           {/* KPIs globales */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            <KpiCard label="Total vigentes"   value={total}              color="text-gray-800" />
-            <KpiCard label="Ocupados"         value={g.ocupados}         color="text-green-700"
-              sub={`${pct(g.ocupados, total)}% del total`} />
-            <KpiCard label="Retención"        value={g.retencion}        color="text-orange-600"
-              sub={`${pct(g.retencion, total)}%`} />
-            <KpiCard label="Comisión"         value={g.comision}         color="text-blue-600"
+            <KpiCard label="Total registros"  value={total}            color="text-gray-800" />
+            <KpiCard label="Personas únicas"  value={g.personas_unicas} color="text-primary-700"
+              sub={total ? `${pct(g.personas_unicas, total)}% del total` : undefined} />
+            <KpiCard label="Efectores"        value={g.efectores}      color="text-gray-600" />
+            <KpiCard label="Activos"          value={g.activos}        color="text-green-700"
+              sub={`${pct(g.activos, total)}%`} />
+            <KpiCard label="Bloqueados"       value={g.bloqueados}     color="text-red-600"
+              sub={`${pct(g.bloqueados, total)}%`} />
+            <KpiCard label="Comisión"         value={g.comision}       color="text-blue-600"
               sub={`${pct(g.comision, total)}%`} />
-            <KpiCard label="Vacantes"         value={g.vacantes}         color="text-amber-600"
-              sub={`${pct(g.vacantes, total)}%`} />
-            <KpiCard label="Personas únicas"  value={g.personas_unicas}  color="text-primary-700" />
-            <KpiCard label="Efectores"        value={g.efectores}        color="text-gray-600" />
+            <KpiCard label="Jefaturas"        value={g.jefaturas}      color="text-violet-700"
+              sub={`${pct(g.jefaturas, total)}%`} />
           </div>
 
-          {/* Barra de situación global */}
+          {/* Barra de estado global */}
           <div className="card p-4">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Distribución global</p>
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Distribución por estado</p>
             <div className="flex h-4 rounded-full overflow-hidden gap-px">
-              {SITUACION_CFG.map(({ key, cls }) => {
-                const p = pct(g[key] ?? 0, total)
+              {(data.porEstado ?? []).map(r => {
+                const p = pct(r.total, total)
+                const cfg = ESTADO_CFG[r.estado] ?? { cls: 'bg-gray-300' }
                 return p > 0
-                  ? <div key={key} className={`${cls} transition-all`} style={{ width: `${p}%` }} title={`${key}: ${fmt(g[key])} (${p}%)`} />
+                  ? <div key={r.estado} className={`${cfg.cls} transition-all`} style={{ width: `${p}%` }}
+                      title={`${r.estado}: ${fmt(r.total)} (${p}%)`} />
                   : null
               })}
             </div>
             <div className="flex flex-wrap gap-4 mt-2">
-              {SITUACION_CFG.map(({ key, label, cls, text }) => (
-                <span key={key} className="flex items-center gap-1.5 text-xs">
-                  <span className={`w-2.5 h-2.5 rounded-full ${cls}`} />
-                  <span className={`font-medium ${text}`}>{label}</span>
-                  <span className="text-gray-400">{fmt(g[key] ?? 0)} ({pct(g[key] ?? 0, total)}%)</span>
-                </span>
-              ))}
+              {(data.porEstado ?? []).map(r => {
+                const cfg = ESTADO_CFG[r.estado] ?? { cls: 'bg-gray-300', text: 'text-gray-600' }
+                return (
+                  <span key={r.estado} className="flex items-center gap-1.5 text-xs">
+                    <span className={`w-2.5 h-2.5 rounded-full ${cfg.cls}`} />
+                    <span className={`font-medium ${cfg.text}`}>{r.estado}</span>
+                    <span className="text-gray-400">{fmt(r.total)} ({pct(r.total, total)}%)</span>
+                  </span>
+                )
+              })}
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-            {/* Por carrera */}
-            <div className="card p-4 space-y-3">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Por carrera</p>
-              {data.porCarrera.map(r => (
-                <div key={r.carrera} className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-gray-700">{r.carrera}</span>
-                    <span className="text-xs text-gray-400">{fmt(r.total)}</span>
-                  </div>
-                  <div className="flex h-1.5 rounded-full overflow-hidden gap-px bg-gray-100">
-                    <div className="bg-green-500"  style={{ width: `${pct(r.ocupados,  r.total)}%` }} />
-                    <div className="bg-orange-400" style={{ width: `${pct(r.retencion, r.total)}%` }} />
-                    <div className="bg-blue-400"   style={{ width: `${pct(r.comision,  r.total)}%` }} />
-                  </div>
-                </div>
+            {/* Por escalafón */}
+            <div className="card p-4 space-y-2.5">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Por escalafón</p>
+              {(data.porEscalafon ?? []).map(r => (
+                <BarRow key={r.escalafon} label={r.escalafon} value={r.total} total={total} colorCls="bg-primary-500" />
               ))}
             </div>
 
-            {/* Por modalidad */}
-            <div className="card p-4 space-y-3">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Por modalidad</p>
-              {data.porModalidad.map(r => (
-                <BarRow key={r.modalidad}
-                  label={MODALIDAD_LABELS[r.modalidad] ?? r.modalidad}
-                  value={r.total} total={total}
-                  colorCls="bg-primary-500" />
+            {/* Por universo */}
+            <div className="card p-4 space-y-2.5">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Por universo totalizador</p>
+              {(data.porUniverso ?? []).map(r => (
+                <BarRow key={r.universo} label={r.universo} value={r.total} total={total} colorCls="bg-teal-500" />
               ))}
             </div>
 
-            {/* Situación detalle */}
-            <div className="card p-4 space-y-3">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Situación</p>
-              {SITUACION_CFG.map(({ key, label, cls, bg, text }) => (
-                <div key={key} className={`flex items-center justify-between px-3 py-2 rounded-lg ${bg}`}>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${cls}`} />
-                    <span className={`text-xs font-medium ${text}`}>{label}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-sm font-bold ${text}`}>{fmt(data.porSituacion?.[key] ?? 0)}</span>
-                    <span className="text-[10px] text-gray-400 ml-1">({pct(data.porSituacion?.[key] ?? 0, total)}%)</span>
-                  </div>
-                </div>
+            {/* Jefaturas */}
+            <div className="card p-4 space-y-2.5">
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Jefaturas</p>
+              {(data.porJefatura ?? []).map((r, i) => (
+                <BarRow key={r.jefe_escalafon} label={r.jefe_escalafon} value={r.total}
+                  total={g.jefaturas} colorCls={JEFATURA_COLORS[i % JEFATURA_COLORS.length]} />
+              ))}
+              {!data.porJefatura?.length && <p className="text-xs text-gray-400">Sin datos</p>}
+            </div>
+          </div>
+
+          {/* Por agrupador */}
+          <div className="card p-4">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Por agrupador</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+              {(data.porAgrupador ?? []).map(r => (
+                <BarRow key={r.agrupador} label={r.agrupador} value={r.total} total={total} colorCls="bg-indigo-400" />
               ))}
             </div>
           </div>
 
-          {/* Top efectores */}
+          {/* Por situación de revista */}
+          <div className="card p-4">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Por situación de revista</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2">
+              {(data.porSitRevista ?? []).map(r => (
+                <BarRow key={r.situacion} label={r.situacion} value={r.total} total={total} colorCls="bg-amber-400" />
+              ))}
+            </div>
+          </div>
+
+          {/* Por efector */}
           <div className="card p-4">
             <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Por efector {sigla ? `— ${sigla}` : `(top ${Math.min(data.porEfector.length, 20)})`}
+              Por efector {sigla ? `— ${sigla}` : `(${data.porEfector?.length ?? 0} efectores)`}
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left py-2 pr-3 font-semibold text-gray-500 w-16">Sigla</th>
-                    <th className="text-left py-2 pr-3 font-semibold text-gray-500">Repartición</th>
                     <th className="text-right py-2 pr-3 font-semibold text-gray-500">Total</th>
-                    <th className="text-right py-2 pr-3 font-semibold text-green-600">Ocupados</th>
-                    <th className="text-right py-2 pr-3 font-semibold text-orange-500">Retención</th>
-                    <th className="text-right py-2 font-semibold text-blue-500">Comisión</th>
-                    <th className="py-2 pl-4 w-32"></th>
+                    <th className="text-right py-2 pr-3 font-semibold text-green-600">Activos</th>
+                    <th className="text-right py-2 pr-3 font-semibold text-red-500">Bloqueados</th>
+                    <th className="text-right py-2 pr-3 font-semibold text-blue-500">Comisión</th>
+                    <th className="text-right py-2 font-semibold text-violet-600">Jefaturas</th>
+                    <th className="py-2 pl-4 w-28"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.porEfector.slice(0, 20).map(r => (
-                    <tr key={r.sigla} className="border-b border-gray-50 hover:bg-gray-50/50">
-                      <td className="py-1.5 pr-3 font-mono font-semibold text-primary-700">{r.sigla}</td>
-                      <td className="py-1.5 pr-3 text-gray-600 max-w-[260px] truncate">{r.desc_rep ?? '—'}</td>
+                  {(data.porEfector ?? []).map(r => (
+                    <tr key={r.siglas} className="border-b border-gray-50 hover:bg-gray-50/50">
+                      <td className="py-1.5 pr-3 font-mono font-semibold text-primary-700">{r.siglas}</td>
                       <td className="py-1.5 pr-3 text-right font-medium text-gray-700">{fmt(r.total)}</td>
-                      <td className="py-1.5 pr-3 text-right text-green-700">{fmt(r.ocupados)}</td>
-                      <td className="py-1.5 pr-3 text-right text-orange-600">{fmt(r.retencion)}</td>
-                      <td className="py-1.5 text-right text-blue-600">{fmt(r.comision)}</td>
+                      <td className="py-1.5 pr-3 text-right text-green-700">{fmt(r.activos)}</td>
+                      <td className="py-1.5 pr-3 text-right text-red-600">{fmt(r.bloqueados)}</td>
+                      <td className="py-1.5 pr-3 text-right text-blue-600">{fmt(r.comision)}</td>
+                      <td className="py-1.5 text-right text-violet-600">{fmt(r.jefaturas)}</td>
                       <td className="py-1.5 pl-4">
                         <div className="flex h-1.5 rounded-full overflow-hidden gap-px bg-gray-100 w-28">
-                          <div className="bg-green-500"  style={{ width: `${pct(r.ocupados,  r.total)}%` }} />
-                          <div className="bg-orange-400" style={{ width: `${pct(r.retencion, r.total)}%` }} />
-                          <div className="bg-blue-400"   style={{ width: `${pct(r.comision,  r.total)}%` }} />
+                          <div className="bg-green-500" style={{ width: `${pct(r.activos,    r.total)}%` }} />
+                          <div className="bg-red-400"   style={{ width: `${pct(r.bloqueados, r.total)}%` }} />
+                          <div className="bg-blue-400"  style={{ width: `${pct(r.comision,   r.total)}%` }} />
                         </div>
                       </td>
                     </tr>

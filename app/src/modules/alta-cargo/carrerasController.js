@@ -456,93 +456,140 @@ async function createEtiqueta(req, res) {
 
 async function getDotacionKpis(req, res) {
   try {
-    const db = AppDataSource
-    const sigla = (req.query.sigla || '').trim().toUpperCase() || null
-    const sp = sigla ? [sigla] : []
-    const siglaWhere = sigla ? "AND nc.sigla = ?" : ''
+    const db     = AppDataSource
+    const sigla  = (req.query.sigla  || '').trim().toUpperCase() || null
+    const desde  = (req.query.desde  || '').trim() || null
+    const hasta  = (req.query.hasta  || '').trim() || null
 
-    const [[globales], porCarrera, porModalidad, porSituacion, porEfector] = await Promise.all([
+    // Construir WHERE dinámico sobre dot_resultado
+    const conds  = []
+    const params = []
+    if (sigla)  { conds.push('siglas = ?');                params.push(sigla) }
+    if (desde)  { conds.push('DATE(fecha_proceso) >= ?');  params.push(desde) }
+    if (hasta)  { conds.push('DATE(fecha_proceso) <= ?');  params.push(hasta) }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : ''
 
+    // Fecha del último proceso (para mostrar en el header)
+    const [[meta]] = await db.query(
+      `SELECT MAX(fecha_proceso) AS ultimo_proceso, COUNT(DISTINCT DATE(fecha_proceso)) AS total_procesos FROM dot_resultado`
+    )
+
+    const [
+      [globales],
+      porAgrupador,
+      porEscalafon,
+      porUniverso,
+      porEstado,
+      porSitRevista,
+      porJefatura,
+      porEfector,
+      procesosDisponibles,
+      siglasDisponibles,
+    ] = await Promise.all([
+
+      // Globales
       db.query(`
         SELECT
-          COUNT(*)                                                                 AS total_vigentes,
-          SUM(CASE WHEN EXISTS(
-            SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista NOT IN('comision','retencion_cargo')
-          ) THEN 1 ELSE 0 END)                                                    AS ocupados,
-          SUM(CASE WHEN NOT EXISTS(
-            SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-          ) THEN 1 ELSE 0 END)                                                    AS vacantes,
-          SUM(CASE WHEN EXISTS(
-            SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='comision'
-          ) THEN 1 ELSE 0 END)                                                    AS comision,
-          SUM(CASE WHEN EXISTS(
-            SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='retencion_cargo'
-          ) THEN 1 ELSE 0 END)                                                    AS retencion,
-          (SELECT COUNT(*) FROM personas_dotacion)                                AS personas_unicas,
-          COUNT(DISTINCT nc.sigla)                                                AS efectores
-        FROM new_cargo nc WHERE nc.estado='vigente' ${siglaWhere}
-      `, sp),
+          COUNT(*)                                                          AS total,
+          COUNT(DISTINCT cuil)                                              AS personas_unicas,
+          COUNT(DISTINCT siglas)                                            AS efectores,
+          SUM(CASE WHEN UPPER(estado) = 'ACTIVO'    THEN 1 ELSE 0 END)     AS activos,
+          SUM(CASE WHEN UPPER(estado) = 'BLOQUEADO' THEN 1 ELSE 0 END)     AS bloqueados,
+          SUM(CASE WHEN UPPER(estado) = 'COMISION'  THEN 1 ELSE 0 END)     AS comision,
+          SUM(CASE WHEN jefe_escalafon IS NOT NULL   THEN 1 ELSE 0 END)     AS jefaturas,
+          SUM(CASE WHEN UPPER(situacion_de_revista) LIKE '%RETENCI%' THEN 1 ELSE 0 END) AS retencion
+        FROM dot_resultado ${where}
+      `, params),
 
+      // Por agrupador
       db.query(`
-        SELECT nc.carrera,
+        SELECT COALESCE(agrupador,'Sin agrupador') AS agrupador, COUNT(*) AS total
+        FROM dot_resultado ${where}
+        GROUP BY agrupador ORDER BY total DESC
+      `, params),
+
+      // Por escalafón
+      db.query(`
+        SELECT COALESCE(escalafon,'Sin escalafón') AS escalafon, COUNT(*) AS total
+        FROM dot_resultado ${where}
+        GROUP BY escalafon ORDER BY total DESC
+      `, params),
+
+      // Por universo totalizador
+      db.query(`
+        SELECT COALESCE(universo_totalizador,'Sin universo') AS universo, COUNT(*) AS total
+        FROM dot_resultado ${where}
+        GROUP BY universo_totalizador ORDER BY total DESC
+      `, params),
+
+      // Por estado
+      db.query(`
+        SELECT COALESCE(estado,'Sin estado') AS estado, COUNT(*) AS total
+        FROM dot_resultado ${where}
+        GROUP BY estado ORDER BY total DESC
+      `, params),
+
+      // Por situación de revista
+      db.query(`
+        SELECT COALESCE(situacion_de_revista,'Sin dato') AS situacion, COUNT(*) AS total
+        FROM dot_resultado ${where}
+        GROUP BY situacion_de_revista ORDER BY total DESC
+      `, params),
+
+      // Por tipo de jefatura
+      db.query(`
+        SELECT jefe_escalafon, COUNT(*) AS total
+        FROM dot_resultado
+        WHERE jefe_escalafon IS NOT NULL ${sigla ? 'AND siglas = ?' : ''}
+              ${desde ? 'AND DATE(fecha_proceso) >= ?' : ''}
+              ${hasta ? 'AND DATE(fecha_proceso) <= ?' : ''}
+        GROUP BY jefe_escalafon ORDER BY total DESC
+      `, params),
+
+      // Por efector (top 61)
+      db.query(`
+        SELECT siglas,
           COUNT(*) AS total,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista NOT IN('comision','retencion_cargo')) THEN 1 ELSE 0 END) AS ocupados,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='retencion_cargo') THEN 1 ELSE 0 END) AS retencion,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='comision') THEN 1 ELSE 0 END) AS comision
-        FROM new_cargo nc WHERE nc.estado='vigente' ${siglaWhere}
-        GROUP BY nc.carrera ORDER BY total DESC
-      `, sp),
+          SUM(CASE WHEN UPPER(estado)='ACTIVO'    THEN 1 ELSE 0 END) AS activos,
+          SUM(CASE WHEN UPPER(estado)='BLOQUEADO' THEN 1 ELSE 0 END) AS bloqueados,
+          SUM(CASE WHEN UPPER(estado)='COMISION'  THEN 1 ELSE 0 END) AS comision,
+          SUM(CASE WHEN jefe_escalafon IS NOT NULL THEN 1 ELSE 0 END) AS jefaturas
+        FROM dot_resultado ${where}
+        GROUP BY siglas ORDER BY total DESC
+      `, params),
 
+      // Procesos disponibles para el selector de fecha
       db.query(`
-        SELECT COALESCE(nc.modalidad,'sin_modalidad') AS modalidad, COUNT(*) AS total
-        FROM new_cargo nc WHERE nc.estado='vigente' ${siglaWhere}
-        GROUP BY nc.modalidad ORDER BY total DESC
-      `, sp),
+        SELECT DATE(fecha_proceso) AS fecha, COUNT(*) AS registros
+        FROM dot_resultado
+        GROUP BY DATE(fecha_proceso) ORDER BY fecha DESC
+      `),
 
-      db.query(`
-        SELECT
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista NOT IN('comision','retencion_cargo')) THEN 1 ELSE 0 END) AS ocupados,
-          SUM(CASE WHEN NOT EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-          ) THEN 1 ELSE 0 END) AS vacantes,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='comision') THEN 1 ELSE 0 END) AS comision,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='retencion_cargo') THEN 1 ELSE 0 END) AS retencion
-        FROM new_cargo nc WHERE nc.estado='vigente' ${siglaWhere}
-      `, sp),
-
-      db.query(`
-        SELECT nc.sigla,
-          (SELECT os.desc_rep FROM organigramas os
-           WHERE os.sigla COLLATE utf8mb4_unicode_ci = nc.sigla ORDER BY os.lvl ASC LIMIT 1) AS desc_rep,
-          COUNT(*) AS total,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista NOT IN('comision','retencion_cargo')) THEN 1 ELSE 0 END) AS ocupados,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='retencion_cargo') THEN 1 ELSE 0 END) AS retencion,
-          SUM(CASE WHEN EXISTS(SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo=nc.id AND cd.hasta IS NULL
-            AND cd.situacion_revista='comision') THEN 1 ELSE 0 END) AS comision
-        FROM new_cargo nc WHERE nc.estado='vigente' ${siglaWhere}
-        GROUP BY nc.sigla ORDER BY total DESC
-      `, sp),
+      // Siglas disponibles
+      db.query(`SELECT DISTINCT siglas FROM dot_resultado WHERE siglas IS NOT NULL ORDER BY siglas ASC`),
     ])
 
-    const toN = v => parseInt(v ?? 0, 10)
-    const norm = rows => rows.map(r => Object.fromEntries(Object.entries(r).map(([k,v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v])))
+    const toN  = v => parseInt(v ?? 0, 10)
+    const norm = rows => rows.map(r => Object.fromEntries(
+      Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v])
+    ))
 
     res.json({
-      globales: Object.fromEntries(Object.entries(globales).map(([k,v]) => [k, toN(v)])),
-      porCarrera:   norm(porCarrera),
-      porModalidad: norm(porModalidad),
-      porSituacion: norm(porSituacion)[0],
-      porEfector:   norm(porEfector),
+      meta: {
+        ultimo_proceso: meta.ultimo_proceso,
+        total_procesos: toN(meta.total_procesos),
+        fuente: 'dot_resultado',
+      },
+      globales:            Object.fromEntries(Object.entries(globales).map(([k, v]) => [k, toN(v)])),
+      porAgrupador:        norm(porAgrupador),
+      porEscalafon:        norm(porEscalafon),
+      porUniverso:         norm(porUniverso),
+      porEstado:           norm(porEstado),
+      porSitRevista:       norm(porSitRevista),
+      porJefatura:         norm(porJefatura),
+      porEfector:          norm(porEfector),
+      procesosDisponibles: procesosDisponibles.map(r => ({ fecha: r.fecha instanceof Date ? r.fecha.toISOString().slice(0,10) : String(r.fecha).slice(0,10), registros: toN(r.registros) })),
+      siglasDisponibles:   siglasDisponibles.map(r => r.siglas),
     })
   } catch (err) {
     logger.error('[carrerasController] getDotacionKpis', { error: err.message })
