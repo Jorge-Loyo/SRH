@@ -19,6 +19,8 @@ const LoginSchema = z.union([
   z.object({ username: z.string().min(1), password: z.string().min(1) }),
 ]);
 
+const isCrossSite = process.env.NODE_ENV === 'production';
+
 /**
  * POST /api/auth/login - Autentica usuario
  */
@@ -33,8 +35,8 @@ async function login(req, res) {
     if (config.auth.cookies && result.refreshToken) {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        sameSite: isCrossSite ? 'none' : 'lax',
+        secure: isCrossSite,
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/api/auth',
       });
@@ -87,8 +89,8 @@ async function refresh(req, res) {
     if (config.auth.cookies) {
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
+        sameSite: isCrossSite ? 'none' : 'lax',
+        secure: isCrossSite,
         maxAge: 30 * 24 * 60 * 60 * 1000,
         path: '/api/auth',
       });

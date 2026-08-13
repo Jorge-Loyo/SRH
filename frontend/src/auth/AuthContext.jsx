@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { setAccessToken, setUnauthenticatedCallback, apiGet } from '../api/client.js'
 
 const AuthContext = createContext(null)
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
 
 function getIdleMs() {
   const minutes = Number(import.meta.env.VITE_AUTH_IDLE_MINUTES || 30)
@@ -43,7 +44,7 @@ export function AuthProvider({ children }) {
 
   async function doRefresh() {
     try {
-      const res = await fetch('/api/auth/refresh', {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -71,7 +72,7 @@ export function AuthProvider({ children }) {
     stopIdleWatcher()
     setAccessToken(null)
     if (mountedRef.current) { setUser(null); setAllowedModules(null) }
-    fetch('/api/auth/logout', {
+    fetch(`${API_BASE}/api/auth/logout`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
     }).catch(() => {})
@@ -120,7 +121,7 @@ export function AuthProvider({ children }) {
 
   async function restoreSession() {
     try {
-      const res = await fetch('/api/auth/refresh', {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -135,7 +136,7 @@ export function AuthProvider({ children }) {
   }
 
   const login = useCallback(async (username, password) => {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -153,7 +154,7 @@ export function AuthProvider({ children }) {
     isLoggedInRef.current = false
     stopIdleWatcher()
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(`${API_BASE}/api/auth/logout`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
       })
