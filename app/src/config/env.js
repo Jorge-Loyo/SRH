@@ -30,6 +30,7 @@ const config = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     name: process.env.DB_NAME || 'salud_db',
+    ssl: toBool(process.env.DB_SSL, process.env.NODE_ENV === 'production'),
   },
   // Credenciales del admin estático (solo usadas cuando AUTH_MODE=env)
   admin: {

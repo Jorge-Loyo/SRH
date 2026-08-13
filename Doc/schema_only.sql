@@ -1,4 +1,3 @@
-mysqldump: [Warning] Using a password on the command line interface can be insecure.
 -- MySQL dump 10.13  Distrib 8.4.9, for Win64 (x86_64)
 --
 -- Host: localhost    Database: dotacion_db
@@ -433,8 +432,7 @@ CREATE TABLE `dot_resultado_historial_cambios` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-13 15:59:20
-mysqldump: [Warning] Using a password on the command line interface can be insecure.
+-- Dump completed on 2026-08-13 16:22:01
 -- MySQL dump 10.13  Distrib 8.4.9, for Win64 (x86_64)
 --
 -- Host: localhost    Database: dotacion_db
@@ -1612,4 +1610,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-08-13 15:59:28
+-- Dump completed on 2026-08-13 16:22:13

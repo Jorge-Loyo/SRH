@@ -31,6 +31,9 @@ if (isSqljs) {
   dsOptions.username = config.db.user;
   dsOptions.password = config.db.password;
   dsOptions.database = config.db.name;
+  if (config.db.ssl) {
+    dsOptions.ssl = { rejectUnauthorized: false };
+  }
   
   // Connection pool configurado para 50+ usuarios concurrentes y queries frecuentes de 33 hospitales
   dsOptions.extra = {
