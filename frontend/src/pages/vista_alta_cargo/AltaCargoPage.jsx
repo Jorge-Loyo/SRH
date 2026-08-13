@@ -739,20 +739,37 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                   {results.map((r, i) => {
                     const p = r.payload
                     const carreraLabel = p.carrera_seleccionada.toUpperCase()
-                    const detalle = p.puesto || p.nivel_formacion || '—'
+                    const detalle = p.puesto || p.nivel_formacion || null
+
+                    // Etiqueta de tipo/modalidad contextual
+                    const modalidadLabel = (m) => m === 'planta' ? 'POF' : m === 'guardia' ? 'POU' : m === 'pof' ? 'POF' : m === 'pou' ? 'POU' : m
+                    const tipoCphLabel = { jefe: 'Jefatura', director: 'Dirección', subdirector: 'Subdirección', ejecucion: 'Ejecución' }
+                    const tipoEgLabel  = { jefe_eg: 'Jefatura EG', director_eg: 'Dirección EG', gerencial: 'Gerencial', ejecucion: 'Ejecución' }
+
+                    const tipoTag = p.tipo_cph
+                      ? tipoCphLabel[p.tipo_cph] ?? p.tipo_cph
+                      : p.tipo_eg
+                        ? tipoEgLabel[p.tipo_eg] ?? p.tipo_eg
+                        : null
+
                     return (
                       <div key={i} className="rounded-lg border border-gray-200 overflow-hidden">
                         <div className="px-3 py-2.5 bg-gray-50 border-b border-gray-200">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-xs font-bold text-primary-700 bg-primary-100 px-2 py-0.5 rounded">{carreraLabel}</span>
                             <span className="text-xs font-semibold text-gray-700">{p.sigla}</span>
-                            {p.modalidad && <span className="text-xs text-gray-500">{p.modalidad}</span>}
+                            {tipoTag && (
+                              <span className="text-xs font-medium bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">{tipoTag}</span>
+                            )}
+                            {p.modalidad && (
+                              <span className="text-xs font-medium bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">{modalidadLabel(p.modalidad)}</span>
+                            )}
                             {p.jornada && <span className="text-xs text-gray-500">{p.jornada}</span>}
                             {p.categoria_interna && (
                               <span className="text-xs font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{p.categoria_interna}</span>
                             )}
                           </div>
-                          {detalle !== '—' && <p className="text-xs text-gray-600 font-medium mt-1 truncate">{detalle}</p>}
+                          {detalle && <p className="text-xs text-gray-600 font-medium mt-1 truncate">{detalle}</p>}
                           {p.especialidad && <p className="text-xs text-gray-400 truncate">{p.especialidad}</p>}
                           {p.norma_referencia && <p className="text-xs text-gray-400 mt-1">{p.norma_referencia}</p>}
                           {p.nro_resolucion && <p className="text-xs text-gray-400">Res: {p.nro_resolucion}</p>}
