@@ -454,6 +454,53 @@ async function createEtiqueta(req, res) {
   }
 }
 
+async function getDotacionEvolucion(req, res) {
+  try {
+    const db    = AppDataSource
+    const sigla = (req.query.sigla || '').trim().toUpperCase() || null
+    const desde = (req.query.desde || '').trim() || null
+    const hasta = (req.query.hasta || '').trim() || null
+
+    const conds  = []
+    const params = []
+    if (sigla) { conds.push('siglas = ?');              params.push(sigla) }
+    if (desde) { conds.push('fecha_asignada >= ?');     params.push(desde) }
+    if (hasta) { conds.push('fecha_asignada <= ?');     params.push(hasta) }
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : ''
+
+    const rows = await db.query(`
+      SELECT
+        fecha_asignada,
+        COUNT(*)                                                        AS total,
+        COUNT(DISTINCT cuil)                                            AS personas_unicas,
+        COUNT(DISTINCT siglas)                                          AS efectores,
+        SUM(CASE WHEN UPPER(estado) = 'ACTIVO'    THEN 1 ELSE 0 END)   AS activos,
+        SUM(CASE WHEN UPPER(estado) = 'BLOQUEADO' THEN 1 ELSE 0 END)   AS bloqueados,
+        SUM(CASE WHEN UPPER(estado) = 'COMISION'  THEN 1 ELSE 0 END)   AS comision,
+        SUM(CASE WHEN jefe_escalafon IS NOT NULL   THEN 1 ELSE 0 END)   AS jefaturas
+      FROM dot_resultado_historico
+      ${where}
+      GROUP BY fecha_asignada
+      ORDER BY fecha_asignada ASC
+    `, params)
+
+    const toN = v => parseInt(v ?? 0, 10)
+    res.json(rows.map(r => ({
+      fecha:          String(r.fecha_asignada).slice(0, 10),
+      total:          toN(r.total),
+      personas_unicas:toN(r.personas_unicas),
+      efectores:      toN(r.efectores),
+      activos:        toN(r.activos),
+      bloqueados:     toN(r.bloqueados),
+      comision:       toN(r.comision),
+      jefaturas:      toN(r.jefaturas),
+    })))
+  } catch (err) {
+    logger.error('[carrerasController] getDotacionEvolucion', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+}
+
 async function getDotacionKpis(req, res) {
   try {
     const db     = AppDataSource
@@ -600,4 +647,4 @@ async function getDotacionKpis(req, res) {
   }
 }
 
-module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis };
+module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion };
