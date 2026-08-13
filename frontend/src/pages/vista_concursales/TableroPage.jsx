@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { tableroApi } from '../../api/concursalesApi'
 import { useAuth } from '../../auth/AuthContext'
 import Spinner from '../../components/ui/Spinner'
 import { COLORES_ESTADO_CPH } from '../../utils/concursalesHelpers'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -436,13 +437,24 @@ export default function TableroPage() {
     ? 'Vista consolidada · CEETPS'
     : 'Vista consolidada · CPH y CEETPS'
 
+  const navigate = useNavigate()
+
   return (
     <div className="pb-12 max-w-5xl">
 
       {/* Cabecera */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Tablero de Procesos Concursales</h1>
-        <p className="text-sm text-gray-500 mt-1">{subtitleByRole}</p>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Tablero de Procesos Concursales</h1>
+          <p className="text-sm text-gray-500 mt-1">{subtitleByRole}</p>
+        </div>
+        <button
+          onClick={() => navigate('/cargos/kpis')}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors shrink-0"
+        >
+          <ChartBarIcon className="w-4 h-4" />
+          KPIs Dotación
+        </button>
       </div>
 
       {/* Tabs — solo para admin / editor / viewer */}
