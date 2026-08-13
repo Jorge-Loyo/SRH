@@ -202,6 +202,7 @@ export default function DotaneitorPage() {
   const [diff,           setDiff]          = useState(null)
   const [diffLoading,    setDiffLoading]   = useState(false)
   const [showDiff,       setShowDiff]      = useState(false)
+  const [fechaAsignada,  setFechaAsignada] = useState('')  // YYYY-MM-DD; vacío = hoy
 
   const addLog = useCallback((text, type) => {
     setLogs(l => [...l, { text, type: type ?? classifyLog(text) }])
@@ -311,7 +312,9 @@ export default function DotaneitorPage() {
     setDiffLoading(true); setError(null)
     addLog('Calculando diferencias con la BD actual...', 'info')
     try {
-      const data = await apiPost(`${BASE}/diff`, { session_id: state.sessionId })
+      const body = { session_id: state.sessionId }
+      if (fechaAsignada) body.fecha_asignada = fechaAsignada
+      const data = await apiPost(`${BASE}/diff`, body)
       setDiff(data)
       setShowDiff(true)
       const { total_nuevos: n, total_eliminados: e, total_modificados: m } = data
@@ -324,15 +327,20 @@ export default function DotaneitorPage() {
     setLoading(true); setError(null)
     addLog('Guardando en base de datos...', 'info')
     try {
-      const r = await apiPost(`${BASE}/guardar-bd`, { session_id: state.sessionId })
+      const body = { session_id: state.sessionId }
+      if (fechaAsignada) body.fecha_asignada = fechaAsignada
+      const r = await apiPost(`${BASE}/guardar-bd`, body)
       setGuardadoInfo(r)
-      setUltimaActualizacion(new Date().toISOString().replace('T', ' ').slice(0, 19))
+      if (!r.es_historico) {
+        setUltimaActualizacion(new Date().toISOString().replace('T', ' ').slice(0, 19))
+      }
       const partes = [
+        r.es_historico ? `📅 Snapshot histórico guardado para ${r.fecha_asignada}` : null,
         r.insertados     ? `+${r.insertados} nuevos`                    : null,
         r.registros_actualizados ? `~${r.registros_actualizados} actualizados (${r.campos_modificados} campos)` : null,
         r.eliminados     ? `-${r.eliminados} eliminados`                : null,
       ].filter(Boolean)
-      addLog(`✓ BD actualizada: ${partes.length ? partes.join(', ') : 'sin cambios'}`, 'success')
+      addLog(`✓ ${partes.length ? partes.join(', ') : 'Snapshot guardado sin cambios en vigente'}`, 'success')
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -448,6 +456,31 @@ export default function DotaneitorPage() {
       {state.procesado && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <StepHeader n={5} label="Validar y guardar" done={!!guardadoInfo} />
+
+          {/* Selector de fecha */}
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                Fecha del proceso
+              </label>
+              <input
+                type="date"
+                value={fechaAsignada}
+                onChange={e => setFechaAsignada(e.target.value)}
+                max={new Date().toISOString().slice(0, 10)}
+                className="form-input text-sm py-1 w-44"
+              />
+            </div>
+            <p className="text-xs text-gray-400 mt-4">
+              {fechaAsignada
+                ? fechaAsignada < new Date().toISOString().slice(0, 10)
+                  ? <span className="text-amber-600">📅 Proceso histórico — solo guarda snapshot, no actualiza el padrón vigente</span>
+                  : '✓ Proceso vigente — actualiza el padrón'
+                : '✓ Sin fecha = hoy, actualiza el padrón vigente'
+              }
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-3 mt-3">
             <button
               onClick={handleVerCambios}
