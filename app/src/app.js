@@ -19,6 +19,22 @@ function createApp(options = {}) {
   const { AppDataSource, toCsvBase64 } = options
   const app = express();
 
+  // CORS — permite el frontend en Vercel y localhost en desarrollo
+  const cors = require('cors');
+  const allowedOrigins = [
+    'https://srh-pi.vercel.app',
+    'https://srh-56558obpq-jorge-loyos-projects.vercel.app',
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
+    ...(config.nodeEnv !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
+  ];
+  app.use(cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS bloqueado: ${origin}`));
+    },
+    credentials: true,
+  }));
+
   // Confiar en el proxy reverso (Nginx/Docker) para que req.ip sea la IP real del cliente
   // Sin esto, todos los usuarios comparten la misma IP del proxy y se bloquean mutuamente en rate limiting
   if (process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1') {
