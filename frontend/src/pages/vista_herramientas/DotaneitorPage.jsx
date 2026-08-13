@@ -270,6 +270,13 @@ export default function DotaneitorPage() {
       const data = await res.json()
       setState(s => ({ ...s, sessionId: sid, cargosFile: data.filename, normalizado: false, procesado: false, cruzado: false }))
       setPreview(null); setPreviewPage(1)
+      // Detectar fecha del nombre del archivo (ej. Cargos_salud_20260705.xlsx → 2026-07-05)
+      const m = file.name.match(/(\d{4})(\d{2})(\d{2})/)
+      if (m) {
+        const fechaDetectada = `${m[1]}-${m[2]}-${m[3]}`
+        const hoy = new Date().toISOString().slice(0, 10)
+        setFechaAsignada(fechaDetectada !== hoy ? fechaDetectada : '')
+      }
       addLog(`Archivo cargado: ${data.filename} (${data.rows.toLocaleString('es-AR')} filas)`, 'success')
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
