@@ -521,7 +521,7 @@ export default function DotaneitorPage() {
       )}
 
       {/* Paso 6 — Sincronizar dotación */}
-      {guardadoInfo && (
+      {guardadoInfo && !guardadoInfo.es_historico && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <StepHeader n={6} label="Sincronizar dotación" done={!!syncInfo} />
           <p className="text-xs text-gray-400 mt-1 mb-3">
