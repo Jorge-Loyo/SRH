@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: srh-api
+    name: srh-backend
     runtime: node
     rootDir: app
-    buildCommand: npm ci
+    buildCommand: npm install
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -12,6 +12,28 @@ services:
         value: 3000
       - key: TRUST_PROXY
         value: true
+      - key: DB_DIALECT
+        value: mysql
+      - key: DB_HOST
+        fromDatabase:
+          name: srh-mysql
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: srh-mysql
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: srh-mysql
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: srh-mysql
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: srh-mysql
+          property: database
       - key: JWT_SECRET
         generateValue: true
       - key: AUTH_MODE
@@ -24,17 +46,3 @@ services:
         value: 30
       - key: AUDIT_RETENTION_DAYS
         value: 30
-      - key: DB_DIALECT
-        value: mysql
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        value: 3306
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: ALLOWED_ORIGINS
-        sync: false

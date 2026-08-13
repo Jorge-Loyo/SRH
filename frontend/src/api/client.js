@@ -12,6 +12,10 @@
  *   3. Si el refresh también falla, llama a _onUnauthenticated (limpia el estado de auth)
  */
 
+// En Vercel el frontend está separado del backend → usar VITE_API_BASE_URL
+// En local/Docker las rutas son relativas (proxy de Vite o Express sirve el SPA)
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? ''
+
 let _accessToken = null
 
 // Callback que AuthContext registra para limpiar el estado cuando la sesión expira
@@ -51,7 +55,7 @@ async function tryRefresh() {
 
   _isRefreshing = true
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(API_BASE + '/api/auth/refresh', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -93,7 +97,7 @@ export async function apiFetch(path, options = {}) {
     ...(options.headers ?? {}),
   }
 
-  const res = await fetch(path, {
+  const res = await fetch(API_BASE + path, {
     ...options,
     headers,
     credentials: 'include',
@@ -118,7 +122,7 @@ export async function apiFetch(path, options = {}) {
 // -----------------------------------------------------------
 
 export async function apiGet(path, params = {}) {
-  const url = new URL(path, window.location.origin)
+  const url = new URL(path, API_BASE || window.location.origin)
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') {
       url.searchParams.set(k, String(v))
