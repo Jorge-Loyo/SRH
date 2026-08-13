@@ -197,6 +197,8 @@ export default function DotaneitorPage() {
   const [showHistorial, setShowHistorial] = useState(false)
   const [guardadoInfo,  setGuardadoInfo]  = useState(null)
   const [ultimaActualizacion, setUltimaActualizacion] = useState(null)
+  const [syncInfo,       setSyncInfo]      = useState(null)
+  const [syncLoading,    setSyncLoading]   = useState(false)
 
   const addLog = useCallback((text, type) => {
     setLogs(l => [...l, { text, type: type ?? classifyLog(text) }])
@@ -319,6 +321,25 @@ export default function DotaneitorPage() {
     finally { setLoading(false) }
   }
 
+  async function handleSincronizar() {
+    setSyncLoading(true); setError(null)
+    addLog('Sincronizando dotación desde padrón...', 'info')
+    try {
+      const r = await apiPost('/api/dotacion/cargos/sincronizar')
+      setSyncInfo(r)
+      const partes = [
+        r.insertados  ? `+${r.insertados} nuevas ocupaciones`  : null,
+        r.actualizados ? `~${r.actualizados} actualizados`     : null,
+        r.bajas       ? `-${r.bajas} cerradas`                 : null,
+      ].filter(Boolean)
+      addLog(`✓ Dotación sincronizada: ${partes.length ? partes.join(', ') : 'sin cambios'}`, 'success')
+    } catch (e) {
+      addLog(`⚠ Sincronización falló: ${e.message} — los datos en BD están guardados correctamente`, 'warning')
+    } finally {
+      setSyncLoading(false)
+    }
+  }
+
   async function handleNuevaSesion() {
     if (state.sessionId) {
       await apiFetch(`${BASE}/session`, {
@@ -328,7 +349,7 @@ export default function DotaneitorPage() {
       }).catch(() => {})
     }
     sessionStorage.removeItem('dotaneitor_session')
-    setState(INIT); setLogs([]); setPreview(null); setPreviewPage(1); setError(null)
+    setState(INIT); setLogs([]); setPreview(null); setPreviewPage(1); setError(null); setSyncInfo(null)
     addLog('Sesión reiniciada.', 'info')
   }
 
@@ -432,6 +453,40 @@ export default function DotaneitorPage() {
               {guardadoInfo.eliminados > 0 && <span className="text-red-500">-{guardadoInfo.eliminados} eliminados</span>}
               {!guardadoInfo.insertados && !guardadoInfo.registros_actualizados && !guardadoInfo.eliminados && (
                 <span className="text-gray-400">Sin cambios respecto al proceso anterior</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Paso 6 — Sincronizar dotación */}
+      {guardadoInfo && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <StepHeader n={6} label="Sincronizar dotación" done={!!syncInfo} />
+          <p className="text-xs text-gray-400 mt-1 mb-3">
+            Actualiza <span className="font-medium text-gray-600">cargo_dotacion</span> con los datos recién guardados en el padrón.
+          </p>
+          <button
+            onClick={handleSincronizar}
+            disabled={syncLoading || !!syncInfo}
+            className={`flex items-center gap-2 px-4 py-2 text-sm rounded-lg font-medium transition-colors
+              ${ syncInfo
+                ? 'bg-green-50 border border-green-200 text-green-700 cursor-default'
+                : syncLoading
+                  ? 'bg-gray-100 text-gray-400 cursor-wait'
+                  : 'bg-primary-700 text-white hover:bg-primary-800'
+              }`}
+          >
+            <CircleStackIcon className="w-4 h-4" />
+            {syncInfo ? 'Sincronización completada' : syncLoading ? 'Sincronizando...' : 'Sincronizar dotación'}
+          </button>
+          {syncInfo && (
+            <div className="mt-3 flex flex-wrap gap-4 text-xs">
+              {syncInfo.insertados   > 0 && <span className="text-green-600">+{syncInfo.insertados} nuevas ocupaciones</span>}
+              {syncInfo.actualizados > 0 && <span className="text-blue-600">~{syncInfo.actualizados} actualizados</span>}
+              {syncInfo.bajas        > 0 && <span className="text-red-500">-{syncInfo.bajas} cerradas</span>}
+              {!syncInfo.insertados && !syncInfo.actualizados && !syncInfo.bajas && (
+                <span className="text-gray-400">Sin cambios en dotación</span>
               )}
             </div>
           )}
