@@ -373,11 +373,7 @@ export default function DotaneitorPage() {
 
   async function handleNuevaSesion() {
     if (state.sessionId) {
-      await apiFetch(`${BASE}/session`, {
-        method: 'DELETE',
-        body: JSON.stringify({ session_id: state.sessionId }),
-        headers: { 'content-type': 'application/json' },
-      }).catch(() => {})
+      await apiPost(`${BASE}/session/delete`, { session_id: state.sessionId }).catch(() => {})
     }
     sessionStorage.removeItem('dotaneitor_session')
     setState(INIT); setLogs([]); setPreview(null); setPreviewPage(1); setError(null); setSyncInfo(null)

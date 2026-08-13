@@ -506,7 +506,7 @@ def reporte_calidad(session_id: str = Query(...)):
     )
 
 
-@app.delete('/session')
+@app.post('/session/delete')
 def delete_session(body: SessionBody):
     _remove_session(body.session_id)
     return {'ok': True}
