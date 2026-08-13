@@ -35,8 +35,7 @@ frontend/dist/
 # Archivos temporales del python-service
 app/python-service/tmp/
 
-# Archivos solo para GitLab/Docker
-app/Dockerfile
+# Archivos solo para GitLab
 docker-compose.yml
 
 # Archivos temporales de Linux/Git

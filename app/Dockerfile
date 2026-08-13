@@ -1,5 +1,4 @@
-# Imagen desde el Harbor
-FROM core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine
+FROM node:18-alpine
 
 # Directorio en el contenedor
 WORKDIR /usr/src/app
