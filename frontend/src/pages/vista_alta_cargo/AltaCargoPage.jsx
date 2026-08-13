@@ -290,7 +290,7 @@ function isComplete(form, modo) {
     return true
   }
   if (c === 'enf') return true  // modalidad fija, jornada no requerida en ejecución
-  if (c === 'tec') return !!puesto
+  if (c === 'tec') return !!puesto && !!modalidad
   return true
 }
 
@@ -383,6 +383,15 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
     altaCargoApi.listPuestos(c, tipo, modo).then(setPuestos).catch(() => {})
   }, [form.carrera_seleccionada, form.modalidad, form.tipo_cargo_estructura, form.tipo_eg])
 
+  // Cuando TEC carga puestos y solo hay POF, fijar modalidad automáticamente
+  useEffect(() => {
+    if (!esTec || modo === 'estructura' || puestos.length === 0) return
+    const mods = [...new Set(puestos.map(p => p.modalidad_tec).filter(Boolean))]
+    if (!mods.includes('pou') && mods.includes('pof') && form.modalidad !== 'pof') {
+      setForm(p => ({ ...p, modalidad: 'pof' }))
+    }
+  }, [puestos]) // eslint-disable-line
+
   const tipo_alta = modo === 'estructura' ? 'estructura' : 'ejecucion'
 
   const confirmarExpediente = () => {
@@ -436,15 +445,25 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
   const esEg  = c === 'eg'
   const esAs  = c === 'as'
 
-  // En ejecución, modalidad siempre es planta para CPH, ENF, TEC, EG
-  const modalidadFija = modo !== 'estructura' && ['cph', 'enf', 'tec', 'eg'].includes(c)
+  // Para TEC en ejecución: derivar modalidades disponibles desde los puestos cargados
+  const tecModalidades = esTec && modo !== 'estructura'
+    ? [...new Set(puestos.map(p => p.modalidad_tec).filter(Boolean))]
+    : []
+  const tecTieneAmbas = tecModalidades.includes('pou') && tecModalidades.includes('pof')
 
-  // Modalidad aplica según requiere_modalidad del tipo seleccionado (estructura) o siempre para ejecución CPH/TEC
+  // En ejecución, modalidad siempre es planta para CPH, ENF, EG — y para TEC solo si no hay POU
+  const modalidadFija = modo !== 'estructura' && (
+    ['cph', 'enf', 'eg'].includes(c) || (esTec && !tecTieneAmbas)
+  )
+
+  // Modalidad aplica según requiere_modalidad del tipo seleccionado (estructura) o siempre para ejecución CPH/TEC con ambas
   const tipoCphObj = tiposCargo.find(t => t.codigo === form.tipo_cargo_estructura)
-  const mostrarModalidad = !modalidadFija && ((esCph && (modo !== 'estructura' || tipoCphObj?.requiere_modalidad || form.tipo_cargo_estructura === 'jefe')) || esTec)
-  const modalidadesOpts = (esCph && modo === 'estructura')
-    ? modalidades.map(m => ({ value: m.nombre, label: m.nombre === 'planta' ? 'POF' : m.nombre === 'guardia' ? 'POU' : m.nombre }))
-    : modalidades.map(m => m.nombre)
+  const mostrarModalidad = !modalidadFija && ((esCph && (modo !== 'estructura' || tipoCphObj?.requiere_modalidad || form.tipo_cargo_estructura === 'jefe')) || (esTec && tecTieneAmbas))
+  const modalidadesOpts = esTec
+    ? tecModalidades.map(m => ({ value: m, label: m === 'pof' ? 'POF' : m === 'pou' ? 'POU' : m }))
+    : (esCph && modo === 'estructura')
+      ? modalidades.map(m => ({ value: m.nombre, label: m.nombre === 'planta' ? 'POF' : m.nombre === 'guardia' ? 'POU' : m.nombre }))
+      : modalidades.map(m => m.nombre)
 
   // Especialidades segun si el puesto seleccionado es medico o no
   const NO_APLICA = 'No aplica'
@@ -452,7 +471,9 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
     ? (form.puesto_es_medico ? espMedico : [NO_APLICA, ...espNoMedico])
     : esTec ? [NO_APLICA, ...espTec] : []
 
-  const puestosOptions = puestos.map(p => p.nombre)
+  const puestosOptions = esTec && tecTieneAmbas && form.modalidad
+    ? puestos.filter(p => p.modalidad_tec === form.modalidad).map(p => p.nombre)
+    : puestos.map(p => p.nombre)
 
   const carreraOpts = carreras
     .filter(cr => modo === 'estructura' ? cr.solo_estructura : !cr.excluir_alta)
@@ -546,7 +567,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                 value={form.carrera_seleccionada}
                 disabled={!form.sigla}
                 onChange={v => {
-                  const fijar = modo !== 'estructura' && ['cph', 'enf', 'tec', 'eg'].includes(v)
+                  const fijar = modo !== 'estructura' && ['cph', 'enf', 'eg'].includes(v)
                   const mod = fijar ? (modalidadForzada || 'planta') : ''
                   setForm(p => ({ ...p, carrera_seleccionada: v, modalidad: mod, nivel_formacion: '', puesto: '', puesto_es_medico: 0, especialidad: '', jornada: '' }))
                 }} />
@@ -589,7 +610,9 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-gray-500">Modalidad</span>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold border border-primary-500 bg-primary-600 text-white">
-                      <CheckIcon className="w-3.5 h-3.5" /> {modalidadForzada === 'guardia' ? 'POU — Guardia' : 'POF — Planta'}
+                      <CheckIcon className="w-3.5 h-3.5" /> {esTec
+                        ? (form.modalidad === 'pou' ? 'POU' : 'POF')
+                        : (modalidadForzada === 'guardia' ? 'POU — Guardia' : 'POF — Planta')}
                     </span>
                   </div>
                 )}

@@ -415,7 +415,7 @@ async function listPuestos(req, res) {
     conditions.push('es_estructura = ?')
     params.push(modo === 'estructura' ? 1 : 0)
     const rows = await AppDataSource.query(
-      `SELECT id, nombre, carrera, tipo, es_medico FROM puestos_cargo WHERE ${conditions.join(' AND ')} ORDER BY tipo ASC, nombre ASC`,
+      `SELECT id, nombre, carrera, tipo, es_medico, modalidad_tec FROM puestos_cargo WHERE ${conditions.join(' AND ')} ORDER BY tipo ASC, nombre ASC`,
       params
     )
     res.json(rows)
