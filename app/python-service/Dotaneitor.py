@@ -272,6 +272,16 @@ class DotacionAutomation:
                 self._eliminar_duplicados_id_sial(df)
             )
 
+            # 9.9 Detectar y eliminar jefaturas CPH con rol duplicado activo: una persona con dos
+            # roles ACTIVOS del mismo LITERAL PUESTO en el mismo efector. El rol válido es el que
+            # tiene CODIGO JEFATURAS con valor; el que tiene CODIGO JEFATURAS vacío es el error de
+            # origen — se elimina del resultado y se documenta en el reporte de calidad.
+            detalle_jefaturas_duplicadas = self._detectar_jefaturas_duplicadas(df)
+            jefaturas_duplicadas_count = len(detalle_jefaturas_duplicadas)
+            if jefaturas_duplicadas_count:
+                ids_error = set(detalle_jefaturas_duplicadas['ID SIAL'].dropna().astype(str))
+                df = df[~df['ID SIAL'].astype(str).isin(ids_error)].reset_index(drop=True)
+
             # 10. Reordenar columnas según especificación
             df = self._reordenar_columnas(df)
 
@@ -284,6 +294,7 @@ class DotacionAutomation:
                 'especialidad_sin_puesto': especialidad_sin_puesto,
                 'duplicados_id_sial_grupos': duplicados_grupos,
                 'duplicados_id_sial_filas_eliminadas': duplicados_filas_eliminadas,
+                'jefaturas_duplicadas': jefaturas_duplicadas_count,
             }
             self.detalle_calidad = {
                 'SIGLA sin coincidencia en hoja SIGLAS': detalle_sin_sigla,
@@ -292,6 +303,7 @@ class DotacionAutomation:
                 'ESPECIALIDAD vaciada (Código de Registro sin especialidad)': detalle_especialidad_limpiada,
                 'ESPECIALIDAD sin LITERAL PUESTO (revisar manualmente)': detalle_especialidad_sin_puesto,
                 'ID SIAL duplicado (se eliminó, se conservó la fila más completa)': detalle_duplicados_id_sial,
+                'JEFATURA CPH con rol duplicado activo (eliminado del resultado — corregir en SIAL)': detalle_jefaturas_duplicadas,
             }
 
             self.resultado_df = df
@@ -340,6 +352,14 @@ class DotacionAutomation:
                 f"[!] ID SIAL duplicado: {grupos} cargo(s) tenían filas repetidas, se eliminaron "
                 f"{duplicados_filas} fila(s) duplicada(s) (se conservó la más completa de cada grupo; "
                 f"ver reporte de calidad para el detalle)"
+            )
+
+        jefaturas_dup = rep.get('jefaturas_duplicadas', 0)
+        if jefaturas_dup:
+            lineas.append(
+                f"[!] JEFATURA CPH con rol duplicado: {jefaturas_dup} fila(s) eliminadas del resultado "
+                f"(rol sin CODIGO JEFATURAS en personas con dos roles activos del mismo tipo en el mismo "
+                f"efector — pedir corrección en SIAL; ver reporte de calidad para el detalle)"
             )
 
         if not lineas:
@@ -489,6 +509,59 @@ class DotacionAutomation:
         cantidad_grupos = df.loc[mask_dup, columna_id].nunique()
 
         return df_resultado, cantidad_grupos, len(indices_a_eliminar), detalle_df
+
+    def _detectar_jefaturas_duplicadas(self, df):
+        """Detecta personas con dos roles ACTIVOS del mismo tipo de jefatura CPH en el mismo
+        efector. El rol válido es el que tiene CODIGO JEFATURAS con valor; el que tiene
+        CODIGO JEFATURAS vacío es el error de origen que hay que pedir que corrijan en SIAL.
+
+        Devuelve un DataFrame con una fila por rol erróneo (CUIL Y ROL, AYN, VALOR con el
+        detalle del problema), listo para incluir en el reporte de calidad.
+        """
+        cols_necesarias = {'CUIL', 'SIGLAS', 'LITERAL PUESTO', 'ESTADO', 'CODIGO JEFATURAS',
+                           'JEFE ESCALAFON', 'ID SIAL'}
+        if not cols_necesarias.issubset(df.columns):
+            return pd.DataFrame(columns=['CUIL Y ROL', 'AYN', 'VALOR'])
+
+        # Solo jefes CPH activos
+        mask_jefe_cph_activo = (
+            df['JEFE ESCALAFON'].isin(['JEFE CPH POF', 'JEFE CPH POU'])
+            & (df['ESTADO'].str.upper() == 'ACTIVO')
+        )
+        jefes = df.loc[mask_jefe_cph_activo].copy()
+
+        if jefes.empty:
+            return pd.DataFrame(columns=['CUIL Y ROL', 'AYN', 'VALOR'])
+
+        # Grupos con mas de un rol activo del mismo tipo en el mismo efector
+        grupos = jefes.groupby(['CUIL', 'SIGLAS', 'LITERAL PUESTO'])
+        filas_error = []
+        for (cuil, sigla, puesto), grupo in grupos:
+            if len(grupo) < 2:
+                continue
+            # Rol valido: tiene CODIGO JEFATURAS con valor
+            # Rol error:  CODIGO JEFATURAS vacio
+            def _vacio(v):
+                return pd.isna(v) or str(v).strip() == ''
+
+            for _, fila in grupo.iterrows():
+                if _vacio(fila.get('CODIGO JEFATURAS')):
+                    id_sial_valido = ', '.join(
+                        str(r['ID SIAL']) for _, r in grupo.iterrows()
+                        if not _vacio(r.get('CODIGO JEFATURAS'))
+                    )
+                    filas_error.append({
+                        'CUIL Y ROL': fila.get('CUIL Y ROL'),
+                        'AYN': fila.get('AYN'),
+                        'ID SIAL': fila.get('ID SIAL'),
+                        'VALOR': (
+                            f"[{sigla}] {puesto}: rol duplicado sin CODIGO JEFATURAS — "
+                            f"ID SIAL eliminado del resultado: {fila.get('ID SIAL')} "
+                            f"(rol valido: {id_sial_valido})"
+                        ),
+                    })
+
+        return pd.DataFrame(filas_error, columns=['CUIL Y ROL', 'AYN', 'ID SIAL', 'VALOR'])
 
     def _reordenar_columnas(self, df):
         """Reordena las columnas según el orden del archivo de referencia (DOTACION 1-12-25 MSGC.xlsx)"""
