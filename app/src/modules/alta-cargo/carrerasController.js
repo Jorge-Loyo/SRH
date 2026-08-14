@@ -178,7 +178,7 @@ async function listModalidades(req, res) {
 async function listSiglas(req, res) {
   try {
     const rows = await AppDataSource.query(
-      `SELECT id_sigla, sigla FROM siglas ORDER BY sigla ASC`
+      `SELECT id_sigla, sigla FROM siglas WHERE activo = 1 ORDER BY sigla ASC`
     );
     res.json(rows);
   } catch (err) {

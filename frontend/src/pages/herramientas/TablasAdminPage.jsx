@@ -47,12 +47,27 @@ function RowModal({ tableName, pk, columns, row, onClose, onSaved }) {
                 {col.name}
                 <span className="ml-1 text-gray-300 font-normal">{col.type}</span>
               </label>
-              <input
-                className="form-input w-full text-sm"
-                value={form[col.name] ?? ''}
-                onChange={e => setForm(f => ({ ...f, [col.name]: e.target.value }))}
-                required={!col.nullable}
-              />
+              {col.name === 'activo' ? (
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, activo: f.activo == 1 ? 0 : 1 }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    form.activo == 1 ? 'bg-green-500' : 'bg-gray-300'
+                  }`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    form.activo == 1 ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                  <span className="ml-12 text-xs font-medium text-gray-700">
+                    {form.activo == 1 ? 'Activo' : 'Inactivo'}
+                  </span>
+                </button>
+              ) : (
+                <input
+                  className="form-input w-full text-sm"
+                  value={form[col.name] ?? ''}
+                  onChange={e => setForm(f => ({ ...f, [col.name]: e.target.value }))}
+                  required={!col.nullable}
+                />
+              )}
             </div>
           ))}
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -159,9 +174,13 @@ function TablePanel({ table, onCountChange }) {
                 <tr key={i} className={`group ${i % 2 ? 'bg-gray-50/50' : ''} hover:bg-blue-50/40 transition-colors`}>
                   {displayCols.map(c => (
                     <td key={c} className="px-3 py-1.5 text-gray-700 whitespace-nowrap border-b border-gray-50 max-w-[280px] truncate">
-                      {row[c] === null || row[c] === undefined
-                        ? <span className="text-gray-300">—</span>
-                        : String(row[c])}
+                      {c === 'activo'
+                        ? <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            row[c] == 1 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                          }`}>{row[c] == 1 ? 'Activo' : 'Inactivo'}</span>
+                        : row[c] === null || row[c] === undefined
+                          ? <span className="text-gray-300">—</span>
+                          : String(row[c])}
                     </td>
                   ))}
                   <td className="px-2 py-1.5 border-b border-gray-50">
