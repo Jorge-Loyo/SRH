@@ -21,7 +21,7 @@ const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001'
 router.get('/dotaneitor/health', async (req, res) => {
   const target = `${PYTHON_SERVICE}/health`;
   try {
-    const upstream = await fetch(target);
+    const upstream = await fetch(target, { signal: AbortSignal.timeout(40000) });
     const buf = await upstream.arrayBuffer();
     res.status(upstream.status).end(Buffer.from(buf));
   } catch {
@@ -35,6 +35,7 @@ router.all('/dotaneitor/*', ...auth, async (req, res) => {
     const isFormData = req.headers['content-type']?.includes('multipart/form-data');
     const fetchOpts = {
       method: req.method,
+      signal: AbortSignal.timeout(120000),
       headers: isFormData ? {} : { 'content-type': req.headers['content-type'] || 'application/json' },
     };
     if (!['GET', 'HEAD'].includes(req.method)) {
