@@ -68,7 +68,7 @@ function InfoModal({ cargoId, onClose }) {
   }, [cargoId])
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onMouseDown={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col" style={{ maxHeight: '85vh' }} onMouseDown={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col" style={{ maxHeight: '85vh' }} onMouseDown={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <span className="text-sm font-semibold text-gray-800">Información del cargo</span>
           <button type="button" onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><XMarkIcon className="w-4 h-4" /></button>
@@ -705,11 +705,6 @@ export default function ListaCargosPage() {
                           className="p-1 rounded text-blue-500 hover:bg-blue-50 transition-colors">
                           <InformationCircleIcon className="w-4 h-4" />
                         </button>
-                        {row.categoria_interna && (
-                          <span className="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center px-1 min-w-[1.1rem] h-[1.1rem] rounded-full bg-amber-400 text-white text-[9px] font-bold leading-none">
-                            {row.categoria_interna}
-                          </span>
-                        )}
                       </div>
                       <button onClick={() => setEditRow(row)} title="Editar cargo"
                         className="p-1 rounded text-gray-500 hover:bg-gray-100 transition-colors">
