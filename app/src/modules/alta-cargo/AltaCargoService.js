@@ -49,11 +49,18 @@ class AltaCargoService {
       `SELECT MAX(CAST(SUBSTRING_INDEX(codigo, '-', -1) AS UNSIGNED)) as max_seq
        FROM new_cargo
        WHERE codigo LIKE ?
-         AND codigo REGEXP ?
-       FOR UPDATE`,
+         AND codigo REGEXP ?`,
       [`${prefix}-%`, `^${escapedPrefix}-[0-9]{6}$`]
     )
-    return { prefix, maxSeq: max_seq ?? 0 }
+    let nextSeq = (max_seq ?? 0) + 1;
+    // Saltar códigos que ya existen (por transacciones previas fallidas)
+    while (true) {
+      const candidate = `${prefix}-${nextSeq.toString().padStart(6, '0')}`;
+      const [existing] = await manager.query(`SELECT 1 FROM new_cargo WHERE codigo = ? LIMIT 1`, [candidate]);
+      if (!existing) break;
+      nextSeq++;
+    }
+    return { prefix, maxSeq: nextSeq - 1 }
   }
 
   async #nextCodigos(manager, carrera, modalidadCod, tipo, cantidad) {
