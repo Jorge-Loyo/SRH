@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Gestión - Hospitales</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ESTILOS GENERALES */
+        :root {
+            --azul-oscuro: #153244;
+            --amarillo: #ffcc00;
+            --celeste: #8de2d6;
+            --blanco: #ffffff;
+            --gris-claro: #f4f7f6;
+            --gris-bordes: #e0e0e0;
+            --naranja-suave: #ffe5b4; 
+            --naranja-fuerte: #ff9900;
+            --verde-suave: #e6f4ea;
+            --verde-fuerte: #34a853;
+            --gris-texto: #999999; 
+        }
+
+        body { font-family: 'Montserrat', sans-serif; margin: 0; background-color: var(--blanco); color: var(--azul-oscuro); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* ENCABEZADO SUPERIOR FIJO */
+        .encabezado-superior { 
+            height: 120px; 
+            background-color: var(--azul-oscuro); 
+            border-bottom: 4px solid var(--amarillo); 
+            display: flex; 
+            align-items: center; 
+            padding: 0 40px; 
+            flex-shrink: 0; 
+            z-index: 10; 
+        }
+
+        /* CONTENEDOR EXACTO SEGÚN REFERENCIA VISUAL */
+        .contenedor-logo-inicio {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Centra horizontalmente el texto respecto al logo */
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .logo-plataforma { 
+            height: 80px; 
+            width: auto;
+            object-fit: contain; 
+            margin-bottom: 4px;
+        }
+
+        .btn-inicio-texto {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--blanco); /* SIEMPRE BLANCO */
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .contenedor-principal { display: flex; flex: 1; overflow: hidden; background-color: var(--blanco); position: relative; }
+
+        .columna-izquierda { width: 20%; min-width: 200px; background-color: var(--blanco); border-right: 1px solid var(--gris-bordes); overflow-y: auto; padding: 20px; transition: all 0.5s ease-in-out; flex-shrink: 0; padding-bottom: 80px; }
+        .columna-central { flex: 1; padding: 30px; background-color: var(--blanco); transition: all 0.5s ease-in-out; display: flex; flex-direction: column; align-items: center; overflow-y: auto; scroll-behavior: smooth; padding-bottom: 80px; }
+        .separador-resizer { width: 6px; background-color: var(--gris-bordes); cursor: ew-resize; transition: background-color 0.2s; z-index: 5; }
+        .separador-resizer:hover, .separador-resizer:active { background-color: var(--celeste); }
+
+        .columna-derecha-desp { width: 320px; min-width: 200px; max-width: 500px; background-color: var(--gris-claro); padding: 20px; overflow-y: auto; display: flex; flex-direction: column; transition: width 0.3s ease; position: relative; padding-bottom: 80px; }
+        .columna-derecha-desp.minimizada { width: 50px !important; min-width: 50px !important; padding: 20px 10px; overflow: hidden; cursor: pointer; }
+        .columna-derecha-desp.minimizada:hover { background-color: #e8eceb; }
+        .columna-derecha-desp.minimizada .contenido-desp { display: none; }
+        .texto-expandir { display: none; writing-mode: vertical-rl; text-orientation: mixed; font-weight: 700; color: var(--azul-oscuro); letter-spacing: 2px; margin-top: 40px; align-self: center; }
+        .columna-derecha-desp.minimizada .texto-expandir { display: block; }
+        body.modo-zoom .columna-izquierda { width: 0; min-width: 0; padding: 0; opacity: 0; border: none; }
+        h1, h2, h3 { color: var(--azul-oscuro); font-weight: 700; margin-top: 0; }
+
+        .caja-hospital { background-color: var(--blanco); border: 2px solid var(--gris-bordes); border-radius: 6px; padding: 8px 12px; margin-bottom: 6px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.3s; }
+        .caja-hospital:hover { background-color: var(--azul-oscuro); color: var(--blanco); border-color: var(--amarillo); transform: translateX(5px); }
+
+        .cabecera-hospital { text-align: center; width: 100%; margin-bottom: 30px; display: none; animation: fadeInDown 0.6s ease forwards; }
+        .cabecera-hospital h1 { font-size: 2em; font-weight: 800; text-transform: uppercase; margin-top: 0; }
+        .btn-volver { background-color: var(--azul-oscuro); border: 2px solid var(--azul-oscuro); padding: 6px 16px; margin-bottom: 15px; border-radius: 20px; cursor: pointer; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; color: var(--blanco); text-transform: uppercase; transition: all 0.3s ease; }
+        .btn-volver:hover { background-color: var(--celeste); color: var(--azul-oscuro); }
+
+        .contenedor-pedidos { display: none; width: 100%; display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
+        .cajon-pedido { background-color: var(--blanco); border-radius: 10px; padding: 15px; width: 290px; box-shadow: 0 5px 20px rgba(21, 50, 68, 0.08); border: 1px solid var(--gris-bordes); border-top: 5px solid var(--amarillo); opacity: 0; transform: scale(0.8); animation: zoomIn 0.4s ease forwards; transition: box-shadow 0.5s ease; }
+        
+        .etiqueta { font-size: 9px; font-weight: 700; background-color: var(--celeste); padding: 3px 6px; border-radius: 4px; text-transform: uppercase; display: inline-block; margin-top: 10px; margin-bottom: 5px; }
+        .valor { font-size: 13px; font-weight: 500; margin: 0; line-height: 1.3; }
+
+        .contenedor-tooltip { position: relative; display: block; width: fit-content; cursor: help; }
+        .valor-tooltip { border-bottom: 1px dashed var(--azul-oscuro); }
+        .tooltip-texto { visibility: hidden; width: max-content; background-color: var(--azul-oscuro); color: var(--blanco); text-align: center; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; position: absolute; z-index: 100; bottom: 130%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s, transform 0.3s; }
+        .tooltip-texto::after { content: ""; position: absolute; top: 100%; left: 50%; margin-left: -5px; border-width: 5px; border-style: solid; border-color: var(--azul-oscuro) transparent transparent transparent; }
+        .contenedor-tooltip:hover .tooltip-texto { visibility: visible; opacity: 1; transform: translateX(-50%) translateY(-3px); }
+
+        .btn-desplegar-cargos { width: 100%; background-color: var(--gris-claro); border: 1px solid var(--gris-bordes); padding: 8px; margin-top: 15px; border-radius: 6px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 700; cursor: pointer; transition: background 0.3s; }
+        .btn-desplegar-cargos:hover { background-color: var(--celeste); }
+
+        .seccion-cargos { display: none; margin-top: 10px; border-top: 1px dashed var(--gris-bordes); padding-top: 10px; }
+        .seccion-cargos.abierto { display: block; }
+
+        .cargo-item { background-color: var(--blanco); border: 1px solid var(--gris-bordes); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 11px; transition: background-color 0.3s, border-color 0.3s; }
+        .cargo-item.resuelto { background-color: var(--verde-suave); border-color: var(--verde-fuerte); }
+        
+        .cargo-titulo { font-weight: 700; font-size: 12px; margin-bottom: 3px; }
+        .cargo-escalafon { font-size: 9px; color: #666; margin-bottom: 8px; }
+        
+        .grid-edicion { display: flex; gap: 5px; align-items: center; justify-content: space-between;}
+        .col-edicion { display: flex; flex-direction: column; align-items: center; flex: 1;}
+        .col-edicion label { font-size: 8px; font-weight: 700; color: #888; margin-bottom: 3px; text-align: center; white-space: nowrap;}
+        
+        .input-num { width: 100%; box-sizing: border-box; padding: 4px; border: 1px solid var(--azul-oscuro); border-radius: 4px; font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 12px; text-align: center; }
+        .input-check { width: 18px; height: 18px; cursor: pointer; accent-color: var(--azul-oscuro); }
+        .input-check-res { width: 18px; height: 18px; cursor: pointer; accent-color: var(--verde-fuerte); }
+        .input-prematuro { color: var(--gris-texto); }
+
+        .contenedor-botones-copiar { display: flex; gap: 8px; margin-top: 10px; }
+        .btn-copiar { flex: 1; background-color: var(--blanco); border: 2px solid var(--amarillo); padding: 6px; border-radius: 4px; font-size: 9px; font-weight: 700; cursor: pointer; font-family: 'Montserrat'; }
+        .btn-copiar:hover { background-color: var(--amarillo); }
+
+        .btn-plegar-inferior { text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--gris-bordes); color: var(--azul-oscuro); font-size: 10px; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: color 0.2s; }
+        .btn-plegar-inferior:hover { color: var(--naranja-fuerte); }
+        .icono-copiar-dato { cursor: pointer; font-size: 12px; transition: transform 0.2s; opacity: 0.7; }
+        .icono-copiar-dato:hover { opacity: 1; transform: scale(1.1); }
+
+        /* TABS COLUMNA DERECHA */
+        .tabs-derecha { display: flex; gap: 5px; margin-bottom: 15px; border-bottom: 2px solid var(--gris-bordes); padding-bottom: 5px;}
+        .tab-btn { flex: 1; background: none; border: none; font-family: 'Montserrat'; font-size: 11px; font-weight: 700; color: #888; cursor: pointer; padding: 5px; border-radius: 4px; transition: all 0.2s;}
+        .tab-btn:hover { background-color: var(--blanco); }
+        .tab-btn.activo { color: var(--azul-oscuro); background-color: var(--celeste); }
+        .tab-btn.activo-res { color: var(--blanco); background-color: var(--verde-fuerte); }
+
+        .cabecera-col-desp { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .titulo-desp { font-size: 14px; text-transform: uppercase; margin: 0;}
+        .btn-minimizar { background: none; border: none; font-size: 18px; color: var(--azul-oscuro); cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; width: 25px; height: 25px; border-radius: 4px; transition: background 0.2s; }
+        .btn-minimizar:hover { background-color: var(--naranja-suave); }
+        .caja-filtros { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+        .input-filtro { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--gris-bordes); border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: clamp(10px, 1vw, 12px); background-color: var(--blanco); }
+        .input-filtro:focus { outline: 2px solid var(--celeste); }
+        .lista-despriorizados { display: flex; flex-direction: column; gap: 10px; }
+        .mini-cajon { width: 100%; box-sizing: border-box; background-color: var(--naranja-suave); border-left: 5px solid var(--naranja-fuerte); padding: 10px 12px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: transform 0.2s; word-wrap: break-word; cursor: pointer; }
+        .mini-cajon:hover { transform: translateX(-3px); }
+        .mini-cajon-resuelto { background-color: var(--verde-suave); border-left-color: var(--verde-fuerte); }
+        .mini-hosp { font-weight: 800; font-size: clamp(11px, 1.2vw, 13px); margin-bottom: 4px; }
+        .mini-fecha { font-size: clamp(9px, 1vw, 11px); color: #555; font-weight: 500; }
+        .mini-detalle { font-size: clamp(9px, 1vw, 11px); margin-top: 4px; font-style: italic; }
+
+        .btn-crear-flotante { position: fixed; bottom: 50px; left: 30px; background-color: var(--amarillo); color: var(--azul-oscuro); border: 2px solid var(--azul-oscuro); border-radius: 50px; padding: 15px 25px; font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 1000; transition: transform 0.2s, background-color 0.2s; display: flex; align-items: center; gap: 10px; }
+        .btn-crear-flotante:hover { transform: scale(1.05); background-color: var(--celeste); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(21, 50, 68, 0.85); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-overlay.abierto { display: flex; }
+        .input-creacion { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 5px; margin-bottom: 12px; border: 1px solid var(--gris-bordes); border-radius: 4px; font-family: 'Montserrat', sans-serif; font-size: 12px; color: var(--azul-oscuro); background-color: var(--blanco); }
+        .input-creacion:focus { outline: 2px solid var(--celeste); border-color: var(--celeste); }
+        
+        /* INFO INFERIOR FIJA */
+        .info-inferior-fija {
+            width: 100%;
+            background-color: var(--blanco);
+            border-top: 1px solid var(--gris-bordes);
+            padding: 6px 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #888888;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 500;
+            line-height: 1.4;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        @keyframes zoomIn { to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <button class="btn-crear-flotante" onclick="abrirModalCreacion()">
+        <span style="font-size: 18px;">+</span> CREAR PEDIDO
+    </button>
+    <div class="modal-overlay" id="modal-creacion">
+        <div class="cajon-pedido" style="opacity: 1; transform: scale(1); animation: none; width: 440px; max-height: 90vh; overflow-y: auto; padding: 25px;">
+            <h2 style="margin-top:0; text-align:center; border-bottom: 2px solid var(--amarillo); padding-bottom:10px; font-size: 16px;">NUEVO PEDIDO DE OBRA</h2>
+            <div class="etiqueta">Hospital</div><select class="input-creacion" id="nuevo-hospital"></select>
+            <div class="etiqueta">Tipo de Pedido</div>
+            <select class="input-creacion" id="nuevo-tipo">
+                <option value="Obra">Obra</option>
+                <option value="Ampliacion de dotación">Ampliación de dotación</option>
+                <option value="Obra Recorrida FQ">Obra Recorrida FQ</option>
+                <option value="Ampliacion Recorrida FQ">Ampliación Recorrida FQ</option>
+            </select>
+            <div class="etiqueta">Denominación / Detalle</div><input type="text" class="input-creacion" id="nuevo-denominacion" placeholder="Ej: 5 NUEVAS CAMAS UTI">
+            <div class="etiqueta">Fecha de Fin</div><input type="text" class="input-creacion" id="nuevo-fecha" placeholder="Ej: 28/11/26">
+            <div class="etiqueta">Priorización MSGC</div>
+            <select class="input-creacion" id="nuevo-priorizacion">
+                <option value="-">-</option><option value="SI">SI</option><option value="DESPRIORIZADO">DESPRIORIZADO</option>
+            </select>
+
+            <div class="seccion-cargos abierto" style="border-top: 2px dashed var(--gris-bordes); margin-top: 5px; padding-top: 15px;">
+                <div class="etiqueta" style="background-color: var(--amarillo); margin-top: 0; margin-bottom: 15px;">DETALLE DE RRHH (Cargos)</div>
+                <label style="font-size: 11px; font-weight:700; color: #555;">Tipo de Q</label>
+                <select class="input-creacion" id="nuevo-tipoq"><option value="POF">POF</option><option value="POU">POU</option><option value="LOYS">LOYS</option><option value="ESTRUCTURA">ESTRUCTURA</option></select>
+                <label style="font-size: 11px; font-weight:700; color: #555;">Escalafón</label>
+                <select class="input-creacion" id="nuevo-escalafon"><option value="" disabled selected>Seleccioná...</option><option value="A definir">A definir</option><option value="CETPS">CETPS</option><option value="CPH MEDICO GUARDIA">CPH MEDICO GUARDIA</option><option value="CPH MEDICO PLANTA">CPH MEDICO PLANTA</option><option value="CPH NO MEDICO PLANTA">CPH NO MEDICO PLANTA</option><option value="ENFERMERIA">ENFERMERIA</option><option value="ESCALAFON GRAL.">ESCALAFON GRAL.</option><option value="ESTRUCTURA">ESTRUCTURA</option></select>
+                <label style="font-size: 11px; font-weight:700; color: #555;">Puesto Nuevo</label>
+                <select class="input-creacion" id="nuevo-puesto"><option value="" disabled selected>Seleccioná...</option><option value="A definir">A definir</option><option value="ENFERMERIA">ENFERMERIA</option><option value="TEC. EN RADIOLOGIA">TEC. EN RADIOLOGIA</option></select>
+                
+                <div class="grid-edicion" style="margin-bottom: 10px;">
+                    <div class="col-edicion" style="flex: 0 0 60px;"><label>Q PLAN</label><input type="number" id="nuevo-qplan" class="input-num" value="0" onfocus="this.select()"></div>
+                    <div class="col-edicion" style="flex: 1; align-items: flex-start; padding-left: 10px;"><label>CANAL DE SOLICITUD</label><input type="text" id="nuevo-canal" class="input-creacion" style="margin:0; width: 100%;" placeholder="Ej: Mail, Nota..."></div>
+                </div>
+                <div class="grid-edicion" style="margin-bottom: 10px;">
+                    <div class="col-edicion" style="flex: 0 0 60px;"><label>Q PEDIDO</label><input type="number" id="nuevo-qpedido" class="input-num" value="0" onfocus="this.select()"></div>
+                    <div class="col-edicion" style="flex: 1; align-items: flex-start; padding-left: 10px;"><label>EXPEDIENTE</label><input type="text" id="nuevo-expediente" class="input-creacion" style="margin:0; width: 100%;" placeholder="Ej: EX-2026-..."></div>
+                </div>
+                <div class="grid-edicion" style="margin-bottom: 15px; justify-content: flex-start;">
+                    <div class="col-edicion" style="flex: 0 0 60px;"><label>Q APROB.</label><input type="number" id="nuevo-qaprobado" class="input-num" value="0" onfocus="this.select()"></div>
+                </div>
+            </div>
+            <div class="contenedor-botones-copiar" style="margin-top: 20px;">
+                <button class="btn-copiar" style="border-color: #ccc; color: #555;" onclick="cerrarModalCreacion()">CANCELAR</button>
+                <button class="btn-copiar" style="background-color: var(--azul-oscuro); color: var(--blanco); border-color: var(--azul-oscuro);" onclick="guardarNuevoPedido()">GUARDAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENCABEZADO FIJO CON LOGO Y TEXTO INICIO EXACTAMENTE BAJO LA LÍNEA VERTICAL -->
+    <header class="encabezado-superior">
+        <div class="contenedor-logo-inicio" onclick="irAlInicio()" title="Volver al inicio">
+            <img src="https://res.cloudinary.com/olddxilu/image/upload/v1786644138/SEGUIMIENTO_OBRAS_1.png" alt="Seguimiento de Obras" class="logo-plataforma" id="imagen-logo">
+            <span class="btn-inicio-texto">INICIO</span>
+        </div>
+    </header>
+
+    <div class="contenedor-principal">
+        
+        <div class="columna-izquierda">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0; font-size: 14px; text-transform: uppercase;">HOSPITALES</h2>
+                <button onclick="toggleOrdenHospitales()" id="btn-orden-hosp" style="background: none; border: none; cursor: pointer; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase;" title="Ordenar A-Z / Z-A">⬇️ A-Z</button>
+            </div>
+            <input type="text" id="filtro-hosp-nav" class="input-filtro" placeholder="🔍 Buscar hospital..." style="margin-bottom: 15px;" oninput="filtrarHospitalesNav()">
+            <div id="lista-hospitales-nav"></div>
+        </div>
+
+        <div class="columna-central">
+            <h2 id="mensaje-inicial" style="margin-top: 50px; color: #888; font-weight: 400; text-align: center;">Seleccioná un hospital para gestionar sus pedidos activos</h2>
+            <div class="cabecera-hospital" id="cabecera">
+                <button class="btn-volver" onclick="salirHospital()">← Volver a la lista</button>
+                <h1 id="titulo-hospital">Nombre Hospital</h1>
+            </div>
+            <div class="contenedor-pedidos" id="grilla-pedidos" style="display: none;"></div>
+        </div>
+
+        <div class="separador-resizer" id="drag-resizer" title="Arrastrar para ajustar tamaño"></div>
+
+        <div class="columna-derecha-desp" id="columna-desp">
+            <div class="texto-expandir" onclick="toggleColumnaDesp()">◀ EXPANDIR PANEL</div>
+            
+            <div class="contenido-desp" id="contenido-desp">
+                <div class="cabecera-col-desp">
+                    <h3 class="titulo-desp" id="titulo-panel-der">Tablero</h3>
+                    <button class="btn-minimizar" onclick="toggleColumnaDesp()" title="Minimizar panel">✖</button>
+                </div>
+
+                <div class="tabs-derecha">
+                    <button class="tab-btn activo" id="tab-desp" onclick="cambiarTab('DESPRIORIZADOS')">DESPRIORIZADOS</button>
+                    <button class="tab-btn" id="tab-res" onclick="cambiarTab('RESUELTOS')">RESUELTOS</button>
+                </div>
+                
+                <div class="caja-filtros">
+                    <input type="text" id="filt-hosp" class="input-filtro" placeholder="🔍 Filtrar por Hospital...">
+                    <input type="text" id="filt-esc" class="input-filtro" placeholder="🏷️ Filtrar por Escalafón...">
+                    <input type="text" id="filt-puesto" class="input-filtro" placeholder="💼 Filtrar por Puesto...">
+                </div>
+
+                <div class="lista-despriorizados" id="contenedor-despriorizados"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- INFO INFERIOR FIJA -->
+    <div class="info-inferior-fija" id="info-footer"></div>
+
+    <script>
+        const DB_ARRAY = {"Alvarez":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","CIRUGIA GENERAL",1,"FLEBOLOGIA",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","ENDOCRINOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Obra","internacion clinica médica 13 camas nuevas","2026-09-01 00:00:00","SI",[["POF","ENFERMERIA","ENFERMERIA",13,"-",13,"Recorrida 17/7/2026",0,0,0],["POF","ENFERMERIA","ENFERMERIA ATP",3,"-",3,"Recorrida 17/7/2026",0,0,0]]]],"Alvear":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1]]],["Ampliacion de dotación","Ampliacion Dotacion","-","SI",[["POF","CETPS","TEC. EN FARMACIA",1,"NO-2025-43102272-GCABA-HEPTA",0,"-",0,0,0]]]],"Argerich":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","KINESIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Ampliacion de dotación","Ampliacion de Dotacion","-","DESPRIORIZADO",[["ESTRUCTURA","JEFE DE SECCION","Jefatura Oncología",1,"NO-2026-28888722-GCABA-HGACA",0,"NO-2026-30348167-GCABA-DGAYDRH",0,0,0]]],["Obra Recorrida FQ","NUEVO TOMOGRAFO (Recorrida 12/2/2026) (Equipamiento Bid) Para ceci no requiere RRHH","2026-10-01 00:00:00","SI",[["POF","-","-",4,"-",4,"-",0,0,0]]]],"Borda":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","-",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Obra","Ampliacion 30 Camas Internacion Agudos","2026-05-01 00:00:00","SI",[["POF","JEFE DE UNIDAD","Jefatura CPH",1,"-",1,"-",0,1,0],["POF","JEFE DE SECCION","Jefatura Enfermeria",1,"-",1,"-",0,1,0],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",2,"-",2,"EX-2026-17549845--GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-17549845--GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","TRABAJO SOCIAL Y SERVICIO SOCIAL",1,"-",1,"EX-2026-17549845--GCABA-DGAYDRH",1,1,1],["POF","ENFERMERIA","ENFERMERIA",20,"-",20,"EX-2026-17549845--GCABA-DGAYDRH EX-2026-23698384-GCABA-DGAYDRH",20,1,1],["POF","ENFERMERIA","ENFERMERIA ATP",20,"-",20,"EX-2026-17549845--GCABA-DGAYDRH EX-2026-23698384-GCABA-DGAYDRH",20,1,1]]],["Ampliacion Recorrida FQ","RECORRIDA 12/1 (no tienen bioquimico de planta)","-","SI",[["POF","CETPS","Bioquimico",1,"-",0,"-",0,0,0]]]],"CRH":[["Obra","CENTRO REGIONAL DE HEMOTERAPIA","2026-09-30 00:00:00","SI",[["POF","CETPS","TEC. EN HEMOTERAPIA",32,"-",17,"-",0,1,0],["POF","CPH MEDICO PLANTA","HEMOTERAPIA",3,"-",3,"-",0,1,0],["POF","CPH NO MEDICO PLANTA","BIOQUIMICA CLINICA (HEMATOLOGIA)",7,"-",0,"-",0,1,0],["POF","SERVICIOS GRALES. ANEXO II","CHOFER DE AMBULANCIA",3,"-",0,"-",0,1,0],["POF","LOYS","PROMOTOR SOCIAL",2,"-",2,"-",0,1,0],["POF","ESCALAFON GRAL.","ASISTENTE DE MESA DE AYUDA AL CIUDADANO",5,"-",5,"-",0,1,0],["POF","ESCALAFON GRAL.","ANALISTA ADMINISTRATIVO GENERAL",7,"-",7,"-",0,1,0],["POF","GERENTE OPERATIVO","GERENTE OPERATIVO",0,"-",1,"-",0,1,0],["POF","SUBGERENTE OPERATIVO","SUBGERENTE OPERATIVO",1,"-",1,"-",0,1,0],["POF","JEFE DE DEPARTAMENTO","JEFATURA DEPARTAMENTO CPH",1,"-",1,"-",0,1,0],["POF","JEFE DE DIVISION","JEFATURA DIVISION CPH",1,"-",1,"-",0,1,0],["POF","JEFE DE DIVISION","JEFATURA DIVISION CPH",1,"-",1,"-",0,1,0],["POF","JEFE DE DEPARTAMENTO","JEFATURA DEPARTAMENTO CETEPS",1,"-",1,"-",0,1,0],["POF","CETPS","TEC. EN HEMOTERAPIA",13,"-",12,"-",0,0,0],["POF","CPH MEDICO PLANTA","HEMOTERAPIA",4,"-",4,"-",0,0,0],["POF","ESCALAFON GRAL.","ANALISTA ADMINISTRATIVO GENERAL",2,"ANALISTA ADMINISTRATIVO GENERAL",2,"-",0,0,0],["POF","ESCALAFON GRAL.","ANALISTA DE CONTROL DE GESTION OPERATIVOADMINISTRATIVA",1,"ANALISTA DE CONTROL DE GESTION OPERATIVOADMINISTRATIVA",1,"-",0,0,0],["POF","ESCALAFON GRAL.","ASISTENTE DE MESA DE AYUDA AL CIUDADANO",3,"ASISTENTE DE MESA DE AYUDA AL CIUDADANO",3,"-",0,0,0],["POF","SERVICIOS GRALES. ANEXO II","servicios generales",2,"-",2,"-",0,0,0],["POF","SERVICIOS GRALES. ANEXO II","CHOFER DE AMBULANCIA",2,"-",3,"-",0,0,0]]]],"Carrillo":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",10,"-",10,"EX-2026-08211746- -GCABA-DGAYDRH",10,1,1]]]],"DG Salud Mental":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,0,1]]],["Obra","CASA DE MEDIO CAMINO RUY DIAZ","2026-05-01 00:00:00","SI",[["LOYS","ESCALAFON GRAL.","ACOMPAÑANTE TERAPEUTICO",24,"-",24,"-",10,0,1],["POF","ENFERMERIA","ENFERMERIA ATP",4,"-",8,"IF-2026-08314155-GCABA-DGPLYCO,  EX-2026-11521641- -GCABA-DGAYDRH",8,0,1],["POF","ENFERMERIA","ENFERMERIA",4,"-",8,"IF-2026-08314155-GCABA-DGPLYCO,  EX-2026-11521641- -GCABA-DGAYDRH",8,0,1],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"IF-2026-08314155-GCABA-DGPLYCO",1,0,1],["POF","CPH NO MEDICO PLANTA","TERAPIA OCUPACIONAL",1,"-",2,"IF-2026-08314155-GCABA-DGPLYCO",2,0,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",2,"IF-2026-08314155-GCABA-DGPLYCO",2,0,1],["POF","CPH NO MEDICO PLANTA","TRABAJO SOCIAL Y SERVICIO SOCIAL",1,"-",1,"IF-2026-08314155-GCABA-DGPLYCO",1,0,1],["POF","ESCALAFON GRAL.","ANALISTA ADMINISTRATIVO GENERAL",2,"-",2,"-",1,0,1]]]],"Dueñas":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1]]]],"Durand":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"PEDIATRICA",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",2,"-",2,"EX-2026-08211746- -GCABA-DGAYDRH",2,1,1],["POF","CPH MEDICO PLANTA","CARDIOLOGIA",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","ENDOCRINOLOGIA",1,"-",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","CIRUGIA GENERAL",1,"FLEBOLOGIA",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","ENDOCRINOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Ampliacion de dotación","Amplian de 14 a 16 camas UTI","-","SI",[["POF","ENFERMERIA","ENFERMERIA",4,"-",4,"-",0,0,0],["POF","ENFERMERIA","ENFERMERIA ATP",4,"-",4,"-",0,0,0]]],["Obra Recorrida FQ","TOMOGRAFO Y RESONADOR TN - RECORRIDA FQ ampliar lo dado por DDI","2025","DESPRIORIZADO",[["POF","CETPS","TEC. EN RADIOLOGIA",1,"Pedido por Ceci 09/01(2026",1,"-",0,1,0]]]],"Elizalde":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",2,"PEDIATRICA",2,"EX-2026-11997709- -GCABA-DGAYDRH",2,1,1],["POF","CPH MEDICO PLANTA","OTORRINOLARINGOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",2,"-",2,"EX-2026-08211746- -GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]]],"Fernández":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","CARDIOLOGIA",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","TERAPIA INTENSIVA",2,"-",2,"EX-2026-16299738--GCABA-DGAYDRH",2,1,1],["POF","CPH MEDICO PLANTA","NEUMONOLOGIA",1,"-",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","CIRUGIA GENERAL",1,"FLEBOLOGIA",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","ENDOCRINOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1]]],["Obra","AMPLIACION UCO 4 CAMAS","2027","SI",[["POF","ENFERMERIA","ENFERMERIA",12,"Solicitado por Ceci 09/01/2026",8,"-",0,0,0],["POF","ENFERMERIA","ENFERMERIA ATP",12,"Solicitado por Ceci 09/01/2026",8,"-",0,0,0]]],["Ampliacion Recorrida FQ","RECORRIDA FQ","-","SI",[["POF","CETPS","TEC. EN LABORATORIO",5,"Solicitado por Ceci 16/10/2025",0,"-",0,0,0],["POF","CETPS","TEC. EN FARMACIA",5,"Solicitado por Ceci 16/10/2025",0,"-",0,0,0],["POF","CETPS","TEC. EN LABORATORIO",5,"Solicitado por Ceci 16/10/2025",0,"-",0,0,0]]],["Obra","Resonador (Equipamiento Bid)","2027","SI",[["POF","CETPS","TEC. EN RADIOLOGIA",10,"Solicitado por Ceci 09/01/2026",10,"-",0,0,0],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",5,"Solicitado por Ceci 09/01/2026",5,"-",0,0,0],["POF","ESCALAFON GRAL.","ASISTENTE DE MESA DE AYUDA AL CIUDADANO",5,"Solicitado por Ceci 09/01/2026",5,"-",0,0,0]]],["Obra","Tomografo - 64 Cortes (Equipamiento Bid)","2027","SI",[["POF","CETPS","TEC. EN RADIOLOGIA",10,"-",10,"-",0,0,0],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",3,"-",3,"-",0,0,0],["POF","ESCALAFON GRAL.","ASISTENTE DE MESA DE AYUDA AL CIUDADANO",0,"ASISTENTE DE MESA DE AYUDA AL CIUDADANO",0,"-",0,0,0]]]],"Grierson":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","DERMATOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","ENDOCRINOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","GINECOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","HEMATOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","NEUROLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","NEUMONOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","ONCOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","OTORRINOLARINGOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,0,1],["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",2,"-",2,"EX-2026-08211746- -GCABA-DGAYDRH",2,1,1],["POF","CPH MEDICO PLANTA","CARDIOLOGIA",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",3,"-",3,"EX-2026-08211746- -GCABA-DGAYDRH",3,1,1],["POF","CPH MEDICO PLANTA","UROLOGIA",1,"-",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","PSIQUIATRIA INFANTO JUVENIL",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Obra","ampliacion capacidad internación del hospital 50 CAMAS","2026","DESPRIORIZADO",[["POF","CPH MEDICO PLANTA","INFECTOLOGIA",1,"Solicitado por Ceci 16/10/2025",1,"EX-2026-11997709- -GCABA-DGAYDRH",0,0,0],["POF","ENFERMERIA","ENFERMERIA",15,"NO-2024-04531144-GCABA-HGACG // NO-2023-27444428-GCABA-HGACG",15,"-",0,0,1]]]],"Gutierrez":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1]]]],"IREP":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1]]],["Ampliacion Recorrida FQ","CARGO INCREMENTAL PEDIDO RECORRIDA FQ","-","SI",[["POF","CPH MEDICO PLANTA","FISIATRIA (MEDICINA FISICA Y REHABILITACION)",1,"-",0,"-",0,0,0]]],["Ampliacion Recorrida FQ","RECORRIDA FQ (05/02/2026)","-","SI",[["POF","CETPS","TEC. EN PODOLOGIA",2,"Solicitado por ceci 16/3/2026",2,"-",0,0,0]]]],"Lagleyze":[["Ampliacion Recorrida FQ","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",5,"Solicitado por Ceci 16/10/2025",5,"EX-2026-11997709- -GCABA-DGAYDRH",5,1,1]]]],"Manuel Rocca":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1]]]],"Maria Curie":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","CIRUGIA GENERAL",1,"FLEBOLOGIA",1,"EX-2026-16299738--GCABA-DGAYDRH",1,1,1]]],["Ampliacion de dotación","Ampliacion Dotacion","-","SI",[["ESTRUCTURA","JEFE DE SECCION","Cuidados Paliativos",1,"NO-2025-46329843-GCABA-HMOMC",0,"-",0,0,0]]],["Obra","Nuevo equipo PET","2026-09-11 00:00:00","SI",[["ESTRUCTURA","JEFE DE SECCION","Jefe de Seccion Escalafon General",1,"-",1,"-",0,0,0],["POF","ESCALAFON GRAL.","ANALISTA ADMINISTRATIVO GENERAL",2,"-",2,"Busqueda Interna",0,0,1],["POF","JEFE DE SECCION","Jefe de Seccion ( a Reconvertir)",1,"-",1,"-",0,0,0],["POF","CPH MEDICO PLANTA","MEDICINA NUCLEAR",3,"-",3,"EX-2026-28188021- -GCABA-DGAYDRH",3,0,1],["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",1,"-",1,"EX-2026-28188021- -GCABA-DGAYDRH",1,0,1],["POF","CPH NO MEDICO PLANTA","FISICOS",2,"-",2,"EX-2026-28188021- -GCABA-DGAYDRH",2,0,1],["POF","CETPS","TEC. EN MEDICINA NUCLEAR",5,"-",5,"EX-2026-28188021- -GCABA-DGAYDRH",5,0,1],["POF","ENFERMERIA","ENFERMERIA",2,"-",2,"EX-2026-28188021- -GCABA-DGAYDRH",2,0,1],["POF","SERVICIOS GRALES. ANEXO II","CAMILLERO",0,"-",0,"-",0,0,0]]]],"Maria Ferrer":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","DIAGNOSTICO POR IMAGENES",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1]]],["Ampliacion Recorrida FQ","Reclamo en recorrida FQ, por pedidos anteriores","-","SI",[["POF","CETPS","TEC. EN ANESTESIOLOGIA",2,"Solicitado por Ceci 16/10/2025",1,"NO-2024-17018546-GCABA-HRRMF",0,0,1],["POF","CETPS","TEC. EN INSTRUMENTACION QUIRURGICA",2,"Solicitado por Ceci 16/10/2025",1,"NO-2023-23004847-GCABA-DGHOSP // NO-2023-24291018-GCABA-SSAH // NO-2024-17018546-GCABA-HRRMF",0,0,1]]]],"Moyano":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Obra","Ampliacion 22 Camas Internacion Agudos","2026-05-08 00:00:00","SI",[["POF","JEFE DE UNIDAD","Jefatura CPH",1,"-",1,"-",0,1,0],["POF","JEFE DE SECCION","Jefatura Enfermeria",1,"-",1,"-",0,1,0],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",3,"-",3,"EX-2026-17549845--GCABA-DGAYDRH",3,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-17549845--GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","TRABAJO SOCIAL Y SERVICIO SOCIAL",1,"-",1,"EX-2026-17549845--GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","MUSICOTERAPIA",1,"-",1,"-",0,1,0],["POF","ENFERMERIA","ENFERMERIA",16,"-",16,"EX-2026-17549845--GCABA-DGAYDRH",16,1,1],["POF","ENFERMERIA","ENFERMERIA ATP",16,"-",16,"EX-2026-17549845--GCABA-DGAYDRH",16,1,1]]],["Obra","Sala de internación (15 camas nuevas para internación Agudos)","2026-08-31 00:00:00","SI",[["POF","ENFERMERIA","ENFERMERIA",12,"sin nota aún",12,"-",0,0,0],["POF","ENFERMERIA","ENFERMERIA ATP",12,"sin nota aún",12,"-",0,0,0]]]],"Muñiz":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",2,"-",2,"EX-2026-08211746- -GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]]],"Penna":[["Ampliacion de dotación","200 CARGOS","2026","SI",[["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"PEDIATRICA",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",4,"-",4,"EX-2026-08211746- -GCABA-DGAYDRH",4,1,1]]],["Ampliacion de dotación","Nuevo Servicio Salud Mental","2027","SI",[["POF","ENFERMERIA","ENFERMERIA",0,"-",0,"-",0,0,0],["POF","ENFERMERIA","-",0,"-",0,"-",0,0,0]]],["Ampliacion Recorrida FQ","RECORRIDA FQ","-","SI",[["POF","CETPS","TEC. EN FARMACIA",3,"Solicitado por Ceci 16/10/2025",3,"-",0,0,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",2,"Solicitado por Ceci 16/10/2025",4,"-",0,0,1]]],["Ampliacion de dotación","obra consultorios externos","2026","SI",[["POF","ESCALAFON GRAL.","AUXILIAR DE MESA DE AYUDA AL CIUDADANO",4,"REUNION DIRECCION",0,"Busqueda Interna",0,0,1]]]],"Pirovano":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","CARDIOLOGIA",1,"-",1,"EX-2026-08211746- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","KINESIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FONOAUDIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","PSIQUIATRIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","FARMACIA HOSPITALARIA",1,"-",1,"EX-2026-19958142-GCABA-DGAYDRH",1,1,1]]],["Ampliacion de dotación","Ampliacion Camas Salud Mental (6 camas)","2026","SI",[["POF","ENFERMERIA","ENFERMERIA",4,"-",4,"-",0,0,0],["POF","ENFERMERIA","ENFERMERIA ATP",4,"-",4,"-",0,0,0],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",1,"-",1,"-",0,0,0],["POF","CPH NO MEDICO PLANTA","TRABAJO SOCIAL Y SERVICIO SOCIAL",1,"-",1,"-",0,0,0]]]],"Piñero":[["Ampliacion de dotación","200 CARGOS","-","SI",[["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"-",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH MEDICO PLANTA","OFTALMOLOGIA",1,"PEDIATRICA",1,"EX-2026-11997709- -GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","ODONTOLOGIA GENERAL",5,"-",5,"EX-2026-08211746- -GCABA-DGAYDRH",5,1,1],["POF","CPH NO MEDICO PLANTA","KINESIOLOGIA",1,"-",1,"EX-2026-18458485- - GCABA-DGAYDRH",1,1,1],["POF","CPH NO MEDICO PLANTA","PSICOLOGIA CLINICA",2,"-",2,"EX-2026-19958142-GCABA-DGAYDRH",2,1,1]]],["Ampliacion de dotación","Ampliacion Dotacion","-","SI",[["POF","CETPS","TEC. EN ASISTENCIA DENTAL",7,"NO-2025-45857857-GCABA-HGAPP",0,"-",0,0,0],["POF","CETPS","TEC. EN ANESTESIOLOGIA",2,"NO-2025-45857924-GCABA-HGAPP",0,"-",0,0,0]]],["Ampliacion Recorrida FQ","PEDIDO RECORRIDA FQ","-","SI",[["POF","CETPS","TEC. EN LABORATORIO",3,"Solicitado por Ceci 16/10/2025",0,"-",0,0,1],["POF","CETPS","TEC. EN FARMACIA",3,"-",0,"-",0,0,1]]],["Obra Recorrida FQ","Tomografo (Recorrida 10/4/26)","2027","SI",[["POF","-","A definir",0,"-",0,"-",0,0,0]]]]};
+
+        const datosSheets = {};
+        for(let hosp in DB_ARRAY) {
+            datosSheets[hosp] = [];
+            DB_ARRAY[hosp].forEach(o => {
+                let cargosArr = [];
+                o[4].forEach(c => {
+                    cargosArr.push({
+                        tipoQ: c[0], escalafon: c[1], puesto: c[2], qPlan: c[3], canal: c[4],
+                        qPedido: c[5], expediente: c[6], qAprobado: c[7], validado: c[8]===1, resuelto: c[9]===1
+                    });
+                });
+                datosSheets[hosp].push({
+                    tipo: o[0], detalle: o[1], fecha: o[2], prioridad: o[3], cargos: cargosArr
+                });
+            });
+        }
+
+        let ordenHospitalesAsc = true;
+        let tabActivoDerecha = 'DESPRIORIZADOS';
+
+        function inicializarHospitales() {
+            renderizarHospitalesNav();
+            const selectModal = document.getElementById('nuevo-hospital');
+            selectModal.innerHTML = '<option value="" disabled selected>Seleccioná un Hospital...</option>';
+            Object.keys(datosSheets).sort().forEach(hosp => { selectModal.innerHTML += `<option value="${hosp}">${hosp}</option>`; });
+            actualizarInfoFlotante();
+        }
+
+        function irAlInicio() {
+            salirHospital();
+            document.getElementById('filtro-hosp-nav').value = '';
+            renderizarHospitalesNav();
+        }
+
+        function renderizarHospitalesNav() {
+            const listaNav = document.getElementById('lista-hospitales-nav');
+            listaNav.innerHTML = '';
+            let nombres = Object.keys(datosSheets);
+            const filtroTexto = document.getElementById('filtro-hosp-nav').value.toLowerCase();
+            if (filtroTexto) nombres = nombres.filter(h => h.toLowerCase().includes(filtroTexto));
+            nombres.sort();
+            if (!ordenHospitalesAsc) nombres.reverse();
+            nombres.forEach(hosp => { listaNav.innerHTML += `<div class="caja-hospital" onclick="entrarHospital('${hosp}')">${hosp}</div>`; });
+        }
+
+        function toggleOrdenHospitales() {
+            ordenHospitalesAsc = !ordenHospitalesAsc;
+            document.getElementById('btn-orden-hosp').innerText = ordenHospitalesAsc ? "⬇️ A-Z" : "⬆️ Z-A";
+            renderizarHospitalesNav();
+        }
+        function filtrarHospitalesNav() { renderizarHospitalesNav(); }
+
+        function actualizarInfoFlotante() {
+            let hospActivos = new Set();
+            let hospAprobados = new Set();
+            let countDespriorizados = 0;
+
+            for (const hosp in datosSheets) {
+                datosSheets[hosp].forEach(pedido => {
+                    let todosResueltos = pedido.cargos.length > 0 && pedido.cargos.every(c => c.resuelto);
+
+                    if (pedido.prioridad === "DESPRIORIZADO" && !todosResueltos) {
+                        countDespriorizados++;
+                    } else if (!todosResueltos) {
+                        hospActivos.add(hosp);
+                    }
+
+                    const tieneAprobado = pedido.cargos.some(c => c.qAprobado > 0);
+                    if (tieneAprobado) hospAprobados.add(hosp);
+                });
+            }
+
+            const fechaActual = new Date();
+            const fStr = fechaActual.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const hStr = fechaActual.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('info-footer').innerHTML = `
+                <div>Actualizado a: ${fStr} ${hStr}</div>
+                <div>Hospitales que tienen pedidos activos: ${hospActivos.size} / Hospitales que tienen pedidos aprobados: ${hospAprobados.size} / Pedidos despriorizados: ${countDespriorizados}</div>
+            `;
+        }
+        inicializarHospitales();
+
+        function toggleColumnaDesp() {
+            const columna = document.getElementById('columna-desp');
+            columna.style.width = ''; columna.classList.toggle('minimizada');
+        }
+
+        function cambiarTab(tab) {
+            tabActivoDerecha = tab;
+            document.getElementById('tab-desp').className = tab === 'DESPRIORIZADOS' ? 'tab-btn activo' : 'tab-btn';
+            document.getElementById('tab-res').className = tab === 'RESUELTOS' ? 'tab-btn activo-res' : 'tab-btn';
+            renderizarPanelDerecho();
+        }
+
+        function renderizarPanelDerecho() {
+            const fHosp = document.getElementById('filt-hosp').value.toLowerCase();
+            const fEsc = document.getElementById('filt-esc').value.toLowerCase();
+            const fPuesto = document.getElementById('filt-puesto').value.toLowerCase();
+            const contenedor = document.getElementById('contenedor-despriorizados');
+            contenedor.innerHTML = ''; 
+
+            let listaMostrar = [];
+
+            for (const hosp in datosSheets) {
+                datosSheets[hosp].forEach((pedido, indexObra) => {
+                    let todosResueltos = pedido.cargos.length > 0 && pedido.cargos.every(c => c.resuelto);
+                    
+                    if (tabActivoDerecha === 'DESPRIORIZADOS' && pedido.prioridad === "DESPRIORIZADO" && !todosResueltos) {
+                        listaMostrar.push({ hospital: hosp, indexObra: indexObra, ...pedido });
+                    } else if (tabActivoDerecha === 'RESUELTOS' && todosResueltos) {
+                        listaMostrar.push({ hospital: hosp, indexObra: indexObra, ...pedido });
+                    }
+                });
+            }
+
+            listaMostrar.forEach(d => {
+                const matchHosp = d.hospital.toLowerCase().includes(fHosp);
+                let matchCargos = false;
+                if (d.cargos.length === 0 && fEsc === "" && fPuesto === "") matchCargos = true;
+                d.cargos.forEach(c => { if (c.escalafon.toLowerCase().includes(fEsc) && c.puesto.toLowerCase().includes(fPuesto)) matchCargos = true; });
+
+                if (matchHosp && matchCargos) {
+                    let claseEx = tabActivoDerecha === 'RESUELTOS' ? 'mini-cajon-resuelto' : '';
+                    let labelFecha = tabActivoDerecha === 'RESUELTOS' ? 'Resuelto' : 'Despriorizado';
+                    
+                    contenedor.innerHTML += `
+                        <div class="mini-cajon ${claseEx}" onclick="enfocarObra('${d.hospital}', ${d.indexObra})" title="Ver detalle">
+                            <div class="mini-hosp">🏥 ${d.hospital}</div>
+                            <div class="mini-fecha">🗓️ ${labelFecha}: ${d.fechaPriorizacion || d.fecha}</div>
+                            <div class="mini-detalle">${d.detalle}</div>
+                        </div>
+                    `;
+                }
+            });
+        }
+        document.getElementById('filt-hosp').addEventListener('input', renderizarPanelDerecho);
+        document.getElementById('filt-esc').addEventListener('input', renderizarPanelDerecho);
+        document.getElementById('filt-puesto').addEventListener('input', renderizarPanelDerecho);
+        renderizarPanelDerecho();
+
+        function enfocarObra(nombreHospital, indexObra) {
+            entrarHospital(nombreHospital);
+            setTimeout(() => {
+                const cajonAEnfocar = document.getElementById(`cajon-obra-${indexObra}`);
+                if (cajonAEnfocar) {
+                    cajonAEnfocar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    cajonAEnfocar.style.boxShadow = "0 0 20px rgba(255, 153, 0, 0.8)";
+                    setTimeout(() => { cajonAEnfocar.style.boxShadow = "0 5px 20px rgba(21, 50, 68, 0.08)"; }, 2000);
+                }
+            }, 300);
+        }
+
+        let hospitalActual = ""; 
+
+        function interactuarCheckCargo(hosp, idxObra, idxCargo, objCheck, tipoCheck) {
+            const cargo = datosSheets[hosp][idxObra].cargos[idxCargo];
+            if(tipoCheck === 'val') cargo.validado = objCheck.checked;
+            if(tipoCheck === 'res') {
+                cargo.resuelto = objCheck.checked;
+                const divItem = document.getElementById(`cargo-item-${idxObra}-${idxCargo}`);
+                if(cargo.resuelto) divItem.classList.add('resuelto');
+                else divItem.classList.remove('resuelto');
+                
+                actualizarInfoFlotante();
+                renderizarPanelDerecho();
+                
+                let todosResueltos = datosSheets[hosp][idxObra].cargos.every(c => c.resuelto);
+                if(todosResueltos) {
+                    document.getElementById(`cajon-obra-${idxObra}`).style.display = 'none';
+                }
+            }
+        }
+
+        function entrarHospital(nombreHospital) {
+            hospitalActual = nombreHospital;
+            document.body.classList.add('modo-zoom');
+            document.getElementById('mensaje-inicial').style.display = 'none';
+            document.getElementById('cabecera').style.display = 'block';
+            document.getElementById('grilla-pedidos').style.display = 'flex';
+            document.getElementById('titulo-hospital').innerText = nombreHospital;
+            const grilla = document.getElementById('grilla-pedidos');
+            grilla.innerHTML = '';
+
+            if(datosSheets[nombreHospital]) {
+                datosSheets[nombreHospital].forEach((pedido, indexObra) => {
+                    let todosResueltos = pedido.cargos.length > 0 && pedido.cargos.every(c => c.resuelto);
+                    if(todosResueltos) return; 
+
+                    const claseFondo = (pedido.prioridad === "DESPRIORIZADO") ? "cajon-despriorizado" : "";
+                    const idCargos = `cargos-${indexObra}`;
+                    let htmlPrioridad = `<p class="valor">${pedido.prioridad}</p>`;
+                    if (pedido.prioridad === "SI" || pedido.prioridad === "DESPRIORIZADO") {
+                        htmlPrioridad = `<div class="contenedor-tooltip"><p class="valor valor-tooltip">${pedido.prioridad}</p><span class="tooltip-texto">Fecha: -</span></div>`;
+                    }
+
+                    let htmlListaCargos = "";
+                    pedido.cargos.forEach((cargo, indexCargo) => {
+                        let valAprob = cargo.qAprobado === 0 ? cargo.qPedido : cargo.qAprobado;
+                        let clAprob = cargo.qAprobado === 0 ? "input-prematuro" : "";
+                        let checkVal = cargo.validado ? "checked" : "";
+                        let checkRes = cargo.resuelto ? "checked" : "";
+                        let htmlBotonCopiar = cargo.expediente && cargo.expediente !== "-" ? `<span class="icono-copiar-dato" title="Copiar Expediente" onclick="copiarUnDato(this, '${cargo.expediente}')">📋</span>` : "";
+                        let claseResueltoItem = cargo.resuelto ? "resuelto" : "";
+
+                        htmlListaCargos += `
+                            <div class="cargo-item ${claseResueltoItem}" id="cargo-item-${indexObra}-${indexCargo}">
+                                <div class="cargo-titulo">${cargo.puesto}</div>
+                                <div class="cargo-escalafon">Escalafón: ${cargo.escalafon}</div>
+                                <div style="font-size: 10px; margin-bottom: 10px; line-height: 1.4;">
+                                    <div style="display: flex; gap: 5px;"><span style="font-weight: 700; color: #888; width: 45px;">CANAL:</span> <span style="color: var(--azul-oscuro);">${cargo.canal || '-'}</span></div>
+                                    <div style="display: flex; gap: 5px; align-items: center;"><span style="font-weight: 700; color: #888; width: 45px;">EXPTE:</span> <span style="color: var(--azul-oscuro); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${cargo.expediente || '-'}">${cargo.expediente || '-'}</span>${htmlBotonCopiar}</div>
+                                </div>
+                                <div class="grid-edicion">
+                                    <div class="col-edicion" style="flex: 1;"><label>Q PLAN</label><div style="font-weight:bold; padding: 4px; font-size: 11px;">${cargo.qPlan}</div></div>
+                                    <div class="col-edicion" style="flex: 1;"><label>Q PED</label><input type="number" id="input-pedido-${indexObra}-${indexCargo}" class="input-num" value="${cargo.qPedido}" onfocus="this.select()"></div>
+                                    <div class="col-edicion" style="flex: 1;"><label>Q APR</label><input type="number" id="input-aprobado-${indexObra}-${indexCargo}" class="input-num ${clAprob}" value="${valAprob}" oninput="this.classList.remove('input-prematuro')" onfocus="this.select()"></div>
+                                    <div class="col-edicion" style="flex: 1;"><label title="Validado SSAH (Columna N)">VAL.</label><input type="checkbox" class="input-check" id="input-validado-${indexObra}-${indexCargo}" ${checkVal} onchange="interactuarCheckCargo('${nombreHospital}', ${indexObra}, ${indexCargo}, this, 'val')"></div>
+                                    <div class="col-edicion" style="flex: 1;"><label title="Resuelto (Columna S)">RES.</label><input type="checkbox" class="input-check-res" id="input-resuelto-${indexObra}-${indexCargo}" ${checkRes} onchange="interactuarCheckCargo('${nombreHospital}', ${indexObra}, ${indexCargo}, this, 'res')"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    grilla.innerHTML += `
+                        <div class="cajon-pedido ${claseFondo}" id="cajon-obra-${indexObra}">
+                            <div class="etiqueta">Tipo</div><p class="valor">${pedido.tipo}</p>
+                            <div class="etiqueta">Denominación</div><p class="valor">${pedido.detalle}</p>
+                            <div class="etiqueta">Fecha Fin</div><p class="valor">${pedido.fecha}</p>
+                            <div class="etiqueta">Priorización</div>${htmlPrioridad}
+                            <button class="btn-desplegar-cargos" onclick="alternarDetalle('${idCargos}')">Gestionar RRHH (${pedido.cargos.length}) ▾</button>
+                            <div class="seccion-cargos" id="${idCargos}">
+                                ${htmlListaCargos}
+                                <div class="contenedor-botones-copiar">
+                                    <button class="btn-copiar" onclick="copiarInfo(${indexObra}, 'pedido', this)">📋 Copiar PED</button>
+                                    <button class="btn-copiar" onclick="copiarInfo(${indexObra}, 'aprobado', this)">📋 Copiar APR</button>
+                                </div>
+                                <div class="btn-plegar-inferior" onclick="plegarCajon('${idCargos}', 'cajon-obra-${indexObra}')">▲ Plegar Información</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function salirHospital() {
+            document.body.classList.remove('modo-zoom');
+            document.getElementById('cabecera').style.display = 'none';
+            document.getElementById('grilla-pedidos').style.display = 'none';
+            setTimeout(() => { document.getElementById('mensaje-inicial').style.display = 'block'; }, 300);
+        }
+
+        function alternarDetalle(id) { document.getElementById(id).classList.toggle('abierto'); }
+        function plegarCajon(idCargos, idCajon) { document.getElementById(idCargos).classList.remove('abierto'); document.getElementById(idCajon).scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        function copiarUnDato(btn, texto) { navigator.clipboard.writeText(texto).then(() => { const original = btn.innerText; btn.innerText = "✅"; setTimeout(() => { btn.innerText = original; }, 1500); }); }
+        function copiarInfo(indexObra, tipoCopia, boton) {
+            const pedido = datosSheets[hospitalActual][indexObra];
+            let texto = `🏥 *Hospital:* ${hospitalActual}\n🏗️ *Obra:* ${pedido.detalle}\n`;
+            texto += tipoCopia === 'pedido' ? `📋 *ESTADO: Q PEDIDO*\n\n` : `✅ *ESTADO: Q APROBADO HACIENDA*\n\n`;
+            pedido.cargos.forEach((cargo, indexCargo) => {
+                let idInput = tipoCopia === 'pedido' ? `input-pedido-${indexObra}-${indexCargo}` : `input-aprobado-${indexObra}-${indexCargo}`;
+                let idCheck = `input-validado-${indexObra}-${indexCargo}`;
+                let validadoTexto = document.getElementById(idCheck).checked ? "SI" : "NO";
+                texto += `- [${cargo.escalafon}] ${cargo.puesto}: *${document.getElementById(idInput).value}* (Validado: ${validadoTexto})\n`;
+            });
+            navigator.clipboard.writeText(texto).then(() => {
+                const original = boton.innerText; boton.innerText = "¡Copiado!"; boton.style.backgroundColor = "var(--celeste)";
+                setTimeout(() => { boton.innerText = original; boton.style.backgroundColor = "var(--blanco)"; }, 2000); 
+            });
+        }
+        function abrirModalCreacion() { document.getElementById('modal-creacion').classList.add('abierto'); }
+        function cerrarModalCreacion() { document.getElementById('modal-creacion').classList.remove('abierto'); }
+        function guardarNuevoPedido() { alert("¡Estructura lista! En la próxima fase enviará los datos a Google Sheets."); cerrarModalCreacion(); }
+
+        /* ARRASTRE DEL DIVISOR */
+        const resizerX = document.getElementById('drag-resizer');
+        const colDespX = document.getElementById('columna-desp');
+        let isResizingX = false;
+        resizerX.addEventListener('mousedown', (e) => { if (colDespX.classList.contains('minimizada')) return; isResizingX = true; document.body.style.cursor = 'ew-resize'; colDespX.style.transition = 'none'; });
+        document.addEventListener('mousemove', (e) => { if (!isResizingX) return; let newWidth = document.body.clientWidth - e.clientX; if (newWidth > 200 && newWidth < 500) { colDespX.style.width = `${newWidth}px`; } });
+        document.addEventListener('mouseup', () => { if (isResizingX) { isResizingX = false; document.body.style.cursor = 'default'; colDespX.style.transition = 'width 0.3s ease'; } });
+    </script>
+</body>
+</html>
