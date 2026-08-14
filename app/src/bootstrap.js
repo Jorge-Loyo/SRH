@@ -24,6 +24,52 @@ async function bootstrap() {
     throw error;
   }
 
+  // Migración: tabla puesto_especialidades
+  try {
+    await AppDataSource.query(`
+      CREATE TABLE IF NOT EXISTS puesto_especialidades (
+        id_puesto      INT NOT NULL,
+        id_especialidad INT UNSIGNED NOT NULL,
+        PRIMARY KEY (id_puesto, id_especialidad),
+        FOREIGN KEY (id_puesto)       REFERENCES puestos_cargo(id)  ON DELETE CASCADE,
+        FOREIGN KEY (id_especialidad) REFERENCES especialidades(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    const [{ n }] = await AppDataSource.query('SELECT COUNT(*) as n FROM puesto_especialidades');
+    if (parseInt(n, 10) === 0) {
+      const MAPEO = {
+        'BIOLOGO':                    [79,80,81,82,83,84,85],
+        'BIOQUIMICO':                 [79,80,81,82,83,84,85],
+        'FARMACEUTICO':               [88],
+        'FONOAUDIOLOGO':              [89],
+        'KINESIOLOGO':                [90],
+        'FISIOTERAPEUTA':             [90],
+        'NUTRICIONISTA DIETISTA':     [91],
+        'OBSTETRICA':                 [93],
+        'ODONTOLOGO':                 [87,94,95,96,97],
+        'PSICOLOGO':                  [98,99],
+        'PSICOPEDAGOGO':              [100],
+        'SOCIOLOGO':                  [102],
+        'TERAPEUTA OCUPACIONAL':      [103],
+        'TRABAJADOR SOCIAL':          [101,104],
+        'MUSICOTERAPEUTA':            [92],
+        'LIC. EN CIENCIAS EDUC.':     [86],
+        'LIC. EN COMUNICACION SOCIAL':[102],
+      };
+      const puestos = await AppDataSource.query("SELECT id, nombre FROM puestos_cargo WHERE carrera='cph' AND es_medico=0");
+      for (const p of puestos) {
+        const esps = MAPEO[p.nombre];
+        if (!esps || !esps.length) continue;
+        for (const eid of esps) {
+          await AppDataSource.query('INSERT IGNORE INTO puesto_especialidades (id_puesto, id_especialidad) VALUES (?, ?)', [p.id, eid]);
+        }
+      }
+      logger.info('[DB] Seed puesto_especialidades completado');
+    }
+  } catch (err) {
+    logger.error('[DB] Error en migración puesto_especialidades:', { error: err.message });
+  }
+
   // Create Express app
   const { toCsvBase64 } = require('./utils/csv');
   const app = createApp({ AppDataSource, toCsvBase64 });
