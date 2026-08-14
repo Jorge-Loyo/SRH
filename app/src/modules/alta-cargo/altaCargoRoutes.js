@@ -1,6 +1,6 @@
 const express = require('express');
 const { listAltas, getAlta, createAlta } = require('./altaCargoController');
-const { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes } = require('./carrerasController');
+const { listCarreras, listSiglas, searchBajas, listEspecialidades, listEspecialidadesPuesto, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes } = require('./carrerasController');
 const { uploadDotacion } = require('./uploadController');
 const { authenticateJWT, authorizeRoles } = require('../../middlewares/auth');
 const { auditMiddleware }                 = require('../../middlewares/audit');
@@ -33,6 +33,7 @@ router.get('/dotacion-kpis/evolucion', authenticateJWT, getDotacionEvolucion);
 router.get('/recientes',               authenticateJWT, listRecientes);
 router.get('/bajas/search',   authenticateJWT, searchBajas);
 router.get('/especialidades', authenticateJWT, listEspecialidades);
+router.get('/especialidades-puesto', authenticateJWT, listEspecialidadesPuesto);
 router.post('/upload-dotacion', authenticateJWT, authorizeRoles('admin', 'editor'), upload.single('file'), uploadDotacion);
 
 router.get('/',    authenticateJWT, listAltas);

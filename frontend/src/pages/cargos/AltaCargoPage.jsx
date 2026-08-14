@@ -346,7 +346,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
   const [carreras,       setCarreras]       = useState([])
   const [siglas,         setSiglas]         = useState([])
   const [espMedico,      setEspMedico]      = useState([])
-  const [espNoMedico,    setEspNoMedico]    = useState([])
+  const [espPuesto,      setEspPuesto]      = useState([])
   const [espTec,         setEspTec]         = useState([])
   const [modalidades,    setModalidades]    = useState([])
   const [jornadas,       setJornadas]       = useState([])
@@ -360,7 +360,6 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
     altaCargoApi.listModalidades().then(setModalidades).catch(() => {})
     altaCargoApi.listJornadas().then(setJornadas).catch(() => {})
     altaCargoApi.listEspecialidades('medico').then(rows => setEspMedico(rows.map(r => r.nombre))).catch(() => {})
-    altaCargoApi.listEspecialidades('no_medico').then(rows => setEspNoMedico(rows.map(r => r.nombre))).catch(() => {})
     altaCargoApi.listEspecialidades(null, 'TEC').then(rows => setEspTec(rows.map(r => r.nombre))).catch(() => {})
   }, [])
 
@@ -500,7 +499,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
   // Especialidades segun si el puesto seleccionado es medico o no
   const NO_APLICA = 'No aplica'
   const espOptions = esCph
-    ? (form.puesto_es_medico ? espMedico : [NO_APLICA, ...espNoMedico])
+    ? (form.puesto_es_medico ? espMedico : [NO_APLICA, ...espPuesto])
     : esTec ? [NO_APLICA, ...espTec] : []
 
   const puestosOptions = esTec && tecTieneAmbas && form.modalidad
@@ -527,6 +526,11 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
           onSelect={v => {
             const found = puestos.find(p => p.nombre === v)
             setForm(p => ({ ...p, puesto: v, puesto_es_medico: found?.es_medico ?? 0, especialidad: '' }))
+            if (found && !found.es_medico) {
+              altaCargoApi.listEspecialidadesPuesto(found.id).then(rows => setEspPuesto(rows.map(r => r.nombre))).catch(() => setEspPuesto([]))
+            } else {
+              setEspPuesto([])
+            }
           }}
           onClose={() => setPicker(null)} />
       )}
@@ -597,6 +601,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                 onChange={v => {
                   const fijar = modo !== 'estructura' && ['cph', 'enf', 'eg'].includes(v)
                   const mod = fijar ? (modalidadForzada || 'planta') : ''
+                  setEspPuesto([])
                   setForm(p => ({ ...p, carrera_seleccionada: v, modalidad: mod, nivel_formacion: '', puesto: '', puesto_es_medico: 0, especialidad: '', jornada: '' }))
                 }} />
             </div>

@@ -14,6 +14,7 @@ export const altaCargoApi = {
   listSiglas:        ()    => apiGet(`${BASE}/siglas`),
   searchBajas:       (q)   => apiGet(`${BASE}/bajas/search`, { q }),
   listEspecialidades:(cat, carrera) => apiGet(`${BASE}/especialidades`, { ...(cat && { categoria: cat }), ...(carrera && { carrera }) }),
+  listEspecialidadesPuesto: (id_puesto) => apiGet(`${BASE}/especialidades-puesto`, { id_puesto }),
   listModalidades:   ()    => apiGet(`${BASE}/modalidades`),
   listPuestos:       (carrera, tipo, modo) => apiGet(`${BASE}/puestos`, { ...(carrera && { carrera }), ...(tipo && { tipo }), ...(modo && { modo }) }),
   listNewCargo:      (params = {}) => apiGet(`${BASE}/new-cargo`, params),

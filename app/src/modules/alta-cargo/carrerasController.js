@@ -207,6 +207,25 @@ async function searchBajas(req, res) {
   }
 }
 
+async function listEspecialidadesPuesto(req, res) {
+  try {
+    const id_puesto = parseInt(req.query.id_puesto, 10)
+    if (!id_puesto) return res.json([])
+    const rows = await AppDataSource.query(
+      `SELECT e.id, e.nombre, e.categoria
+       FROM puesto_especialidades pe
+       JOIN especialidades e ON e.id = pe.id_especialidad
+       WHERE pe.id_puesto = ? AND e.activo = 1
+       ORDER BY e.nombre ASC`,
+      [id_puesto]
+    )
+    res.json(rows)
+  } catch (err) {
+    logger.error('[carrerasController] listEspecialidadesPuesto', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+}
+
 async function listEspecialidades(req, res) {
   try {
     const { categoria, carrera } = req.query
@@ -712,4 +731,4 @@ async function listRecientes(req, res) {
   }
 }
 
-module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes };
+module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listEspecialidadesPuesto, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes };
