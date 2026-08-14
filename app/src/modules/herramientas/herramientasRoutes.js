@@ -17,6 +17,18 @@ router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
 
 const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
 
+// health es público para que el frontend pueda verificar sin token
+router.get('/dotaneitor/health', async (req, res) => {
+  const target = `${PYTHON_SERVICE}/health`;
+  try {
+    const upstream = await fetch(target);
+    const buf = await upstream.arrayBuffer();
+    res.status(upstream.status).end(Buffer.from(buf));
+  } catch {
+    res.status(503).json({ error: 'Servicio Dotaneitor no disponible' });
+  }
+});
+
 router.all('/dotaneitor/*', ...auth, async (req, res) => {
   const target = `${PYTHON_SERVICE}/${req.params[0]}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
   try {
