@@ -291,8 +291,6 @@ const COLS = [
   { key: 'codigo',              label: 'Código',          mono: true  },
   { key: 'sigla',               label: 'Sigla'                        },
   { key: 'org_desc_rep',        label: 'Repartición',      wide: true  },
-  { key: 'carrera',             label: 'Carrera'                      },
-  { key: 'modalidad',           label: 'Modalidad'                    },
   { key: 'puesto',              label: 'Puesto',          wide: true  },
   { key: 'especialidad',        label: 'Especialidad',    wide: true  },
   { key: 'estado',              label: 'Estado'                       },
@@ -301,7 +299,6 @@ const COLS = [
   { key: 'antiguedad_calc',     label: 'Antigüedad'                   },
   { key: 'cargo_desde',         label: 'Desde',           date: true  },
   { key: 'cargo_hasta',         label: 'Hasta',           date: true  },
-  { key: 'norma_ref_final',     label: 'Norma ref.'                   },
   { key: 'resolucion_final',    label: 'Resolución'                   },
 ]
 
