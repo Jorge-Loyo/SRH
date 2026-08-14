@@ -40,3 +40,7 @@ docker-compose.yml
 
 # Archivos temporales de Linux/Git
 *~
+
+# Archivos temporales de análisis
+app/temp_*.xlsx
+app/temp_*.csv
