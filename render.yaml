@@ -1,10 +1,9 @@
 services:
   - type: web
     name: srh-backend
-    runtime: node
+    runtime: docker
     rootDir: app
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: ""
     envVars:
       - key: NODE_ENV
         value: production
@@ -15,25 +14,17 @@ services:
       - key: DB_DIALECT
         value: mysql
       - key: DB_HOST
-        fromDatabase:
-          name: srh-mysql
-          property: host
+        sync: false
       - key: DB_PORT
-        fromDatabase:
-          name: srh-mysql
-          property: port
+        sync: false
       - key: DB_USER
-        fromDatabase:
-          name: srh-mysql
-          property: user
+        sync: false
       - key: DB_PASSWORD
-        fromDatabase:
-          name: srh-mysql
-          property: password
+        sync: false
       - key: DB_NAME
-        fromDatabase:
-          name: srh-mysql
-          property: database
+        sync: false
+      - key: DB_SSL
+        value: true
       - key: JWT_SECRET
         generateValue: true
       - key: AUTH_MODE
@@ -46,3 +37,21 @@ services:
         value: 30
       - key: AUDIT_RETENTION_DAYS
         value: 30
+
+  - type: web
+    name: srh-python
+    runtime: docker
+    rootDir: app/python-service
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: PORT
+        value: 5001
