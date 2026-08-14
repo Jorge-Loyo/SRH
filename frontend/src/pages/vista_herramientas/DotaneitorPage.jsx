@@ -208,11 +208,22 @@ export default function DotaneitorPage() {
     setLogs(l => [...l, { text, type: type ?? classifyLog(text) }])
   }, [])
 
-  // ── Health check al montar ──────────────────────────────────────────────────
+  // ── Health check al montar (reintenta hasta 3 veces por cold start) ─────────
   useEffect(() => {
-    apiGet(`${BASE}/health`)
-      .then(() => setOnline(true))
-      .catch(() => setOnline(false))
+    let cancelled = false
+    async function checkHealth(retries = 3, delay = 8000) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          await apiGet(`${BASE}/health`)
+          if (!cancelled) setOnline(true)
+          return
+        } catch {
+          if (i < retries - 1) await new Promise(r => setTimeout(r, delay))
+        }
+      }
+      if (!cancelled) setOnline(false)
+    }
+    checkHealth()
 
     apiGet(`${BASE}/ultima-actualizacion`)
       .then(r => setUltimaActualizacion(r.ultima))
@@ -229,6 +240,8 @@ export default function DotaneitorPage() {
         }
       } catch { /* ignore */ }
     }
+
+    return () => { cancelled = true }
   }, [])
 
   // Persistir estado de sesión
