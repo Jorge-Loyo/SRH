@@ -48,18 +48,22 @@ function RowModal({ tableName, pk, columns, row, onClose, onSaved }) {
                 <span className="ml-1 text-gray-300 font-normal">{col.type}</span>
               </label>
               {col.name === 'activo' ? (
-                <button type="button"
-                  onClick={() => setForm(f => ({ ...f, activo: f.activo == 1 ? 0 : 1 }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    form.activo == 1 ? 'bg-green-500' : 'bg-gray-300'
+                <div className="flex items-center gap-3">
+                  <button type="button"
+                    onClick={() => setForm(f => ({ ...f, activo: f.activo == 1 ? 0 : 1 }))}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      form.activo == 1 ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      form.activo == 1 ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                  <span className={`text-sm font-medium ${
+                    form.activo == 1 ? 'text-green-600' : 'text-gray-400'
                   }`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    form.activo == 1 ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                  <span className="ml-12 text-xs font-medium text-gray-700">
                     {form.activo == 1 ? 'Activo' : 'Inactivo'}
                   </span>
-                </button>
+                </div>
               ) : (
                 <input
                   className="form-input w-full text-sm"
