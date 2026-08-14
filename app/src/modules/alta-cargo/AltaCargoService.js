@@ -156,17 +156,15 @@ class AltaCargoService {
         id_etiqueta = etRow?.id ?? null;
       }
 
-      const codigos = await this.#nextCodigos(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as, cantidad);
+      const tipoParaCodigo = payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as;
       let detalle = null;
+      const codigos = [];
 
       for (let i = 0; i < cantidad; i++) {
-        // Regenerar código si ya existe (por transacciones previas fallidas)
-        let codigo = codigos[i];
-        const [existing] = await manager.query(`SELECT codigo FROM new_cargo WHERE codigo = ? LIMIT 1`, [codigo]);
-        if (existing) {
-          const { prefix, maxSeq } = await this.#nextCodigoBase(manager, carrera_seleccionada, modalidadCod, payload.tipo_cph ?? payload.tipo_eg ?? payload.tipo_as);
-          codigo = `${prefix}-${(maxSeq + 1).toString().padStart(6, '0')}`;
-        }
+        // Generar código dentro del loop para que cada uno tome el MAX actualizado
+        const { prefix, maxSeq } = await this.#nextCodigoBase(manager, carrera_seleccionada, modalidadCod, tipoParaCodigo);
+        const codigo = `${prefix}-${(maxSeq + 1).toString().padStart(6, '0')}`;
+        codigos.push(codigo);
 
         if (carrera_seleccionada === 'cph') {
           const numero_unico = await this.#nextNumero(manager, this.cphRepo.target);
