@@ -401,7 +401,7 @@ function CategoriaPickerModal({ etiquetas, value, onSelect, onClose }) {
 }
 
 
-const CARRERAS = ['CPH', 'CPS', 'CPT', 'CPB', 'CPO', 'CPA']
+const CARRERAS_DEFAULT = []  // se carga desde la BD
 const MODALIDADES = [{ v: 'planta', l: 'POF' }, { v: 'guardia', l: 'POU' }]
 
 const ESTADO_CONFIG = [
@@ -441,6 +441,7 @@ export default function ListaCargosPage() {
   const [sigla,      setSigla]      = useState('')
   const [estado,     setEstado]     = useState('')
   const [categoria,  setCategoria]  = useState('')
+  const [carreras,   setCarreras]   = useState([])
   const [siglas,     setSiglas]     = useState([])
   const [siglaModal, setSiglaModal] = useState(false)
   const [etiquetas,  setEtiquetas]  = useState([])
@@ -478,6 +479,7 @@ export default function ListaCargosPage() {
   }, [page, q, carrera, modalidad, tipoCph, sigla, estado, categoria])
 
   useEffect(() => {
+    altaCargoApi.listCarreras().then(data => setCarreras(data.map(c => c.codigo))).catch(() => {})
     altaCargoApi.listSiglas().then(data => setSiglas(data.map(s => s.sigla))).catch(() => {})
     altaCargoApi.listEtiquetas().then(data => setEtiquetas(data)).catch(() => {})
   }, [])
@@ -563,7 +565,7 @@ export default function ListaCargosPage() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide w-16 shrink-0">Carrera</span>
-              {CARRERAS.map(c => (
+              {carreras.map(c => (
                 <FilterChip key={c} label={c} active={carrera === c} onClick={() => toggleCarrera(c)} />
               ))}
             </div>
