@@ -1,30 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
-import RoleBadge from '../components/ui/RoleBadge.jsx'
-
-// Mapeo de rutas a títulos legibles
-const ROUTE_TITLES = {
-  '/':                      'Panel',
-  '/hospitales':            'Hospitales',
-  '/organigrama':           'Organigrama',
-  '/tablas/personas':       'Tabla · Personas',
-  '/tablas/cargos':         'Tabla · Cargos',
-  '/tablas/roles':          'Tabla · Roles',
-  '/tablas/siglas':         'Tabla · Siglas',
-  '/tablas/bajas':          'Tabla · Bajas',
-  '/recorridas':            'Recorridas',
-  '/concursos':             'Concursos',
-  '/dotacion':              'Dotación Total',
-  '/director':              'Mi Hospital',
-  '/seguridad/auditoria':   'Seguridad · Auditoría',
-  '/seguridad/tokens':      'Seguridad · Tokens',
-  '/seguridad/usuarios':    'Seguridad · Usuarios',
-  '/seguridad/permisos':    'Seguridad · Permisos',
-  '/concursales/bajas':           'Bajas Consolidadas',
-  '/concursales/seguimiento-cph':          'Seguimiento CPH',
-  '/herramientas/dotacion-padron':          'Herramientas · Dotación',
-}
 
 const SEGURIDAD_ITEMS = [
   { to: '/seguridad/auditoria',    label: 'Auditoría' },
@@ -36,45 +12,39 @@ const SEGURIDAD_ITEMS = [
 
 const HERRAMIENTAS_ITEMS = [
   { to: '/herramientas/dotacion-padron', label: 'Dotación' },
-  { to: '/herramientas/tablas-vista', label: 'Tablas Vista' },
-  { to: '/herramientas/tablas-admin', label: 'Tablas Admin' },
-  { to: '/herramientas/dotaneitor',   label: 'Dotaneitor' },
-  { to: '/cargos/kpis',               label: 'KPIs Dotación' },
+  { to: '/herramientas/tablas-vista',    label: 'Tablas Vista' },
+  { to: '/herramientas/tablas-admin',    label: 'Tablas Admin' },
+  { to: '/herramientas/dotaneitor',      label: 'Dotaneitor' },
+  { to: '/cargos/kpis',                  label: 'KPIs Dotación' },
 ]
 
-function HeaderMenu({ title, items, navigate, icon }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+const ROLE_LABELS = {
+  admin: 'Administrador', editor: 'Editor', viewer: 'Visualizador',
+  director: 'Director', gerencia: 'Gerencia', concursales: 'Concursales',
+}
 
-  useEffect(() => {
-    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
+function DropdownMenu({ items, navigate, title, icon, onClose }) {
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        title={title}
-        className={`p-1.5 rounded-lg transition-colors ${
-          open ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-        }`}
-      >
-        {icon}
-      </button>
-      {open && (
-        <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1">
-          <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
-          {items.map(item => (
-            <button key={item.to} onClick={() => { navigate(item.to); setOpen(false) }}
-              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+      <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
+      {items.map(item => (
+        <button key={item.to} onClick={() => { navigate(item.to); onClose() }}
+          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+          {item.label}
+        </button>
+      ))}
     </div>
+  )
+}
+
+function IconButton({ icon, title, active, onClick }) {
+  return (
+    <button onClick={onClick} title={title}
+      className={`p-1.5 rounded-lg transition-colors ${
+        active ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+      }`}>
+      {icon}
+    </button>
   )
 }
 
@@ -93,12 +63,29 @@ const ICON_WRENCH = (
   </svg>
 )
 
-function resolveTitle(pathname) {
-  if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname]
-  if (pathname.startsWith('/hospitales/')) return 'Vista de Hospital'
-  if (pathname.startsWith('/organigrama/')) return 'Organigrama · Detalle'
-  if (pathname.startsWith('/pou/')) return 'POU · Detalle'
-  return 'Sistema RRHH'
+const ICON_OBRAS = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+  </svg>
+)
+
+const ICON_PANEL = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+  </svg>
+)
+
+function useDropdown() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+  return { open, setOpen, ref }
 }
 
 export default function Header({ onMenuClick = () => {} }) {
@@ -107,59 +94,112 @@ export default function Header({ onMenuClick = () => {} }) {
   const { user, logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const title = resolveTitle(pathname)
-  const role      = user?.role ?? ''
-  const roleAlias = user?.role_alias ?? null
+  const tools  = useDropdown()
+  const sec    = useDropdown()
+  const profile = useDropdown()
+
+  const role        = user?.role ?? ''
+  const roleAlias   = user?.role_alias ?? null
   const displayName = user?.username ?? user?.email ?? 'Usuario'
-  const initial = displayName[0].toUpperCase()
+  const initial     = displayName[0].toUpperCase()
+  const roleLabel   = roleAlias || ROLE_LABELS[role] || role
 
   async function handleLogout() {
     setLoggingOut(true)
+    profile.setOpen(false)
     await logout()
     navigate('/login', { replace: true })
   }
 
   return (
-    <header className="h-14 shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 bg-white border-b border-gray-200">
+    <header className="h-12 shrink-0 flex items-center justify-between gap-3 px-4 sm:px-6 bg-white border-b border-gray-100">
+
+      {/* Izquierda: hamburger + título */}
       <div className="flex items-center gap-3 min-w-0">
-        {/* Botón de menú — solo visible por debajo de `lg`, donde el sidebar es un drawer */}
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden -ml-1 p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg shrink-0"
-          aria-label="Abrir menú"
-        >
+        <button onClick={onMenuClick}
+          className="lg:hidden -ml-1 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg shrink-0"
+          aria-label="Abrir menú">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-
-        {/* Título de la ruta actual */}
-        <h1 className="text-sm font-semibold text-gray-700 truncate">{title}</h1>
+        <span className="text-sm font-medium text-gray-500 truncate">
+          {pathname === '/' ? 'Panel' : pathname.split('/').filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' · ')}
+        </span>
       </div>
 
-      {/* Usuario + seguridad + cerrar sesión */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold shrink-0">
-            {initial}
+      {/* Derecha: acciones */}
+      <div className="flex items-center gap-1">
+
+        {/* Obras */}
+        <IconButton icon={ICON_OBRAS} title="Obras" active={false}
+          onClick={() => { window.location.href = '/obras.html' }} />
+
+        {/* Landing */}
+        <IconButton icon={ICON_PANEL} title="Portal" active={false}
+          onClick={() => { window.location.href = '/landing.html' }} />
+
+        {/* Herramientas */}
+        {role === 'admin' && (
+          <div ref={tools.ref} className="relative">
+            <IconButton icon={ICON_WRENCH} title="Herramientas" active={tools.open}
+              onClick={() => { tools.setOpen(v => !v); sec.setOpen(false); profile.setOpen(false) }} />
+            {tools.open && <DropdownMenu items={HERRAMIENTAS_ITEMS} navigate={navigate} title="Herramientas" onClose={() => tools.setOpen(false)} />}
           </div>
-          <span className="text-sm font-medium text-gray-800 hidden sm:block">{displayName}</span>
-          <RoleBadge role={role} alias={roleAlias} />
+        )}
+
+        {/* Seguridad */}
+        {role === 'admin' && (
+          <div ref={sec.ref} className="relative">
+            <IconButton icon={ICON_SHIELD} title="Seguridad" active={sec.open}
+              onClick={() => { sec.setOpen(v => !v); tools.setOpen(false); profile.setOpen(false) }} />
+            {sec.open && <DropdownMenu items={SEGURIDAD_ITEMS} navigate={navigate} title="Seguridad" onClose={() => sec.setOpen(false)} />}
+          </div>
+        )}
+
+        {/* Separador */}
+        <div className="w-px h-5 bg-gray-200 mx-1" />
+
+        {/* Avatar / perfil */}
+        <div ref={profile.ref} className="relative">
+          <button
+            onClick={() => { profile.setOpen(v => !v); tools.setOpen(false); sec.setOpen(false) }}
+            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+              profile.open
+                ? 'bg-primary-600 text-white'
+                : 'bg-primary-100 text-primary-700 hover:bg-primary-200'
+            }`}>
+            {initial}
+          </button>
+
+          {profile.open && (
+            <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-100 rounded-xl shadow-lg z-50 overflow-hidden">
+              {/* Info usuario */}
+              <div className="px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-sm font-bold shrink-0">
+                    {initial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">{displayName}</p>
+                    <p className="text-xs text-gray-400 truncate">{roleLabel}</p>
+                  </div>
+                </div>
+              </div>
+              {/* Cerrar sesión */}
+              <div className="py-1">
+                <button onClick={handleLogout} disabled={loggingOut}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  {loggingOut ? 'Saliendo...' : 'Cerrar sesión'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        {role === 'admin' && <HeaderMenu title="Herramientas" items={HERRAMIENTAS_ITEMS} navigate={navigate} icon={ICON_WRENCH} />}
-        {role === 'admin' && <HeaderMenu title="Seguridad" items={SEGURIDAD_ITEMS} navigate={navigate} icon={ICON_SHIELD} />}
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          title="Cerrar sesión"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span className="hidden sm:block">{loggingOut ? 'Saliendo...' : 'Cerrar sesión'}</span>
-        </button>
       </div>
     </header>
   )

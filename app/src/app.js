@@ -74,12 +74,16 @@ function createApp(options = {}) {
   // Logging estándar de requests HTTP
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
-  // Landing page (portal de enlaces) en la raíz "/".
-  // Va ANTES del static de la SPA para que gane siempre a su index.html.
-  // El acceso al sistema queda dentro de la landing (botón "SISTEMA" → /login).
-  app.get('/', (req, res) => {
+  // Landing page — accesible en /landing.html
+  app.get('/landing.html', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
+  });
+
+  // Obras — accesible en /obras.html
+  app.get('/obras.html', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.resolve(__dirname, '..', 'public', 'obras.html'));
   });
 
   // Assets propios de la landing (CSS de Tailwind compilado, imágenes, fuente)
