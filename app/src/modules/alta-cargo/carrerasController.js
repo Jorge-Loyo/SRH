@@ -27,20 +27,13 @@ async function listNewCargo(req, res) {
     if (sigla)     { conditions.push('nc.sigla = ?');     params.push(sigla) }
     if (categoria) { conditions.push('nc.categoria_interna = ?'); params.push(categoria) }
     if (estado) {
-      if (estado === 'comision')  { conditions.push("nc.situacion_revista = 'comision'") }
-      else if (estado === 'retencion') { conditions.push("nc.situacion_revista = 'retencion_cargo'") }
+      if (estado === 'comision')  { conditions.push("cd.situacion_revista = 'comision'") }
+      else if (estado === 'retencion') { conditions.push("cd.situacion_revista = 'retencion_cargo'") }
       else if (estado === 'vacante') {
-        conditions.push(`nc.estado = 'vigente' AND NOT EXISTS (
-          SELECT 1 FROM cargo_dotacion cd2
-          WHERE cd2.id_cargo = nc.id AND cd2.hasta IS NULL
-        )`)
+        conditions.push("nc.estado = 'vigente' AND cd.id IS NULL")
       }
       else if (estado === 'activo') {
-        conditions.push(`nc.estado = 'vigente' AND EXISTS (
-          SELECT 1 FROM cargo_dotacion cd2
-          WHERE cd2.id_cargo = nc.id AND cd2.hasta IS NULL
-            AND cd2.situacion_revista NOT IN ('comision', 'retencion_cargo')
-        )`)
+        conditions.push("nc.estado = 'vigente' AND cd.id IS NOT NULL AND cd.situacion_revista NOT IN ('comision', 'retencion_cargo')")
       }
       else { conditions.push('nc.estado = ?'); params.push(estado === 'bloqueado' ? 'no_vigente' : estado) }
     }
@@ -53,7 +46,10 @@ async function listNewCargo(req, res) {
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 
     const [{ total }] = await AppDataSource.query(
-      `SELECT COUNT(*) as total FROM new_cargo nc LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta ${where}`, params
+      `SELECT COUNT(*) as total FROM new_cargo nc
+       LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
+       LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
+       ${where}`, params
     )
     const rows = await AppDataSource.query(
       `SELECT
@@ -68,32 +64,21 @@ async function listNewCargo(req, res) {
         COALESCE(ca.norma_referencia, nc.norma_referencia)   AS norma_ref_final,
         COALESCE(ca.nro_resolucion,   nc.nro_resolucion)     AS resolucion_final,
         COALESCE(ca.documento_origen, nc.documento_origen)   AS doc_origen_final,
-        (SELECT cd.antiguedad FROM cargo_dotacion cd
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS antiguedad,
-        (SELECT
-          CASE WHEN cd.antiguedad IS NOT NULL THEN CONCAT(
-            TIMESTAMPDIFF(YEAR, cd.antiguedad, CURDATE()), ' a ',
-            MOD(TIMESTAMPDIFF(MONTH, cd.antiguedad, CURDATE()), 12), ' m'
-          ) ELSE NULL END
-          FROM cargo_dotacion cd WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1
-        ) AS antiguedad_calc,
-        (SELECT pd.cuil FROM cargo_dotacion cd
-          INNER JOIN personas_dotacion pd ON pd.id = cd.id_persona
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_cuil,
-        (SELECT pd.ayn FROM cargo_dotacion cd
-          INNER JOIN personas_dotacion pd ON pd.id = cd.id_persona
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_ayn,
-        (SELECT cd.situacion_revista FROM cargo_dotacion cd
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_sit_revista,
-        (SELECT cd.estado FROM cargo_dotacion cd
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_estado,
-        (SELECT cd.codigo_repa FROM cargo_dotacion cd
-          WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL LIMIT 1) AS dot_codigo_repa,
+        cd.antiguedad,
+        CASE WHEN cd.antiguedad IS NOT NULL THEN CONCAT(
+          TIMESTAMPDIFF(YEAR, cd.antiguedad, CURDATE()), ' a ',
+          MOD(TIMESTAMPDIFF(MONTH, cd.antiguedad, CURDATE()), 12), ' m'
+        ) ELSE NULL END AS antiguedad_calc,
+        pd.cuil  AS dot_cuil,
+        pd.ayn   AS dot_ayn,
+        cd.situacion_revista AS dot_sit_revista,
+        cd.estado            AS dot_estado,
+        cd.codigo_repa       AS dot_codigo_repa,
         CASE
           WHEN nc.estado != 'vigente' THEN NULL
-          WHEN NOT EXISTS (SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL) THEN 'vacante'
-          WHEN EXISTS (SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL AND cd.situacion_revista = 'comision') THEN 'comision'
-          WHEN EXISTS (SELECT 1 FROM cargo_dotacion cd WHERE cd.id_cargo = nc.id AND cd.hasta IS NULL AND cd.situacion_revista = 'retencion_cargo') THEN 'retencion'
+          WHEN cd.id IS NULL THEN 'vacante'
+          WHEN cd.situacion_revista = 'comision' THEN 'comision'
+          WHEN cd.situacion_revista = 'retencion_cargo' THEN 'retencion'
           ELSE 'activo'
         END AS dot_ocupacion,
         (SELECT os.desc_rep FROM organigramas os
@@ -101,6 +86,8 @@ async function listNewCargo(req, res) {
           ORDER BY os.lvl ASC LIMIT 1) AS org_desc_rep
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
+       LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
+       LEFT JOIN personas_dotacion pd ON pd.id = cd.id_persona
        ${where}
        ORDER BY nc.id DESC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
