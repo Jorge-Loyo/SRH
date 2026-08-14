@@ -647,4 +647,69 @@ async function getDotacionKpis(req, res) {
   }
 }
 
-module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion };
+async function listRecientes(req, res) {
+  try {
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit || '50', 10)))
+    const offset = Math.max(0, parseInt(req.query.offset || '0', 10))
+    const q = (req.query.q || '').trim()
+
+    const conds = []
+    const params = []
+    if (q) {
+      conds.push('(ca.documento LIKE ? OR nc.sigla LIKE ? OR nc.carrera LIKE ?)')
+      const like = `%${q}%`
+      params.push(like, like, like)
+    }
+    const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+
+    // Agrupar por id_alta (expediente/decreto), traer los códigos generados
+    const rows = await AppDataSource.query(
+      `SELECT
+        ca.id            AS id_alta,
+        ca.documento,
+        ca.tipo_alta,
+        ca.cantidad,
+        ca.norma_referencia,
+        ca.fecha_registro,
+        GROUP_CONCAT(nc.codigo ORDER BY nc.id ASC SEPARATOR ',') AS codigos,
+        GROUP_CONCAT(DISTINCT nc.sigla ORDER BY nc.sigla ASC SEPARATOR ',') AS siglas,
+        GROUP_CONCAT(DISTINCT nc.carrera ORDER BY nc.carrera ASC SEPARATOR ',') AS carreras,
+        GROUP_CONCAT(DISTINCT COALESCE(nc.modalidad,'') ORDER BY nc.modalidad ASC SEPARATOR ',') AS modalidades,
+        GROUP_CONCAT(DISTINCT COALESCE(nc.puesto,'') ORDER BY nc.puesto ASC SEPARATOR '|') AS puestos,
+        GROUP_CONCAT(DISTINCT COALESCE(nc.especialidad,'') ORDER BY nc.especialidad ASC SEPARATOR '|') AS especialidades,
+        MIN(nc.cargo_desde) AS cargo_desde,
+        COUNT(nc.id) AS total_cargos
+       FROM cargos_alta ca
+       INNER JOIN new_cargo nc ON nc.id_alta = ca.id
+       ${where}
+       GROUP BY ca.id
+       ORDER BY ca.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    )
+
+    const [{ total }] = await AppDataSource.query(
+      `SELECT COUNT(DISTINCT ca.id) AS total FROM cargos_alta ca INNER JOIN new_cargo nc ON nc.id_alta = ca.id ${where}`,
+      params
+    )
+
+    res.json({
+      data: rows.map(r => ({
+        ...r,
+        codigos: r.codigos ? r.codigos.split(',') : [],
+        siglas: r.siglas ? [...new Set(r.siglas.split(','))] : [],
+        carreras: r.carreras ? [...new Set(r.carreras.split(','))] : [],
+        modalidades: r.modalidades ? [...new Set(r.modalidades.split(',').filter(Boolean))] : [],
+        puestos: r.puestos ? [...new Set(r.puestos.split('|').filter(Boolean))] : [],
+        especialidades: r.especialidades ? [...new Set(r.especialidades.split('|').filter(Boolean))] : [],
+        total_cargos: parseInt(r.total_cargos, 10),
+      })),
+      meta: { total: parseInt(total, 10), limit, offset },
+    })
+  } catch (err) {
+    logger.error('[carrerasController] listRecientes', { error: err.message })
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+}
+
+module.exports = { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes };

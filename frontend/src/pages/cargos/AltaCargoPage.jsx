@@ -394,6 +394,38 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
 
   const tipo_alta = modo === 'estructura' ? 'estructura' : 'ejecucion'
 
+  const descargarAlta = (results) => {
+    const doc = results[0]?.payload.documento || 'alta'
+    const fecha = new Date().toLocaleDateString('es-AR')
+    const lineas = []
+    lineas.push(`ALTA DE CARGOS`)
+    lineas.push(`Fecha: ${fecha}`)
+    lineas.push(`${modo === 'estructura' ? 'Decreto' : 'Expediente'}: ${doc}`)
+    lineas.push(`Total de cargos: ${results.reduce((a, r) => a + r.codigos.length, 0)}`)
+    lineas.push('')
+    results.forEach((r, i) => {
+      const p = r.payload
+      lineas.push(`--- Grupo ${i + 1} ---`)
+      lineas.push(`Carrera: ${p.carrera_seleccionada?.toUpperCase()}`)
+      lineas.push(`Sigla: ${p.sigla}`)
+      if (p.modalidad) lineas.push(`Modalidad: ${p.modalidad === 'planta' ? 'POF' : p.modalidad === 'guardia' ? 'POU' : p.modalidad}`)
+      if (p.puesto) lineas.push(`Puesto: ${p.puesto}`)
+      if (p.especialidad) lineas.push(`Especialidad: ${p.especialidad}`)
+      if (p.norma_referencia) lineas.push(`Norma: ${p.norma_referencia}`)
+      lineas.push(`Desde: ${p.cargo_desde}`)
+      lineas.push(`Codigos asignados:`)
+      r.codigos.forEach((cod, j) => lineas.push(`  #${j + 1}  ${cod}`))
+      lineas.push('')
+    })
+    const blob = new Blob([lineas.join('\n')], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `alta-cargos-${doc.replace(/[^a-zA-Z0-9-]/g, '_')}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const confirmarExpediente = () => {
     const v = expInput.trim()
     if (!v) return
@@ -528,7 +560,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between p-4 rounded-xl border border-green-200 bg-green-50">
+          <div className="p-4 rounded-xl border border-green-200 bg-green-50">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                 <CheckIcon className="w-4 h-4 text-green-600" />
@@ -538,10 +570,6 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                 <p className="text-sm font-bold text-gray-800 mt-0.5">{expediente}</p>
               </div>
             </div>
-            <button type="button" onClick={editarExpediente}
-              className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors">
-              Editar
-            </button>
           </div>
         )}
       </div>
@@ -792,6 +820,10 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                     setExpediente('')
                   }} className="w-full text-xs text-gray-400 hover:text-gray-600 underline transition-colors pt-1">
                     Nuevo expediente
+                  </button>
+                  <button type="button" onClick={() => descargarAlta(results)}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-xs font-medium text-gray-600 hover:bg-green-50 hover:border-green-400 hover:text-green-700 transition-colors">
+                    ↓ Descargar documento
                   </button>
                 </div>
               ) : cargos.length === 0 ? (

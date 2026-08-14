@@ -37,6 +37,7 @@ const SeguimientoCphPage       = lazy(() => import('./pages/concursales/Seguimie
 const SeguimientoCeetpsPage    = lazy(() => import('./pages/concursales/SeguimientoCeetpsPage.jsx'))
 const TableroPage              = lazy(() => import('./pages/concursales/TableroPage.jsx'))
 const ConfiguracionPage        = lazy(() => import('./pages/concursales/ConfiguracionPage.jsx'))
+const RecientesAltasPage       = lazy(() => import('./pages/concursales/RecientesAltasPage.jsx'))
 
 // Director
 const DirectorHomePage = lazy(() => import('./pages/director/DirectorHomePage.jsx'))
@@ -168,6 +169,9 @@ export default function App() {
                 } />
                 <Route path="concursales/configuracion" element={
                   <ProtectedRoute roles={[...EDIT_ROLES, 'gerencia', 'concursales']}><ConfiguracionPage /></ProtectedRoute>
+                } />
+                <Route path="concursales/recientes" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><RecientesAltasPage /></ProtectedRoute>
                 } />
                 <Route path="modulo2/bajas" element={<Navigate to="/concursales/bajas" replace />} />
                 <Route path="modulo2/seguimiento-cph" element={<Navigate to="/concursales/seguimiento-cph" replace />} />
