@@ -299,7 +299,6 @@ const COLS = [
   { key: 'antiguedad_calc',     label: 'Antigüedad'                   },
   { key: 'cargo_desde',         label: 'Desde',           date: true  },
   { key: 'cargo_hasta',         label: 'Hasta',           date: true  },
-  { key: 'resolucion_final',    label: 'Resolución'                   },
 ]
 
 const ESTADO_STYLES = {
