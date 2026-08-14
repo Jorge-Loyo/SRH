@@ -53,7 +53,7 @@ function ServiceBadge({ online }) {
   return (
     <span className={`flex items-center gap-1.5 text-xs font-medium ${online ? 'text-green-600' : 'text-red-500'}`}>
       <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-400'}`} />
-      {online ? 'Servicio activo' : 'Servicio offline — ejecutá start.bat'}
+      {online ? 'Servicio activo' : 'Servicio no disponible'}
     </span>
   )
 }
