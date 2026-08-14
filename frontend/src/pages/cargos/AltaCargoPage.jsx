@@ -263,7 +263,7 @@ function EtiquetaPicker({ value, onChange }) {
 
 const EMPTY_FORM = {
   sigla: '', carrera_seleccionada: '', modalidad: '',
-  puesto: '', puesto_es_medico: 0, especialidad: '', cargo_desde: '', cantidad: 1,
+  puesto: '', puesto_id: '', puesto_es_medico: 0, especialidad: '', cargo_desde: '', cantidad: 1,
   categoria_interna: '', jornada: '',
   nro_resolucion: '', documento_origen: '',
   tipo_cargo_estructura: '', tipo_eg: '', tipo_as: '',
@@ -502,9 +502,11 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
     ? (form.puesto_es_medico ? espMedico : [NO_APLICA, ...espPuesto])
     : esTec ? [NO_APLICA, ...espTec] : []
 
-  const puestosOptions = esTec && tecTieneAmbas && form.modalidad
-    ? puestos.filter(p => p.modalidad_tec === form.modalidad).map(p => p.nombre)
-    : puestos.map(p => p.nombre)
+  const puestosFiltered = esTec && tecTieneAmbas && form.modalidad
+    ? puestos.filter(p => p.modalidad_tec === form.modalidad)
+    : puestos
+  // Deduplicar por nombre (pueden existir duplicados POF/POU con distinto id)
+  const puestosOptions = [...new Map(puestosFiltered.map(p => [p.nombre, { value: String(p.id), label: p.nombre }])).values()]
 
   const carreraOpts = carreras
     .filter(cr => modo === 'estructura' ? cr.solo_estructura : !cr.excluir_alta)
@@ -522,10 +524,10 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
       )}
       {picker === 'puesto' && (
         <PickerModal title="Seleccionar Puesto"
-          options={puestosOptions} value={form.puesto}
+          options={puestosOptions} value={form.puesto_id}
           onSelect={v => {
-            const found = puestos.find(p => p.nombre === v)
-            setForm(p => ({ ...p, puesto: v, puesto_es_medico: found?.es_medico ?? 0, especialidad: '' }))
+            const found = puestos.find(p => String(p.id) === v)
+            setForm(p => ({ ...p, puesto: found?.nombre ?? v, puesto_id: v, puesto_es_medico: found?.es_medico ?? 0, especialidad: '' }))
             if (found && !found.es_medico) {
               altaCargoApi.listEspecialidadesPuesto(found.id).then(rows => setEspPuesto(rows.map(r => r.nombre))).catch(() => setEspPuesto([]))
             } else {
@@ -615,7 +617,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                     options={tiposCargo.map(t => ({ value: t.codigo, label: t.nombre }))}
                     value={form.tipo_cargo_estructura}
                     disabled={false}
-                    onChange={v => setForm(p => ({ ...p, tipo_cargo_estructura: v, modalidad: '', puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                    onChange={v => setForm(p => ({ ...p, tipo_cargo_estructura: v, modalidad: '', puesto: '', puesto_id: '', puesto_es_medico: 0, especialidad: '' }))} />
                 )}
                 {modo === 'estructura' && esEg && (
                   <ButtonGroup
@@ -656,7 +658,7 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                     options={modalidadesOpts}
                     value={form.modalidad}
                     disabled={false}
-                    onChange={v => setForm(p => ({ ...p, modalidad: v, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                    onChange={v => setForm(p => ({ ...p, modalidad: v, puesto: '', puesto_id: '', puesto_es_medico: 0, especialidad: '' }))} />
                 )}
                 {esEnf && (
                   <ButtonGroup
@@ -670,14 +672,14 @@ export default function AltaCargoPage({ embedded = false, modo = 'ejecucion', mo
                   <PickerField label="Puesto" value={form.puesto}
                     disabled={!form.modalidad}
                     onOpen={() => setPicker('puesto')}
-                    onClear={() => setForm(p => ({ ...p, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                    onClear={() => setForm(p => ({ ...p, puesto: '', puesto_id: '', puesto_es_medico: 0, especialidad: '' }))} />
                 )}
                 {(mostrarModalidad || modalidadFija) && (esTec || (esCph && modo !== 'estructura')) && (
                   <div className="grid grid-cols-2 gap-3">
                     <PickerField label="Puesto" value={form.puesto}
                       disabled={!form.modalidad}
                       onOpen={() => setPicker('puesto')}
-                      onClear={() => setForm(p => ({ ...p, puesto: '', puesto_es_medico: 0, especialidad: '' }))} />
+                      onClear={() => setForm(p => ({ ...p, puesto: '', puesto_id: '', puesto_es_medico: 0, especialidad: '' }))} />
                     {esCph && (
                       <PickerField label="Especialidad" value={form.especialidad}
                         disabled={!form.puesto}
