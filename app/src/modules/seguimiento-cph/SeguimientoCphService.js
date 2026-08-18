@@ -38,7 +38,7 @@ class SeguimientoCphService {
       escalafon_baja, especialidad_baja,
       escalafon_2, puesto_2, especialidad_solicitada,
       conjuntos, cambio_especialidad, dispo_desierta, tipo_baja,
-      suspendido, examen_publicado, orden_merito, insal,
+      examen_publicado, orden_merito, insal,
       // Nuevos
       fecha_baja_desde, fecha_baja_hasta,
       fecha_dispo_desierta_desde, fecha_dispo_desierta_hasta,
@@ -100,11 +100,11 @@ class SeguimientoCphService {
     applyLike(where, 'resolucion_designacion', resolucion_designacion);
     applyLike(where, 'cargo_baja', cargo_baja);
     applyLike(where, 'cargo_sial', cargo_sial);
+    // orden_merito e insal son texto libre (antes booleanos) → búsqueda parcial
+    applyLike(where, 'orden_merito', orden_merito);
+    applyLike(where, 'insal', insal);
     // Filtros booleanos: string 'true'/'false' → boolean
-    applyBoolString(where, 'suspendido', suspendido);
     applyBoolString(where, 'examen_publicado', examen_publicado);
-    applyBoolString(where, 'orden_merito', orden_merito);
-    applyBoolString(where, 'insal', insal);
     applyBoolString(where, 'sorteo_jurado', sorteo_jurado);
     applyBoolString(where, 'carga_documentacion', carga_documentacion);
     applyBoolString(where, 'reso_a_la_firma', reso_a_la_firma);
@@ -217,7 +217,6 @@ class SeguimientoCphService {
       .addSelect('s.descr_efector', 'descr_efector')
       .addSelect('COUNT(*)', 'total')
       .addSelect("SUM(CASE WHEN s.estado = 'FINALIZADO' THEN 1 ELSE 0 END)", 'finalizados')
-      .addSelect("SUM(CASE WHEN s.suspendido = TRUE THEN 1 ELSE 0 END)", 'suspendidos')
       .groupBy('s.sigla_efector')
       .addGroupBy('s.descr_efector')
       .orderBy('total', 'DESC')

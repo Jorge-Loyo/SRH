@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useContext } from 'react'
 import { InformationCircleIcon } from '@heroicons/react/24/outline'
 import { bajasApi } from '../../api/concursalesApi'
-import { exportBajaToPdf, exportBajaToWord } from '../../utils/exportReport'
 import BaseModal from '../../components/ui/modals/BaseModal'
 import {
   OPCIONES_USUARIOS,
@@ -31,7 +30,6 @@ import {
   SiglaSearchField,
   DateMaskField,
   CheckField,
-  ExportDropdown,
 } from '../../components/ui/ConcursalesFormFields'
 
 /**
@@ -127,7 +125,14 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
         }),
       }),
       ...(origen === 'POU a POF' && {
-        motivo_baja: 'POU a POF',
+        motivo_baja:         'POU a POF',
+        nombre_apellido:     '',
+        cuil:                '',
+        cargo_baja:          '',
+        unificador_puestos:  'CPH de Planta',
+        pou_pof:             'POF',
+        puesto_baja:         '',
+        especialidad_baja:   '',
       }),
     }))
   }
@@ -361,13 +366,19 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
     let validationFields = esCeetps
       ? CAMPOS_VALIDACION.filter(f => f.key !== 'pou_pof' && f.key !== 'especialidad_baja')
       : CAMPOS_VALIDACION
-    // Campos bloqueados (sin valor posible) según el origen: no tiene sentido pedirlos
+    // Campos bloqueados con "—" (Field de texto deshabilitado y sin valor): no tiene
+    // sentido pedirlos. Los combos forzados (Motivo de baja, Unificador, POU/POF) no
+    // entran acá porque siempre muestran un valor real, nunca un "—".
     if (form.origen === 'Ampliación') {
       const bloqueados = ['codigo_cargo', 'cargo_baja', 'cuil', 'nombre_apellido', 'partida_presupuestaria']
       validationFields = validationFields.filter(f => !bloqueados.includes(f.key))
     }
     if (form.origen === 'Cobertura Dotación') {
       const bloqueados = ['cargo_baja', 'cuil', 'nombre_apellido', 'partida_presupuestaria', 'doc_respaldatoria']
+      validationFields = validationFields.filter(f => !bloqueados.includes(f.key))
+    }
+    if (form.origen === 'POU a POF') {
+      const bloqueados = ['cargo_baja', 'cuil', 'nombre_apellido']
       validationFields = validationFields.filter(f => !bloqueados.includes(f.key))
     }
     if (form.origen !== 'Ampliación' || form.genera_concurso !== 'SI') {
@@ -426,7 +437,6 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
       onClose={onClose}
       title={isEdit ? 'Editar baja' : 'Nueva baja consolidada'}
       size="xl"
-      headerExtra={isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportBajaToPdf(form) : exportBajaToWord(form)} />}
       borderTop={origenBorderColor}
     >
         <form id="baja-form" onSubmit={handleSubmit} className={`px-4 sm:px-6 py-6 space-y-7 ${origenFormClass}`}>
@@ -453,11 +463,11 @@ export default function BajaForm({ initial, onSaved, onClose, readOnly = false, 
           <Section title="Datos funcionales">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <Field        label="Codigo cargo"           value={form.codigo_cargo}           onChange={set('codigo_cargo')}           cols={1} disabled={form.origen === 'Ampliación'} />
-              <Field        label="ID SIAL"                value={form.cargo_baja}              onChange={set('cargo_baja')}             cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
-              <Field        label="CUIL"                   value={form.cuil}                   onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
-              <Field        label="Nombre y Apellido"      value={form.nombre_apellido}         onChange={set('nombre_apellido')}        cols={2} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación'} />
+              <Field        label="ID SIAL"                value={form.cargo_baja}              onChange={set('cargo_baja')}             cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación' || form.origen === 'POU a POF'} />
+              <Field        label="CUIL"                   value={form.cuil}                   onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación' || form.origen === 'POU a POF'} />
+              <Field        label="Nombre y Apellido"      value={form.nombre_apellido}         onChange={set('nombre_apellido')}        cols={2} disabled={form.origen === 'Ampliación' || form.origen === 'Cobertura Dotación' || form.origen === 'POU a POF'} />
               <StyledSelectField  label="Código de registro"     value={String(form.codigo_registro)} onChange={set('codigo_registro')} options={form.origen === 'Cobertura Dotación' ? ['37', '23'] : OPCIONES_CODIGO} cols={1} />
-              <StyledSelectField  label="Unificador de puestos"  value={form.unificador_puestos}     onChange={handleUnificadorChange}        options={esCeetps ? [CEETPS_UNIFICADOR_POR_CODIGO[codigoNum]].filter(Boolean) : esCodigo23 ? ['Suplente de Guardia'] : esCod37Cobertura ? ['CPH de Guardia', 'Jefaturas'] : OPCIONES_UNIFICADOR_PUESTOS} cols={1} disabled={esCeetps || esCodigo23} />
+              <StyledSelectField  label="Unificador de puestos"  value={form.unificador_puestos}     onChange={handleUnificadorChange}        options={esCeetps ? [CEETPS_UNIFICADOR_POR_CODIGO[codigoNum]].filter(Boolean) : esCodigo23 ? ['Suplente de Guardia'] : esCod37Cobertura ? ['CPH de Guardia', 'Jefaturas'] : form.origen === 'POU a POF' ? ['CPH de Planta'] : OPCIONES_UNIFICADOR_PUESTOS} cols={1} disabled={esCeetps || esCodigo23 || form.origen === 'POU a POF'} />
               <StyledSelectField  label="Escalafon"              value={form.escalafon}              onChange={handleEscalafonBajaChange}     options={esCeetps ? [form.escalafon].filter(Boolean) : OPCIONES_ESCALAFON_BAJAS} cols={1} disabled={esCeetps || !form.unificador_puestos} />
               <StyledSelectField  label="POU/POF"                value={form.pou_pof}                onChange={handlePouPofChange}             options={(esCodigo23 || (esCod37Cobertura && form.unificador_puestos !== 'Jefaturas')) ? ['POU'] : OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={esCeetps || esCodigo23 || (form.origen === 'Cobertura Dotación' && form.unificador_puestos !== 'Jefaturas') || form.unificador_puestos === 'CPH de Guardia' || form.unificador_puestos === 'CPH de Planta' || !form.escalafon} />
               <SearchSelectField  label={form.origen === 'Ampliación' ? 'Puesto Ampliación' : 'Puesto baja'} value={form.puesto_baja}            onChange={handlePuestoBajaChange}        options={esCeetps ? getCeetpsPuestoOptions(form.escalafon) : getPuestoOptions(form.unificador_puestos, form.escalafon)} cols={1} disabled={!esCeetps && !form.pou_pof} />

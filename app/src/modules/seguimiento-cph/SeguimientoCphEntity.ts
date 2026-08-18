@@ -9,7 +9,7 @@ import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, Index } from 'typeo
  *
  * FK id_baja → bajas_consolidadas.id (nullable para carga manual directa)
  *
- * Estados principales: SUSPENDIDO · AUTORIZADO · INSCRIPCION · ETAPA EVAL ·
+ * Estados principales: AUTORIZADO · INSCRIPCION · ETAPA EVAL ·
  * ADJUDI · PROX. A DESIG · DESIERTO · FINALIZADO
  */
 @Entity({ name: 'seguimiento_cph' })
@@ -166,8 +166,9 @@ export class SeguimientoCph extends BaseEntity {
   fecha_examen?: string | null
 
   // ============ ORDEN DE MÉRITO ============
-  @Column({ type: 'boolean', nullable: true })
-  orden_merito?: boolean | null
+  // Texto libre (antes booleano) — puede llevar referencia/número, no solo Sí/No
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  orden_merito?: string | null
 
   @Column({ type: 'varchar', length: 15, nullable: true })
   fecha_orden_merito?: string | null
@@ -177,8 +178,9 @@ export class SeguimientoCph extends BaseEntity {
   fecha_ifacs?: string | null
 
   // ============ INSAL ============
-  @Column({ type: 'boolean', nullable: true })
-  insal?: boolean | null
+  // Texto libre (antes booleano) — puede llevar referencia/número, no solo Sí/No
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  insal?: string | null
 
   @Column({ type: 'varchar', length: 15, nullable: true })
   fecha_insal?: string | null
@@ -225,9 +227,6 @@ export class SeguimientoCph extends BaseEntity {
   cargo_sial?: string | null
 
   // ============ CONTROL ============
-  @Column({ type: 'boolean', nullable: true })
-  suspendido?: boolean | null
-
   @Column({ type: 'varchar', length: 50, nullable: true })
   dispo_desierta?: string | null
 

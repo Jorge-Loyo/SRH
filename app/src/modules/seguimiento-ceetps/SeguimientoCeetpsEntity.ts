@@ -151,4 +151,21 @@ export class SeguimientoCeetps extends BaseEntity {
 
   @Column({ type: 'varchar', length: 150, nullable: true })
   doc_respaldatoria?: string | null
+
+  /** Partida presupuestaria del cargo autorizado (falta en el modelo original, la sumamos para el formulario de Autorización) */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  partida_presupuestaria?: string | null
+
+  // ============ APERTURA 2x18hs (excepción Enfermería) ============
+  /** Marca que 1 cargo de 35hs se abrió en 2 cargos de 18hs (ver FORMULARIOS X CASO) */
+  @Column({ type: 'boolean', nullable: true })
+  apertura_2x18?: boolean | null
+
+  /** N° de informe (IF-...) que documenta el pedido de apertura */
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  informe_apertura?: string | null
+
+  /** 2do expediente de concurso (el 1ro ya está en expediente_concurso) */
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  expediente_concurso_2?: string | null
 }

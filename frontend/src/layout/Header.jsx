@@ -69,8 +69,21 @@ export default function Header({ onMenuClick = () => {} }) {
         <h1 className="text-sm font-semibold text-gray-700 truncate">{title}</h1>
       </div>
 
-      {/* Usuario + cerrar sesión */}
+      {/* Catálogo + Usuario + cerrar sesión */}
       <div className="flex items-center gap-3">
+        <a
+          href="/catalogo"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Abrir catálogo de enlaces"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 016.5 22H20V4H6.5A2.5 2.5 0 004 6.5v13z" />
+          </svg>
+          <span className="hidden sm:block">Catálogo</span>
+        </a>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-semibold shrink-0">
             {initial}

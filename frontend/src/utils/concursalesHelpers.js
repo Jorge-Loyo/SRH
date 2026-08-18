@@ -4,7 +4,6 @@
  */
 
 export const ESTADOS_CPH = {
-  SUSPENDIDO:   'SUSPENDIDO',
   VACANTE:      'A-VALID. VCTE',
   AUTORIZADO:   'B-AUTORIZADO',
   INSCRIPCION:  'C-INSCRIPCION',
@@ -16,7 +15,6 @@ export const ESTADOS_CPH = {
 }
 
 export const COLORES_ESTADO_CPH = {
-  'SUSPENDIDO':        { bg: '#ECEFF1', text: '#455a64', ring: '#90a4ae' },
   'NO INICIADO':       { bg: '#FAFAFA', text: '#616161', ring: '#bdbdbd' },
   'ACTIVO':            { bg: '#E8F5E9', text: '#1b5e20', ring: '#66bb6a' },
   'A-VALID. VCTE':     { bg: '#FFF8E1', text: '#f57f17', ring: '#ffca28' },
@@ -58,9 +56,8 @@ export function boolLabel(val) {
   return '—'
 }
 
-/** Opciones del campo "Estado" (los 4 valores reales de calcEstado) */
+/** Opciones del campo "Estado" (los 3 valores reales de calcEstado) */
 export const OPCIONES_ESTADO = [
-  'SUSPENDIDO',
   'ACTIVO',
   'NO INICIADO',
   'FINALIZADO',
@@ -790,7 +787,6 @@ export function formatDias(val) {
 
 export function calcSubEstado(row) {
   if (row.fecha_dispo_desierta && row.dispo_desierta)     return 'Q-DESIERTO'
-  if (row.suspendido)                                     return 'P-SUSPENDIDO'
   if (row.cargo_sial)                                     return 'O-ALTA SIAL'
   if (row.fecha_resolucion && row.resolucion_designacion) return 'N-DESIGNADO'
   if (row.reso_a_la_firma)                                return 'M-RESO A LA FIRMA'
@@ -812,7 +808,6 @@ export function calcSubEstado(row) {
 }
 
 export function calcEstado(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.resolucion_designacion) return 'FINALIZADO'
   if (row.ee_baja && row.ee_concurso && row.fecha_baja && row.fecha_ee_concurso) return 'ACTIVO'
   return 'NO INICIADO'
@@ -838,13 +833,11 @@ export function calcCambioEspecialidad(row) {
 }
 
 export function calcTiempoBaja(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (!row.ee_concurso) return diasDesde(row.fecha_baja)
   return 'CON CONCURSO'
 }
 
 export function calcTiempoDesdeAutorizacion(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.fecha_autorizacion && row.ee_concurso) return diasDesde(row.fecha_ee_concurso)
   if (row.fecha_autorizacion) return 'AUTORIZADO'
@@ -852,7 +845,6 @@ export function calcTiempoDesdeAutorizacion(row) {
 }
 
 export function calcTiempoConAutorizacion(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.disposicion && row.fecha_autorizacion) return diasDesde(row.fecha_autorizacion)
   if (row.disposicion) return 'CON DISPOSICION'
@@ -860,7 +852,6 @@ export function calcTiempoConAutorizacion(row) {
 }
 
 export function calcTiempoInscripcion(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.examen_publicado && row.disposicion) return diasDesde(row.fecha_insc_hasta)
   if (row.examen_publicado) return 'CON EXAMEN'
@@ -868,14 +859,12 @@ export function calcTiempoInscripcion(row) {
 }
 
 export function calcTiempoExamen(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (!row.orden_merito && row.examen_publicado) return diasDesde(row.fecha_examen)
   if (row.orden_merito) return 'CON ORDEN DE MERITO'
   return 'PENDIENTE'
 }
 
 export function calcTiempoIfacs(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.fecha_ifacs && row.orden_merito) return diasDesde(row.fecha_orden_merito)
   if (row.fecha_ifacs) return 'CON IFACS'
@@ -883,7 +872,6 @@ export function calcTiempoIfacs(row) {
 }
 
 export function calcTiempoInsal(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.insal && row.fecha_ifacs) return diasDesde(row.fecha_ifacs)
   if (row.insal) return 'CON INSAL'
@@ -897,7 +885,6 @@ export function calcTiempoAdjudicacion(row) {
 }
 
 export function calcTiempoTad(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (!row.ee_designacion && row.insal) return diasDesde(row.fecha_insal)
   if (row.ee_designacion) return 'CON TAD'
@@ -905,7 +892,6 @@ export function calcTiempoTad(row) {
 }
 
 export function calcArcoTadApto(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (row.fecha_ite) return 'APTO REALIZADO'
   if (row.fecha_apto_medico) return diasDesde(row.fecha_apto_medico)
@@ -913,7 +899,6 @@ export function calcArcoTadApto(row) {
 }
 
 export function calcArcoTadIte(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.fecha_dispo_desierta) return 'DESIERTO'
   if (row.proyecto_resolucion) return 'ITE REALIZADO'
   if (row.fecha_ite) return diasDesde(row.fecha_ite)
@@ -921,14 +906,12 @@ export function calcArcoTadIte(row) {
 }
 
 export function calcArcoTadReso(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (!row.resolucion_designacion && row.ee_designacion) return diasDesde(row.fecha_ee_designacion)
   if (row.resolucion_designacion) return 'CON RESOLUCION'
   return 'PENDIENTE'
 }
 
 export function calcArcoProxDesig(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.resolucion_designacion) return 'CON RESOLUCION'
   if (!row.ee_designacion && row.fecha_insal) return diasDesde(row.fecha_insal)
   if (!row.fecha_insal) return 'PENDIENTE INSAL'
@@ -936,7 +919,6 @@ export function calcArcoProxDesig(row) {
 }
 
 export function calcConteoConcurso(row) {
-  if (row.suspendido) return 'SUSPENDIDO'
   if (row.resolucion_designacion) return 'CON RESOLUCION'
   if (!row.disposicion) return 'PENDIENTE DISPOSICION'
   const d1 = parseDate(row.fecha_insc_desde)

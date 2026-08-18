@@ -58,10 +58,9 @@ function createApp(options = {}) {
   // Logging estándar de requests HTTP
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
-  // Landing page (portal de enlaces) en la raíz "/".
-  // Va ANTES del static de la SPA para que gane siempre a su index.html.
-  // El acceso al sistema queda dentro de la landing (botón "SISTEMA" → /login).
-  app.get('/', (req, res) => {
+  // Landing page (portal de enlaces), accesible desde el botón "Catálogo" del
+  // header una vez logueado. La raíz "/" vuelve a ser la SPA (login/sistema).
+  app.get('/catalogo', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
   });

@@ -8,12 +8,12 @@ const { auditMiddleware } = require('../../middlewares/audit');
 
 const router = express.Router();
 
-// CPH
+// CPH — gerencia edita CPH (no ve CEETPS)
 router.get('/conjuntos',        authenticateJWT, authorizeRoles('admin', 'editor', 'gerencia', 'concursales'), getConjuntosConfig);
-router.put('/conjuntos',        authenticateJWT, authorizeRoles('admin', 'editor'), auditMiddleware, saveConjuntosConfig);
+router.put('/conjuntos',        authenticateJWT, authorizeRoles('admin', 'editor', 'gerencia'), auditMiddleware, saveConjuntosConfig);
 
-// CEETPS
+// CEETPS — concursales edita CEETPS (no ve CPH)
 router.get('/conjuntos-ceetps', authenticateJWT, authorizeRoles('admin', 'editor', 'gerencia', 'concursales'), getConjuntosCeetpsConfig);
-router.put('/conjuntos-ceetps', authenticateJWT, authorizeRoles('admin', 'editor'), auditMiddleware, saveConjuntosCeetpsConfig);
+router.put('/conjuntos-ceetps', authenticateJWT, authorizeRoles('admin', 'editor', 'concursales'), auditMiddleware, saveConjuntosCeetpsConfig);
 
 module.exports = router;

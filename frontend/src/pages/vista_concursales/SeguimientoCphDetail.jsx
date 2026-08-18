@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import BaseModal from '../../components/ui/modals/BaseModal'
 import { seguimientoApi, configApi } from '../../api/concursalesApi'
-import { exportSeguimientoToPdf, exportSeguimientoToWord } from '../../utils/exportReport'
+import { getCasoCph, exportCphPdf, exportCphWord } from '../../utils/exportReport'
 import { applyRules } from '../../utils/conjuntosRules'
 import {
   calcSubEstado3, calcSubEstado, calcEstado, calcCambioEspecialidad, getColorEstadoCph,
@@ -59,7 +59,6 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
     sub_estado_3:      initial?.sub_estado_3       ?? '',
     cambio_especialidad: initial?.cambio_especialidad ?? 'NO',
     doc_cambio_especialidad: initial?.doc_cambio_especialidad ?? '',
-    suspendido:        initial?.suspendido         ?? false,
     dispo_desierta:    initial?.dispo_desierta      ?? '',
     fecha_dispo_desierta: isoToDmy(initial?.fecha_dispo_desierta) ?? '',
     // 4. Concurso
@@ -79,11 +78,11 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
     // 6. Evaluación
     examen_publicado:   initial?.examen_publicado   ?? false,
     fecha_examen:       isoToDmy(initial?.fecha_examen)       ?? '',
-    orden_merito:       initial?.orden_merito       ?? false,
+    orden_merito:       initial?.orden_merito       ?? '',
     fecha_orden_merito: isoToDmy(initial?.fecha_orden_merito)  ?? '',
     // 7. Adjudicación
     fecha_ifacs: isoToDmy(initial?.fecha_ifacs) ?? '',
-    insal:       initial?.insal       ?? false,
+    insal:       initial?.insal       ?? '',
     fecha_insal: isoToDmy(initial?.fecha_insal) ?? '',
     // 8. Designación
     ee_designacion:       initial?.ee_designacion       ?? '',
@@ -134,7 +133,7 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
     'ee_designacion', 'fecha_ee_designacion', 'carga_documentacion',
     'fecha_apto_medico', 'fecha_ite', 'reso_a_la_firma', 'proyecto_resolucion',
     'resolucion_designacion', 'fecha_resolucion', 'fecha_cargo', 'cargo_sial',
-    'estado', 'sub_estado_3', 'suspendido', 'cambio_especialidad',
+    'estado', 'sub_estado_3', 'cambio_especialidad',
     'dispo_desierta', 'fecha_dispo_desierta',
     'usuario',
   ]
@@ -263,6 +262,13 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
     'POU a POF':          'border-violet-400',
   }[form.origen] ?? ''
 
+  // Ampliación y POU a POF no parten de una baja real, sino de una solicitud
+  const esOrigenSolicitud = form.origen === 'Ampliación' || form.origen === 'POU a POF'
+
+  // Caso del formulario (ver FORMULARIOS X CASO) — determina si corresponde el
+  // documento de Validación además del de Autorización, y qué campos lleva cada uno.
+  const caso = getCasoCph(form)
+
   if (readOnly) return <PipelineViewSeguimiento initial={initial} onClose={onClose} />
 
   return (
@@ -273,7 +279,14 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
       title={isEdit ? `Seguimiento CPH #${initial.id} — ${initial.nombre_baja ?? ''}` : 'Nuevo seguimiento CPH'}
       size="xl"
       borderTop={origenBorderColor}
-      headerExtra={isEdit && <ExportDropdown onExport={fmt => fmt === 'pdf' ? exportSeguimientoToPdf(form) : exportSeguimientoToWord(form)} />}
+      headerExtra={isEdit && (
+        <div className="flex items-center gap-2">
+          {caso.validacion && (
+            <ExportDropdown label="Validación" onExport={fmt => fmt === 'pdf' ? exportCphPdf(form, 'validacion') : exportCphWord(form, 'validacion')} />
+          )}
+          <ExportDropdown label="Autorización" onExport={fmt => fmt === 'pdf' ? exportCphPdf(form, 'autorizacion') : exportCphWord(form, 'autorizacion')} />
+        </div>
+      )}
     >
         <form onSubmit={handleSubmit} className={`px-2 py-2 ${origenFormClass}`}>
           <fieldset disabled={readOnly} className="border-0 p-0 m-0 min-w-0 space-y-7">
@@ -294,7 +307,7 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                     <span className="text-xs text-gray-400">(editá en Bajas)</span>
                   </div>
                 )}
-                <CalcField label="Estado"          value={calcEstado({ ...form })}              cols={1} title="SUSPENDIDO / FINALIZADO / ACTIVO / NO INICIADO" />
+                <CalcField label="Estado"          value={calcEstado({ ...form })}              cols={1} title="FINALIZADO / ACTIVO / NO INICIADO" />
                 <CalcField label="Sub-estado"      value={calcSubEstado({ ...form })}           cols={1} title="19 etapas del proceso concursal" />
                 <CalcField label="Sub-estado 3"    value={calcSubEstado3({ ...form })}          cols={1} title="Estado resumido para filtros y color-coding" />
                 <CalcField label="Cambio esp."     value={calcCambioEspecialidad({ ...form })}  cols={1} title="SI si especialidad baja ≠ especialidad solicitada" />
@@ -308,14 +321,14 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <Field         label="EE baja"                value={form.ee_baja}              onChange={set('ee_baja')}              cols={2} />
                 <Field         label="CUIL baja"              value={form.cuil_baja}            onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 11); setForm(prev => ({ ...prev, cuil_baja: v })) }}  placeholder="20123456789" cols={1} disabled={form.origen === 'Ampliación'} />
                 <Field         label="Nombre baja"            value={form.nombre_baja}          onChange={set('nombre_baja')}          cols={4} disabled={form.origen === 'Ampliación'} />
-                <DateMaskField label="Fecha baja"             value={form.fecha_baja}           onChange={set('fecha_baja')}           cols={1} />
+                <DateMaskField label={esOrigenSolicitud ? 'Fecha de solicitud' : 'Fecha baja'} value={form.fecha_baja} onChange={set('fecha_baja')} cols={1} />
                 <StyledSelectField   label="Escalafón"             value={form.escalafon_baja}       onChange={set('escalafon_baja')}       options={OPCIONES_ESCALAFON_BAJAS} cols={1} />
                 <StyledSelectField   label="POU/POF"                value={form.escalafon_1}          onChange={set('escalafon_1')}          options={OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={!!initial?.escalafon_1} />
                 <StyledSelectField   label="Unificador puestos"    value={form.unificador_puestos}   onChange={set('unificador_puestos')}   options={OPCIONES_UNIFICADOR_PUESTOS} cols={2} />
                 <StyledSelectField   label="Puesto 1"               value={form.puesto_1}             onChange={set('puesto_1')}             options={getPuestoOptions(form.escalafon_1, form.escalafon_baja)} cols={2} />
                 <SearchSelectField label="Especialidad baja"  value={form.especialidad_baja}    onChange={set('especialidad_baja')}    options={getEspecialidadOptions(form.puesto_1, form.escalafon_baja)} cols={2} />
                 <Field         label="Carga horaria"          value={form.carga_horaria}        onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setForm(prev => ({ ...prev, carga_horaria: v })) }} cols={1} />
-                <StyledSelectField   label="Motivo de baja"         value={form.motivo_baja}          onChange={set('motivo_baja')}          options={OPCIONES_MOTIVO_BAJA} cols={1} />
+                <StyledSelectField   label={esOrigenSolicitud ? 'Motivo de solicitud' : 'Motivo de baja'} value={form.motivo_baja} onChange={set('motivo_baja')} options={OPCIONES_MOTIVO_BAJA} cols={1} />
                 <Field         label="Doc. respaldatoria"     value={form.doc_respaldatoria}    onChange={set('doc_respaldatoria')}    cols={2} />
                 <DateMaskField label="Fecha pase paralelo/GT" value={form.fecha_pase_paralelo}  onChange={set('fecha_pase_paralelo')}  cols={1} />
                 <Field         label="Partida presupuestaria" value={form.partida_presupuestaria} onChange={set('partida_presupuestaria')} cols={1} disabled={form.origen === 'Ampliación'} />
@@ -326,10 +339,10 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
             <Section title="Concurso">
               <div className="grid grid-cols-4 gap-3">
                 {/* Expediente y autorización */}
-                <Field         label="EE concurso"              value={form.ee_concurso}             onChange={set('ee_concurso')}             cols={4} />
+                <Field         label="EE concurso"              value={form.ee_concurso}             onChange={set('ee_concurso')}             cols={4} disabled />
                 <DateMaskField label="Fecha EE concurso"        value={form.fecha_ee_concurso}        onChange={set('fecha_ee_concurso')}       cols={1} />
                 <Field         label="IF autorización vacante"  value={form.if_solicitante}           onChange={set('if_solicitante')}          cols={1} />
-                
+
                 {/* Puesto 2 → Especialidad solicitada → Cambio de Especialidad */}
                 <StyledSelectField   label="POU/POF 2"               value={form.escalafon_2}              onChange={set('escalafon_2')}             options={OPCIONES_ESCALAFON_SEGUIMIENTO} cols={1} disabled={!!initial?.escalafon_1} />
                 <StyledSelectField   label="Puesto 2"                value={form.puesto_2}                 onChange={set('puesto_2')}                options={getPuestoOptions(form.escalafon_2, '')} cols={2} disabled={form.cambio_especialidad !== 'SI'} />
@@ -349,18 +362,33 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 ) : (
                   <Field label="Disposición"        value={form.disposicion}              onChange={set('disposicion')}             cols={4} />
                 )}
-                {/* Inscripción */}
+              </div>
+            </Section>
+
+            {/* 3b — Inscripción */}
+            <Section title="Inscripción">
+              <div className="grid grid-cols-4 gap-3">
                 <DateMaskField label="Fecha insc. desde"  value={form.fecha_insc_desde}   onChange={set('fecha_insc_desde')}   cols={1} />
                 <DateMaskField label="Fecha insc. hasta"  value={form.fecha_insc_hasta}   onChange={set('fecha_insc_hasta')}   cols={1} />
                 <Field         label="Cant. inscriptos"   value={form.q_inscriptos}       onChange={set('q_inscriptos')}       type="number" cols={1} />
-                {/* Evaluación */}
+              </div>
+            </Section>
+
+            {/* 3c — Evaluación */}
+            <Section title="Evaluación">
+              <div className="grid grid-cols-4 gap-3">
                 <CheckField    label="Examen publicado"   value={form.examen_publicado}   onChange={setBool('examen_publicado')}   cols={1} />
                 <DateMaskField label="Fecha examen"       value={form.fecha_examen}       onChange={set('fecha_examen')}           cols={1} />
-                <CheckField    label="Orden de mérito"   value={form.orden_merito}       onChange={setBool('orden_merito')}       cols={1} />
+                <Field         label="Orden de mérito"    value={form.orden_merito}       onChange={set('orden_merito')}           cols={1} />
                 <DateMaskField label="F. orden de mérito" value={form.fecha_orden_merito} onChange={set('fecha_orden_merito')}     cols={1} />
-                {/* Adjudicación */}
+              </div>
+            </Section>
+
+            {/* 3d — Adjudicación */}
+            <Section title="Adjudicación">
+              <div className="grid grid-cols-4 gap-3">
                 <DateMaskField label="Fecha IFACS"        value={form.fecha_ifacs}        onChange={set('fecha_ifacs')}            cols={1} />
-                <CheckField    label="INSAL"              value={form.insal}              onChange={setBool('insal')}              cols={1} />
+                <Field         label="INSAL"              value={form.insal}              onChange={set('insal')}                  cols={1} />
                 <DateMaskField label="Fecha INSAL"        value={form.fecha_insal}        onChange={set('fecha_insal')}        cols={1} />
               </div>
             </Section>
@@ -383,11 +411,9 @@ export default function SeguimientoCphDetail({ initial, onSaved, onClose, readOn
                 <DateMaskField label="Fecha resolución"       value={form.fecha_resolucion}       onChange={set('fecha_resolucion')}        cols={1} />
                 <DateMaskField label="Fecha cargo"             value={form.fecha_cargo}            onChange={set('fecha_cargo')}             cols={1} />
                 <Field         label="Cargo SIAL"               value={form.cargo_sial}             onChange={set('cargo_sial')}              cols={1} />
-                {/* Suspensión y desierta */}
-                <CheckField    label="Suspendido"               value={form.suspendido}             onChange={setBool('suspendido')}          cols={1} />
+                {/* Desierta */}
                 <StyledSelectField   label="Dispo. desierta"          value={form.dispo_desierta}         onChange={set('dispo_desierta')}          options={OPCIONES_DISPO_DESIERTA} cols={1} />
                 <DateMaskField label="Fecha dispo. desierta"    value={form.fecha_dispo_desierta}   onChange={set('fecha_dispo_desierta')}    cols={1} />
-                <div className="col-span-1" />
               </div>
             </Section>
 
@@ -450,6 +476,8 @@ function CalcField({ label, value, cols = 1, title = '' }) {
 // ─── Vista pipeline (solo-lectura) ────────────────────────────────────────────
 function PipelineViewSeguimiento({ initial, onClose }) {
   const b = v => v ? 'Sí' : 'No'
+  // Ampliación y POU a POF no parten de una baja real, sino de una solicitud
+  const esOrigenSolicitud = initial?.origen === 'Ampliación' || initial?.origen === 'POU a POF'
   const sections = [
     {
       title: 'Datos generales', bg: 'bg-indigo-700',
@@ -473,14 +501,14 @@ function PipelineViewSeguimiento({ initial, onClose }) {
         ['EE baja',           initial?.ee_baja],
         ['CUIL',              initial?.cuil_baja],
         ['Nombre',            initial?.nombre_baja],
-        ['Fecha baja',        initial?.fecha_baja],
+        [esOrigenSolicitud ? 'Fecha de solicitud' : 'Fecha baja', initial?.fecha_baja],
         ['Escalafón',         initial?.escalafon_baja],
         ['POU/POF',           initial?.escalafon_1],
         ['Unificador puestos', initial?.unificador_puestos],
         ['Puesto 1',          initial?.puesto_1],
         ['Especialidad baja', initial?.especialidad_baja],
         ['Carga horaria',     initial?.carga_horaria],
-        ['Motivo baja',       initial?.motivo_baja],
+        [esOrigenSolicitud ? 'Motivo de solicitud' : 'Motivo baja', initial?.motivo_baja],
         ['Doc. respaldatoria', initial?.doc_respaldatoria],
         ['F. pase paralelo',  initial?.fecha_pase_paralelo],
         ['Partida presup.',   initial?.partida_presupuestaria],
@@ -513,7 +541,7 @@ function PipelineViewSeguimiento({ initial, onClose }) {
       fields: [
         ['Examen pub.',      b(initial?.examen_publicado)],
         ['F. examen',        initial?.fecha_examen],
-        ['Orden mérito',     b(initial?.orden_merito)],
+        ['Orden mérito',     initial?.orden_merito],
         ['F. orden mérito',  initial?.fecha_orden_merito],
       ]
     },
@@ -521,7 +549,7 @@ function PipelineViewSeguimiento({ initial, onClose }) {
       title: 'Adjudicación', bg: 'bg-sky-700',
       fields: [
         ['F. IFACS', initial?.fecha_ifacs],
-        ['INSAL',    b(initial?.insal)],
+        ['INSAL',    initial?.insal],
         ['F. INSAL', initial?.fecha_insal],
       ]
     },
@@ -541,7 +569,6 @@ function PipelineViewSeguimiento({ initial, onClose }) {
         ['F. resolución',       initial?.fecha_resolucion],
         ['F. cargo',            initial?.fecha_cargo],
         ['Cargo SIAL',          initial?.cargo_sial],
-        ['Suspendido',          b(initial?.suspendido)],
         ['Dispo. desierta',     initial?.dispo_desierta],
         ['F. dispo. desierta',  initial?.fecha_dispo_desierta],
       ]
