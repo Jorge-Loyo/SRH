@@ -1,30 +1,46 @@
 stages:
   - validate
+  - build
   - deploy
 
 chequeo_sintaxis:
   stage: validate
   script:
     - echo "Buscando errores de sintaxis..."
-    # Montamos la carpeta actual adentro de un contenedor efímero de Node y corremos el chequeo
     - docker run --rm -v $(pwd):/app -w /app node:20-alpine find . -type f -name "*.js" -not -path "*/node_modules/*" -exec node --check {} +
   allow_failure: false
 
+build_frontend:
+  stage: build
+  image: core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine
+  only:
+    - develop
+  script:
+    - cd frontend
+    - npm ci
+    - VERCEL=1 npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+    expire_in: 1 hour
+
 deploy_dev:
   stage: deploy
-  # Usamos la imagen oficial de DevOps ASI que ya tiene SSH y herramientas instaladas
   image: core-harbor-devops-msgc.gcba.gob.ar/devops-images/docker-compose-deploy
   only:
     - develop
+  dependencies:
+    - build_frontend
   before_script:
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    # Configuramos SSH para evitar el prompt de validación de host
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config
     - chmod 600 ~/.ssh/config
   script:
     - echo "Conectando a la VM $SERVER_IP para actualizar la App Dotación..."
+    - ssh $SERVER_USER@$SERVER_IP "sudo mkdir -p /opt/dotacion-rrhh/app/public/spa"
+    - scp -r frontend/dist/* $SERVER_USER@$SERVER_IP:/opt/dotacion-rrhh/app/public/spa/
     - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git fetch origin develop && sudo git reset --hard origin/develop && sudo git clean -fd && sudo docker compose build --no-cache app && sudo docker compose up -d app"
     - echo "Despliegue finalizado con éxito!"

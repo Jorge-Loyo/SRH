@@ -24,6 +24,7 @@ function createApp(options = {}) {
   const allowedOrigins = [
     'https://srh-pi.vercel.app',
     'https://srh-56558obpq-jorge-loyos-projects.vercel.app',
+    'https://srh-pi-git-main-jorge-loyos-projects.vercel.app',
     ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
     ...(config.nodeEnv !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
   ];

@@ -83,7 +83,7 @@ async function listNewCargo(req, res) {
         END AS dot_ocupacion,
         (SELECT os.desc_rep FROM organigramas os
           WHERE os.sigla COLLATE utf8mb4_unicode_ci = nc.sigla
-          ORDER BY os.lvl ASC LIMIT 1) AS org_desc_rep
+          ORDER BY os.lvl DESC LIMIT 1) AS org_desc_rep
        FROM new_cargo nc
        LEFT JOIN cargos_alta ca ON ca.id = nc.id_alta
        LEFT JOIN cargo_dotacion cd ON cd.id_cargo = nc.id AND cd.hasta IS NULL
@@ -313,6 +313,13 @@ async function getNewCargoInfo(req, res) {
         cd.antiguedad  AS dot_antiguedad,
         o.desc_rep     AS dot_reparticion,
         o.path_nombres AS dot_path,
+        CASE
+          WHEN nc.estado != 'vigente' THEN NULL
+          WHEN cd.id IS NULL THEN 'vacante'
+          WHEN cd.situacion_revista = 'comision' THEN 'comision'
+          WHEN cd.situacion_revista = 'retencion_cargo' THEN 'retencion'
+          ELSE 'activo'
+        END AS dot_ocupacion,
         os.desc_rep    AS org_desc_rep,
         os.path_nombres AS org_path,
         os.lvl         AS org_lvl,
@@ -323,7 +330,9 @@ async function getNewCargoInfo(req, res) {
        LEFT JOIN personas_dotacion pd ON pd.id = cd.id_persona
        LEFT JOIN organigramas o  ON o.codigo_reparticion = cd.codigo_repa
        LEFT JOIN organigramas os ON os.sigla COLLATE utf8mb4_unicode_ci = nc.sigla
-       WHERE nc.id = ?`,
+       WHERE nc.id = ?
+       ORDER BY os.lvl DESC
+       LIMIT 1`,
       [id]
     )
     if (!row) return res.status(404).json({ error: 'Cargo no encontrado' })

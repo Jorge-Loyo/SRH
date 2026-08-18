@@ -17,45 +17,48 @@ router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
 
 const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
 
-// health es público para que el frontend pueda verificar sin token
-router.get('/dotaneitor/health', async (req, res) => {
-  const target = `${PYTHON_SERVICE}/health`;
-  try {
-    const upstream = await fetch(target, { signal: AbortSignal.timeout(40000) });
-    const buf = await upstream.arrayBuffer();
-    res.status(upstream.status).end(Buffer.from(buf));
-  } catch {
-    res.status(503).json({ error: 'Servicio Dotaneitor no disponible' });
-  }
-});
-
-router.all('/dotaneitor/*', ...auth, async (req, res) => {
-  const target = `${PYTHON_SERVICE}/${req.params[0]}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
-  try {
-    const isFormData = req.headers['content-type']?.includes('multipart/form-data');
-    const fetchOpts = {
-      method: req.method,
-      signal: AbortSignal.timeout(120000),
-      headers: isFormData ? {} : { 'content-type': req.headers['content-type'] || 'application/json' },
-    };
-    if (!['GET', 'HEAD'].includes(req.method)) {
-      if (isFormData) {
-        // pipe raw body for multipart
-        fetchOpts.body = req;
-        fetchOpts.duplex = 'half';
-        fetchOpts.headers['content-type'] = req.headers['content-type'];
-      } else {
-        fetchOpts.body = JSON.stringify(req.body);
-      }
+function proxyToPython(req, res, target) {
+  const isFormData = req.headers['content-type']?.includes('multipart/form-data');
+  const fetchOpts = {
+    method: req.method,
+    signal: AbortSignal.timeout(120000),
+    headers: isFormData ? {} : { 'content-type': req.headers['content-type'] || 'application/json' },
+  };
+  if (!['GET', 'HEAD'].includes(req.method)) {
+    if (isFormData) {
+      fetchOpts.body = req;
+      fetchOpts.duplex = 'half';
+      fetchOpts.headers['content-type'] = req.headers['content-type'];
+    } else {
+      fetchOpts.body = JSON.stringify(req.body);
     }
-    const upstream = await fetch(target, fetchOpts);
+  }
+  return fetch(target, fetchOpts).then(async upstream => {
     res.status(upstream.status);
-    upstream.headers.forEach((v, k) => !['transfer-encoding','connection'].includes(k) && res.setHeader(k, v));
+    upstream.headers.forEach((v, k) => {
+      if (!['transfer-encoding', 'connection', 'content-encoding'].includes(k)) res.setHeader(k, v);
+    });
     const buf = await upstream.arrayBuffer();
     res.end(Buffer.from(buf));
-  } catch {
+  }).catch(() => {
     res.status(503).json({ error: 'Servicio Dotaneitor no disponible' });
-  }
+  });
+}
+
+// Endpoints públicos (sin auth)
+router.get('/dotaneitor/health', (req, res) => {
+  proxyToPython(req, res, `${PYTHON_SERVICE}/health`);
+});
+
+router.get('/dotaneitor/ultima-actualizacion', (req, res) => {
+  proxyToPython(req, res, `${PYTHON_SERVICE}/ultima-actualizacion`);
+});
+
+// Resto de endpoints con auth
+router.all('/dotaneitor/*', ...auth, (req, res) => {
+  const path = req.params[0];
+  const qs   = req.url.includes('?') ? '?' + req.url.split('?')[1] : '';
+  proxyToPython(req, res, `${PYTHON_SERVICE}/${path}${qs}`);
 });
 
 module.exports = router;

@@ -68,58 +68,74 @@ function InfoModal({ cargoId, onClose }) {
   }, [cargoId])
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onMouseDown={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col" style={{ maxHeight: '85vh' }} onMouseDown={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col" style={{ maxHeight: '90vh' }} onMouseDown={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <span className="text-sm font-semibold text-gray-800">Información del cargo</span>
           <button type="button" onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"><XMarkIcon className="w-4 h-4" /></button>
         </div>
-        <div className="overflow-y-auto px-5 py-4 space-y-4">
+        <div className="overflow-y-auto px-5 py-4">
           {error && <p className="text-sm text-red-500">{error}</p>}
           {!data && !error && <p className="text-sm text-gray-400 text-center py-4">Cargando...</p>}
           {data && (
-            <>
-              {/* Organigrama */}
-              <Section title="Organigrama">
-                {data.org_desc_rep ? (
-                  <>
-                    <Row label="Repartición" val={<span className="font-medium text-gray-800">{data.org_desc_rep}</span>} />
-                    {data.org_tipo && <Row label="Tipo" val={<span className="capitalize text-gray-600">{data.org_tipo}</span>} />}
-                    {data.org_lvl  && <Row label="Nivel" val={<span className="text-gray-600">{data.org_lvl}</span>} />}
-                    {data.org_path && (
-                      <Row label="Jerarquía" val={
-                        <span className="text-[11px] text-gray-400 leading-relaxed">
-                          {data.org_path.replace(/\\/g, ' › ').replace(/^ › /, '')}
-                        </span>
-                      } />
-                    )}
-                  </>
-                ) : (
-                  <Row label="Estado" val={<span className="text-xs text-gray-400">Sin datos de organigrama</span>} />
-                )}
-              </Section>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+
+              {/* Organigrama — ancho completo */}
+              <div className="col-span-2">
+                <Section title="Organigrama">
+                  {data.org_desc_rep ? (
+                    <>
+                      <Row label="Repartición" val={<span className="font-medium text-gray-800">{data.org_desc_rep}</span>} />
+                      {data.org_tipo && <Row label="Tipo" val={<span className="capitalize text-gray-600">{data.org_tipo}</span>} />}
+                      {data.org_lvl  && <Row label="Nivel" val={<span className="text-gray-600">{data.org_lvl}</span>} />}
+                      {data.org_path && (
+                        <Row label="Jerarquía" val={
+                          <span className="text-[11px] text-gray-400 leading-relaxed">
+                            {data.org_path.replace(/\\/g, ' › ').replace(/^ › /, '')}
+                          </span>
+                        } />
+                      )}
+                    </>
+                  ) : (
+                    <Row label="Estado" val={<span className="text-xs text-gray-400">Sin datos de organigrama</span>} />
+                  )}
+                </Section>
+              </div>
 
               {/* Dotación */}
-              <Section title="Dotación">
-                {data.dot_ayn ? (
-                  <>
-                    <Row label="Agente" val={<span className="font-medium">{data.dot_ayn}</span>} />
-                    <Row label="CUIL" val={<span className="font-mono text-gray-600">{data.dot_cuil}</span>} />
-                    {data.dot_especialidad && <Row label="Especialidad" val={data.dot_especialidad} />}
-                    <Row label="ID SIAL rol" val={<span className="font-mono text-xs text-gray-500">{data.dot_id_sial}</span>} />  
-                    {data.dot_reparticion && <Row label="Repartición" val={data.dot_reparticion} />}
-                    {data.dot_sit_revista && (
-                      <Row label="Sit. revista" val={
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SR_STYLES[data.dot_sit_revista] || 'bg-gray-100 text-gray-600'}`}>
-                          {SR_LABELS[data.dot_sit_revista] || data.dot_sit_revista}
-                        </span>
-                      } />
-                    )}
-                    {data.dot_periodo && <Row label="Período" val={data.dot_periodo} />}
-                  </>
-                ) : (
-                  <Row label="Estado" val={<span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Vacante</span>} />
-                )}
-              </Section>
+              <div className="col-span-2">
+                <Section title="Dotación">
+                  {(() => {
+                    const occ = data.dot_ocupacion
+                    const cfg = OCUPACION_CONFIG[occ]
+                    return (
+                      <>
+                        <Row label="Estado" val={
+                          cfg
+                            ? <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cfg.cls}`}>{cfg.l}</span>
+                            : <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Vacante</span>
+                        } />
+                        {data.dot_ayn && (
+                          <>
+                            <Row label="Agente" val={<span className="font-medium">{data.dot_ayn}</span>} />
+                            <Row label="CUIL" val={<span className="font-mono text-gray-600">{data.dot_cuil}</span>} />
+                            {data.dot_especialidad && <Row label="Especialidad" val={data.dot_especialidad} />}
+                            {data.dot_id_sial && <Row label="ID SIAL rol" val={<span className="font-mono text-xs text-gray-500">{data.dot_id_sial}</span>} />}
+                            {data.dot_reparticion && <Row label="Repartición" val={data.dot_reparticion} />}
+                            {data.dot_sit_revista && (
+                              <Row label="Sit. revista" val={
+                                <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${SR_STYLES[data.dot_sit_revista] || 'bg-gray-100 text-gray-600'}`}>
+                                  {SR_LABELS[data.dot_sit_revista] || data.dot_sit_revista}
+                                </span>
+                              } />
+                            )}
+                            {data.dot_periodo && <Row label="Período" val={data.dot_periodo} />}
+                          </>
+                        )}
+                      </>
+                    )
+                  })()}
+                </Section>
+              </div>
 
               {/* Identificación */}
               <Section title="Identificación">
@@ -155,7 +171,7 @@ function InfoModal({ cargoId, onClose }) {
                 } />
                 <Row label="Cargo desde"   val={data.cargo_desde   ? fmtDate(data.cargo_desde)   : <Dash />} />
                 <Row label="Cargo hasta"   val={data.cargo_hasta   ? fmtDate(data.cargo_hasta)   : <Dash />} />
-                <Row label="Antigüedad"    val={data.antiguedad_calc || (data.antiguedad ? fmtDate(data.antiguedad) : <Dash />)} />
+                <Row label="Antigüedad"    val={data.antiguedad_calc || (data.dot_antiguedad ? fmtDate(data.dot_antiguedad) : <Dash />)} />
                 <Row label="Fecha alta"    val={data.fecha_alta    ? fmtDate(data.fecha_alta)    : <Dash />} />
                 <Row label="Actualización" val={data.fecha_actualizacion ? fmtDate(data.fecha_actualizacion) : <Dash />} />
               </Section>
@@ -170,7 +186,8 @@ function InfoModal({ cargoId, onClose }) {
                 <Row label="Resolución"  val={data.resolucion_final || <Dash />} />
                 <Row label="Doc. origen" val={data.doc_origen_final || <Dash />} />
               </Section>
-            </>
+
+            </div>
           )}
         </div>
       </div>
