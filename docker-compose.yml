@@ -3,9 +3,8 @@ version: '3.8'
 services:
   app:
     build: 
-      # Contexto a la carpeta anidada
-      context: "./app" 
-      dockerfile: Dockerfile
+      context: "."          # raíz del proyecto para acceder a frontend/ y app/
+      dockerfile: app/Dockerfile
     container_name: dotacion_app
     restart: unless-stopped
     env_file: .env

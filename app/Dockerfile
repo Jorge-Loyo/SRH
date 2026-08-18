@@ -1,21 +1,25 @@
-FROM node:18-alpine
+# ── Etapa 1: build del frontend ──────────────────────────────────────────────
+FROM node:18-alpine AS frontend-build
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
 
-# Directorio en el contenedor
+# ── Etapa 2: imagen final del backend ────────────────────────────────────────
+FROM node:18-alpine
 WORKDIR /usr/src/app
 
-COPY package*.json ./
-
-# Instalamos dependencias
+COPY app/package*.json ./
 RUN npm ci --only=production
 
-# Creamos la carpeta de logs que pide la app
 RUN mkdir -p logs
 
-# Copiamos el resto del código
-COPY . .
+COPY app/ .
 
-# Exponemos el puerto
+# Copiamos el SPA compilado al lugar donde Express lo sirve
+COPY --from=frontend-build /frontend/dist ./public/spa
+
 EXPOSE 3000
 
-# El comando de arranque: Migra la BD y luego levanta la app
 CMD sh -c "npm run migrate && npm start"
