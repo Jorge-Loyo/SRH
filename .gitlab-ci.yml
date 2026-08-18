@@ -26,5 +26,5 @@ deploy_dev:
     - chmod 600 ~/.ssh/config
   script:
     - echo "Conectando a la VM $SERVER_IP para actualizar la App Dotación..."
-    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git pull origin develop && sudo docker compose up -d --build app"
+    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git stash && sudo git clean -fd && sudo git pull origin develop && sudo docker compose up -d --build app"
     - echo "Despliegue finalizado con éxito!"
