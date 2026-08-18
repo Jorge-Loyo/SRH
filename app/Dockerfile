@@ -4,7 +4,7 @@ WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
-RUN npm run build
+RUN VERCEL=1 npm run build
 
 # ── Etapa 2: imagen final del backend ────────────────────────────────────────
 FROM node:18-alpine
