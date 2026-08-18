@@ -16,9 +16,15 @@ build_frontend:
     - develop
   script:
     - echo "Build del frontend..."
+    # Por si quedaron node_modules/dist root-owned de una corrida anterior (ver nota
+    # abajo), se los devolvemos al usuario del runner antes de tocar nada, si no el
+    # checkout de la próxima corrida no puede limpiarlos.
+    - docker run --rm -v $(pwd):/app alpine chown -R $(id -u):$(id -g) /app
     # El runner es shell executor: ignora la keyword `image:`, por eso invocamos
     # Docker explícitamente (mismo patrón que chequeo_sintaxis, que sí funciona).
-    - docker run --rm -v $(pwd):/app -w /app/frontend -e VERCEL=1 core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine sh -c "npm ci && npm run build"
+    # --user + HOME=/tmp: corre npm como el usuario del runner (no root), para que
+    # node_modules/dist no queden root-owned en el disco del runner.
+    - docker run --rm -v $(pwd):/app -w /app/frontend -e VERCEL=1 -e HOME=/tmp --user "$(id -u):$(id -g)" core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine sh -c "npm ci && npm run build"
   artifacts:
     paths:
       - frontend/dist/
