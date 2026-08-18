@@ -353,6 +353,7 @@ async def upload_cargos(session_id: str = Form(...), file: UploadFile = File(...
 
 class SessionBody(BaseModel):
     session_id: str
+    fecha_asignada: str | None = None  # YYYY-MM-DD; None = hoy (proceso vigente)
 
 
 @app.post('/normalizar')
@@ -505,7 +506,7 @@ def reporte_calidad(session_id: str = Query(...)):
     )
 
 
-@app.delete('/session')
+@app.post('/session/delete')
 def delete_session(body: SessionBody):
     _remove_session(body.session_id)
     return {'ok': True}
@@ -554,15 +555,6 @@ except ImportError:
     _NP_INT = _NP_FLOAT = type(None)
 
 
-import math as _math
-try:
-    import numpy as _np
-    _NP_INT   = _np.integer
-    _NP_FLOAT = _np.floating
-except ImportError:
-    _NP_INT = _NP_FLOAT = type(None)
-
-
 def _safe_val(v):
     if v is None: return None
     if isinstance(v, _NP_INT):   return int(v)
@@ -572,6 +564,10 @@ def _safe_val(v):
     if isinstance(v, float):
         return None if (_math.isnan(v) or _math.isinf(v)) else v
     if hasattr(v, 'isoformat'):  return v.isoformat()[:10]
+    if isinstance(v, str):
+        import re as _re
+        m = _re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', v.strip())
+        if m: return f'{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}'
     return v
 
 
@@ -583,109 +579,278 @@ def _sid(v):
     return str(v)
 
 
-@app.post('/guardar-bd')
-async def guardar_bd(body: SessionBody):
+def _cols_watch_presentes(cols_presentes):
+    COLS_WATCH = ['ayn', 'siglas', 'escalafon', 'codigo_de_registro',
+                  'literal_puesto', 'especialidad', 'unificador_de_puestos',
+                  'agrupador', 'estado', 'situacion_de_revista', 'universo_totalizador']
+    return [c for c in COLS_WATCH if c in cols_presentes]
+
+
+def _es_historico(fecha_asignada: str | None) -> bool:
+    """True si fecha_asignada es anterior a la fecha asignada del snapshot más reciente."""
+    if not fecha_asignada:
+        return False
+    conn = db_connect()
+    cur  = conn.cursor()
+    cur.execute('SELECT MAX(fecha_asignada) FROM dot_resultado_historico')
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    max_fecha = row[0]  # date o None
+    if max_fecha is None:
+        return False
+    from datetime import date
+    return date.fromisoformat(fecha_asignada) <= max_fecha
+
+
+@app.post('/diff')
+async def diff(body: SessionBody):
+    """Calcula diferencias. Si fecha_asignada es histórica, compara contra el
+    snapshot anterior más cercano en dot_resultado_historico. Si es vigente,
+    compara contra dot_resultado (estado actual)."""
     s = get_session(body.session_id)
     if not s['cruzado'] or s['automation'] is None:
         raise HTTPException(400, 'Primero completa el paso Cruzar')
 
-    proceso_id = str(uuid.uuid4())
-
     def _run():
-        import traceback as _tb
         df = s['automation'].resultado_df.copy()
         df = df.rename(columns=COL_MAP)
         cols_presentes = [c for c in BD_COLS if c in df.columns]
         df = df[cols_presentes].copy()
         df['id_sial'] = df['id_sial'].apply(_sid)
 
+        watch_presentes = _cols_watch_presentes(cols_presentes)
+        cols_cmp = list(dict.fromkeys(['id_sial', 'cuil_y_rol', 'ayn'] + watch_presentes))
+        cols_cmp = [c for c in cols_cmp if c in cols_presentes]
+
         conn = db_connect()
         cur  = conn.cursor(dictionary=True)
 
-        COLS_WATCH = ['ayn', 'siglas', 'escalafon', 'codigo_de_registro',
-                      'literal_puesto', 'especialidad', 'unificador_de_puestos',
-                      'agrupador', 'estado', 'situacion_de_revista', 'universo_totalizador']
-        watch_presentes = [c for c in COLS_WATCH if c in cols_presentes]
-        cols_cmp = list(dict.fromkeys(['id_sial'] + watch_presentes))
-        cur.execute('SELECT ' + ', '.join('`' + c + '`' for c in cols_cmp) + ' FROM dot_resultado')
-        actuales = {str(r['id_sial']): r for r in cur.fetchall()}
+        historico = _es_historico(body.fecha_asignada)
+        if historico and body.fecha_asignada:
+            # Comparar contra el snapshot inmediatamente anterior a fecha_asignada
+            cur.execute("""
+                SELECT MAX(fecha_asignada) FROM dot_resultado_historico
+                WHERE fecha_asignada < %s
+            """, (body.fecha_asignada,))
+            row = cur.fetchone()
+            fecha_ref = list(row.values())[0] if row else None
+            if fecha_ref:
+                cur.execute("""
+                    SELECT proceso_id FROM dot_resultado_historico
+                    WHERE fecha_asignada = %s LIMIT 1
+                """, (fecha_ref,))
+                pid_row = cur.fetchone()
+                pid_ref = pid_row['proceso_id'] if pid_row else None
+                if pid_ref:
+                    cols_h = [c for c in cols_cmp if c in
+                              ['id_sial','cuil_y_rol','ayn','siglas','escalafon',
+                               'codigo_de_registro','literal_puesto','especialidad',
+                               'unificador_de_puestos','agrupador','estado',
+                               'situacion_de_revista','universo_totalizador']]
+                    cur.execute('SELECT ' + ', '.join('`'+c+'`' for c in cols_h) +
+                                ' FROM dot_resultado_historico WHERE proceso_id = %s', (pid_ref,))
+                    actuales = {str(r['id_sial']): r for r in cur.fetchall()}
+                else:
+                    actuales = {}
+            else:
+                actuales = {}
+        else:
+            cur.execute('SELECT ' + ', '.join('`' + c + '`' for c in cols_cmp) + ' FROM dot_resultado')
+            actuales = {str(r['id_sial']): r for r in cur.fetchall()}
+
+        cur.close()
+        conn.close()
 
         nuevos_ids   = {r for r in df['id_sial'].dropna()}
         actuales_ids = set(actuales.keys())
-        inserts          = nuevos_ids - actuales_ids
-        deletes          = actuales_ids - nuevos_ids
-        posibles_updates = nuevos_ids & actuales_ids
 
-        ahora = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        historial = []
+        # Nuevos
+        nuevos = []
+        for _, row in df[df['id_sial'].isin(nuevos_ids - actuales_ids)].iterrows():
+            nuevos.append({
+                'id_sial':    str(row.get('id_sial') or ''),
+                'cuil_y_rol': str(row.get('cuil_y_rol') or ''),
+                'ayn':        str(row.get('ayn') or ''),
+                'siglas':     str(row.get('siglas') or ''),
+                'escalafon':  str(row.get('escalafon') or ''),
+                'literal_puesto': str(row.get('literal_puesto') or ''),
+                'especialidad':   str(row.get('especialidad') or ''),
+            })
 
-        col_names    = ', '.join('`' + c + '`' for c in cols_presentes)
-        placeholders = ', '.join(['%s'] * len(cols_presentes))
-        update_parts = ', '.join('`' + c + '`=VALUES(`' + c + '`)' for c in cols_presentes if c != 'id_sial')
-        sql_upsert = (
-            'INSERT INTO dot_resultado (' + col_names + ') VALUES (' + placeholders + ')'
-            ' ON DUPLICATE KEY UPDATE ' + update_parts + ', fecha_proceso=NOW()'
-        )
-        batch = []
-        for _, row in df.iterrows():
-            batch.append(tuple(_safe_val(row[c]) for c in cols_presentes))
-            if len(batch) == 500:
-                cur.executemany(sql_upsert, batch)
-                batch = []
-        if batch:
-            cur.executemany(sql_upsert, batch)
+        # Eliminados
+        eliminados = []
+        for id_s in (actuales_ids - nuevos_ids):
+            ant = actuales[id_s]
+            eliminados.append({
+                'id_sial':    id_s,
+                'cuil_y_rol': str(ant.get('cuil_y_rol') or ''),
+                'ayn':        str(ant.get('ayn') or ''),
+                'siglas':     str(ant.get('siglas') or ''),
+                'escalafon':  str(ant.get('escalafon') or ''),
+                'literal_puesto': str(ant.get('literal_puesto') or ''),
+                'especialidad':   str(ant.get('especialidad') or ''),
+            })
 
-        for _, row in df[df['id_sial'].isin(inserts)].iterrows():
-            historial.append((
-                proceso_id, ahora, 'insert',
-                str(row['id_sial']), str(row.get('cuil_y_rol') or ''),
-                str(row.get('ayn') or ''), None, None, None,
-            ))
-
-        for _, row in df[df['id_sial'].isin(posibles_updates)].iterrows():
+        # Modificados — agrupados por persona
+        modificados_map = {}
+        for _, row in df[df['id_sial'].isin(nuevos_ids & actuales_ids)].iterrows():
             id_s = str(row['id_sial'])
             ant  = actuales.get(id_s, {})
+            cambios = []
             for col in watch_presentes:
                 v_ant = str(_safe_val(ant.get(col)) or '')
                 v_new = str(_safe_val(row.get(col)) or '')
                 if v_ant != v_new:
-                    historial.append((
-                        proceso_id, ahora, 'update',
-                        id_s, str(row.get('cuil_y_rol') or ''),
-                        str(row.get('ayn') or ''), col,
-                        v_ant or None, v_new or None,
-                    ))
+                    cambios.append({'campo': col, 'antes': v_ant or None, 'despues': v_new or None})
+            if cambios:
+                modificados_map[id_s] = {
+                    'id_sial':    id_s,
+                    'cuil_y_rol': str(row.get('cuil_y_rol') or ''),
+                    'ayn':        str(row.get('ayn') or ''),
+                    'siglas':     str(row.get('siglas') or ''),
+                    'cambios':    cambios,
+                }
 
-        for id_s in deletes:
-            ant = actuales.get(id_s, {})
-            historial.append((
-                proceso_id, ahora, 'delete',
-                id_s, str(ant.get('cuil_y_rol') or ''),
-                str(ant.get('ayn') or ''), None, None, None,
-            ))
-        if deletes:
-            fmt = ', '.join(['%s'] * len(deletes))
-            cur.execute('DELETE FROM dot_resultado WHERE id_sial IN (' + fmt + ')', list(deletes))
+        return {
+            'nuevos':      nuevos,
+            'eliminados':  eliminados,
+            'modificados': list(modificados_map.values()),
+            'total_nuevos':      len(nuevos),
+            'total_eliminados':  len(eliminados),
+            'total_modificados': len(modificados_map),
+            'total_campos_modificados': sum(len(m['cambios']) for m in modificados_map.values()),
+        }
 
-        if historial:
-            cur.executemany(
-                'INSERT INTO dot_resultado_historial'
-                ' (proceso_id,fecha_proceso,accion,id_sial,cuil_y_rol,ayn,campo,valor_anterior,valor_nuevo)'
-                ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)',
-                historial,
-            )
+    try:
+        return await asyncio.to_thread(_run)
+    except Exception as e:
+        import traceback
+        raise HTTPException(500, str(e) + ' | ' + traceback.format_exc())
+
+
+@app.post('/guardar-bd')
+async def guardar_bd(body: SessionBody):
+    s = get_session(body.session_id)
+    if not s['cruzado'] or s['automation'] is None:
+        raise HTTPException(400, 'Primero completa el paso Cruzar')
+
+    proceso_id     = str(uuid.uuid4())
+    fecha_asignada = body.fecha_asignada  # YYYY-MM-DD o None
+    es_historico   = _es_historico(fecha_asignada)
+
+    def _run():
+        from datetime import date as _date
+        df = s['automation'].resultado_df.copy()
+        df = df.rename(columns=COL_MAP)
+        cols_presentes = [c for c in BD_COLS if c in df.columns]
+        df = df[cols_presentes].copy()
+        df['id_sial'] = df['id_sial'].apply(_sid)
+
+        watch_presentes = _cols_watch_presentes(cols_presentes)
+        ahora      = __import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        fecha_snap = fecha_asignada or str(_date.today())
+
+        conn = db_connect()
+        cur  = conn.cursor(dictionary=True)
+
+        # ── 1. Siempre guardar snapshot histórico ─────────────────────────────
+        # Verificar si ya existe un snapshot para esta fecha (evitar duplicados)
+        cur.execute('SELECT COUNT(*) as n FROM dot_resultado_historico WHERE fecha_asignada = %s', (fecha_snap,))
+        ya_existe = cur.fetchone()['n'] > 0
+        if ya_existe:
+            cur.execute('DELETE FROM dot_resultado_historico WHERE fecha_asignada = %s', (fecha_snap,))
+
+        HIST_COLS = ['id_sial','cuil','cuil_y_rol','ayn','siglas','universo_totalizador',
+                     'escalafon','codigo_de_registro','literal_puesto','especialidad',
+                     'unificador_de_puestos','agrupador','codigo_jefaturas','jefe_escalafon',
+                     'estado','situacion_de_revista']
+        hist_presentes = [c for c in HIST_COLS if c in cols_presentes]
+        h_names = ', '.join(['proceso_id','fecha_asignada','fecha_proceso'] + ['`'+c+'`' for c in hist_presentes])
+        h_ph    = ', '.join(['%s'] * (3 + len(hist_presentes)))
+        sql_hist = f'INSERT INTO dot_resultado_historico ({h_names}) VALUES ({h_ph})'
+        batch_h = []
+        for _, row in df.iterrows():
+            batch_h.append((proceso_id, fecha_snap, ahora) + tuple(_safe_val(row.get(c)) for c in hist_presentes))
+            if len(batch_h) == 500:
+                cur.executemany(sql_hist, batch_h); batch_h = []
+        if batch_h:
+            cur.executemany(sql_hist, batch_h)
+
+        # ── 2. Solo actualizar dot_resultado si NO es histórico ───────────────
+        inserts = deletes = 0
+        regs_act = campos_mod = 0
+        historial = []
+
+        if not es_historico:
+            cols_cmp = list(dict.fromkeys(['id_sial'] + watch_presentes))
+            cur.execute('SELECT ' + ', '.join('`'+c+'`' for c in cols_cmp) + ' FROM dot_resultado')
+            actuales     = {str(r['id_sial']): r for r in cur.fetchall()}
+            nuevos_ids   = set(df['id_sial'].dropna())
+            actuales_ids = set(actuales.keys())
+            ins_ids      = nuevos_ids - actuales_ids
+            del_ids      = actuales_ids - nuevos_ids
+
+            col_names    = ', '.join('`'+c+'`' for c in cols_presentes)
+            placeholders = ', '.join(['%s'] * len(cols_presentes))
+            update_parts = ', '.join('`'+c+'`=VALUES(`'+c+'`)' for c in cols_presentes if c != 'id_sial')
+            sql_upsert   = ('INSERT INTO dot_resultado ('+col_names+') VALUES ('+placeholders+')'
+                            ' ON DUPLICATE KEY UPDATE '+update_parts+', fecha_proceso=NOW()')
+            batch = []
+            for _, row in df.iterrows():
+                batch.append(tuple(_safe_val(row[c]) for c in cols_presentes))
+                if len(batch) == 500:
+                    cur.executemany(sql_upsert, batch); batch = []
+            if batch:
+                cur.executemany(sql_upsert, batch)
+
+            if del_ids:
+                cur.execute('DELETE FROM dot_resultado WHERE id_sial IN (' + ','.join(['%s']*len(del_ids)) + ')', list(del_ids))
+
+            # Historial de cambios
+            for _, row in df[df['id_sial'].isin(ins_ids)].iterrows():
+                historial.append((proceso_id, ahora, 'insert', str(row['id_sial']),
+                                  str(row.get('cuil_y_rol') or ''), str(row.get('ayn') or ''), None, None, None))
+            for _, row in df[df['id_sial'].isin(nuevos_ids & actuales_ids)].iterrows():
+                id_s = str(row['id_sial'])
+                for col in watch_presentes:
+                    v_ant = str(_safe_val(actuales[id_s].get(col)) or '')
+                    v_new = str(_safe_val(row.get(col)) or '')
+                    if v_ant != v_new:
+                        historial.append((proceso_id, ahora, 'update', id_s,
+                                          str(row.get('cuil_y_rol') or ''), str(row.get('ayn') or ''),
+                                          col, v_ant or None, v_new or None))
+            for id_s in del_ids:
+                ant = actuales[id_s]
+                historial.append((proceso_id, ahora, 'delete', id_s,
+                                  str(ant.get('cuil_y_rol') or ''), str(ant.get('ayn') or ''), None, None, None))
+
+            es_carga_inicial = 1 if not actuales else 0
+            if historial:
+                cur.executemany(
+                    'INSERT INTO dot_resultado_historial_cambios'
+                    ' (proceso_id,fecha_proceso,accion,id_sial,cuil_y_rol,ayn,campo,valor_anterior,valor_nuevo,es_carga_inicial)'
+                    ' VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)',
+                    [h + (es_carga_inicial,) for h in historial],
+                )
+
+            inserts  = len(ins_ids)
+            deletes  = len(del_ids)
+            regs_act = len({h[3] for h in historial if h[2] == 'update'})
+            campos_mod = len([h for h in historial if h[2] == 'update'])
 
         conn.commit()
         cur.close()
         conn.close()
 
-        regs_act = len({h[3] for h in historial if h[2] == 'update'})
         return {
             'proceso_id':             proceso_id,
-            'insertados':             len(inserts),
+            'fecha_asignada':         fecha_snap,
+            'es_historico':           es_historico,
+            'insertados':             inserts,
             'registros_actualizados': regs_act,
-            'campos_modificados':     len([h for h in historial if h[2] == 'update']),
-            'eliminados':             len(deletes),
+            'campos_modificados':     campos_mod,
+            'eliminados':             deletes,
+            'snapshot_guardado':      True,
         }
 
     try:
@@ -705,8 +870,9 @@ def historial(limit: int = Query(10, ge=1, le=50)):
                SUM(accion='insert')  AS insertados,
                SUM(accion='delete')  AS eliminados,
                SUM(accion='update')  AS campos_modificados,
-               COUNT(DISTINCT CASE WHEN accion='update' THEN id_sial END) AS registros_actualizados
-        FROM dot_resultado_historial
+               COUNT(DISTINCT CASE WHEN accion='update' THEN id_sial END) AS registros_actualizados,
+               MAX(es_carga_inicial) AS es_carga_inicial
+        FROM dot_resultado_historial_cambios
         GROUP BY proceso_id
         ORDER BY fecha DESC
         LIMIT %s
@@ -716,7 +882,7 @@ def historial(limit: int = Query(10, ge=1, le=50)):
     for p in procesos:
         cur.execute("""
             SELECT accion, id_sial, cuil_y_rol, ayn, campo, valor_anterior, valor_nuevo
-            FROM dot_resultado_historial
+            FROM dot_resultado_historial_cambios
             WHERE proceso_id = %s AND accion = 'update'
             ORDER BY id_sial, campo
             LIMIT 200

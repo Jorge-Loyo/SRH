@@ -30,6 +30,7 @@ const cargaMasivaDotacion = require('../modules/carga-masiva/cargaMasivaRoutes')
 const cargaMasivaPou      = require('../modules/carga-masiva/pou/pouRoutes');
 const altaCargo           = require('../modules/alta-cargo/altaCargoRoutes');
 const herramientas        = require('../modules/herramientas/herramientasRoutes');
+const dotacion            = require('../modules/dotacion/dotacionRoutes');
 
 const router = express.Router();
 
@@ -58,6 +59,7 @@ router.use('/admin/carga-masiva/dotacion', cargaMasivaDotacion);
 router.use('/admin/carga-masiva/pou', cargaMasivaPou);
 
 router.use('/herramientas', herramientas);
+router.use('/dotacion', dotacion);
 
 // ─── Módulo 2 ─────────────────────────────────────────────────────────────────
 router.use('/concursales/bajas', bajasConsolidadas);

@@ -2,7 +2,10 @@
 const path = require('path');
 try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env') }); } catch {}
 // .env.local overrides .env — usar para desarrollo local sin Docker (ej: DB_HOST=localhost)
-try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env.local'), override: true }); } catch {}
+// En modo test, no cargar .env.local para que las variables de setup.js tengan prioridad
+if (process.env.NODE_ENV !== 'test') {
+  try { require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env.local'), override: true }); } catch {}
+}
 
 // ✅ BLOQUEANTE: Validar environment crítico
 const { validateEnvironment } = require('../utils/envValidator');
@@ -27,6 +30,7 @@ const config = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     name: process.env.DB_NAME || 'salud_db',
+    ssl: toBool(process.env.DB_SSL, process.env.NODE_ENV === 'production'),
   },
   // Credenciales del admin estático (solo usadas cuando AUTH_MODE=env)
   admin: {

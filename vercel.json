@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm ci && npm run build -- --outDir dist",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

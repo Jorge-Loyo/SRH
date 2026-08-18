@@ -15,7 +15,19 @@ router.post('/admin/:tableName',            ...auth, adminInsert);
 router.put('/admin/:tableName/:id',         ...auth, adminUpdate);
 router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
 
-const PYTHON_SERVICE = 'http://localhost:5001';
+const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
+
+// health es público para que el frontend pueda verificar sin token
+router.get('/dotaneitor/health', async (req, res) => {
+  const target = `${PYTHON_SERVICE}/health`;
+  try {
+    const upstream = await fetch(target, { signal: AbortSignal.timeout(40000) });
+    const buf = await upstream.arrayBuffer();
+    res.status(upstream.status).end(Buffer.from(buf));
+  } catch {
+    res.status(503).json({ error: 'Servicio Dotaneitor no disponible' });
+  }
+});
 
 router.all('/dotaneitor/*', ...auth, async (req, res) => {
   const target = `${PYTHON_SERVICE}/${req.params[0]}${req.url.includes('?') ? '?' + req.url.split('?')[1] : ''}`;
@@ -23,6 +35,7 @@ router.all('/dotaneitor/*', ...auth, async (req, res) => {
     const isFormData = req.headers['content-type']?.includes('multipart/form-data');
     const fetchOpts = {
       method: req.method,
+      signal: AbortSignal.timeout(120000),
       headers: isFormData ? {} : { 'content-type': req.headers['content-type'] || 'application/json' },
     };
     if (!['GET', 'HEAD'].includes(req.method)) {

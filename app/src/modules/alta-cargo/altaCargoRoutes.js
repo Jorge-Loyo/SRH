@@ -1,6 +1,6 @@
 const express = require('express');
 const { listAltas, getAlta, createAlta } = require('./altaCargoController');
-const { listCarreras, listSiglas, searchBajas, listEspecialidades, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta } = require('./carrerasController');
+const { listCarreras, listSiglas, searchBajas, listEspecialidades, listEspecialidadesPuesto, listModalidades, listNewCargo, exportNewCargo, getNewCargoInfo, updateNewCargo, listEtiquetas, createEtiqueta, listPuestos, listJornadas, listTiposCargo, getDotacionKpis, getDotacionEvolucion, listRecientes } = require('./carrerasController');
 const { uploadDotacion } = require('./uploadController');
 const { authenticateJWT, authorizeRoles } = require('../../middlewares/auth');
 const { auditMiddleware }                 = require('../../middlewares/audit');
@@ -18,6 +18,9 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 
 router.get('/etiquetas',    authenticateJWT, listEtiquetas);
 router.post('/etiquetas',   authenticateJWT, authorizeRoles('admin', 'editor'), createEtiqueta);
+router.get('/puestos',        authenticateJWT, listPuestos);
+router.get('/tipos-cargo',    authenticateJWT, listTiposCargo);
+router.get('/jornadas',       authenticateJWT, listJornadas);
 router.get('/carreras',       authenticateJWT, listCarreras);
 router.get('/siglas',         authenticateJWT, listSiglas);
 router.get('/modalidades',    authenticateJWT, listModalidades);
@@ -25,8 +28,12 @@ router.get('/new-cargo',        authenticateJWT, listNewCargo);
 router.get('/new-cargo/export', authenticateJWT, exportNewCargo);
 router.get('/new-cargo/:id',    authenticateJWT, getNewCargoInfo);
 router.patch('/new-cargo/:id',  authenticateJWT, authorizeRoles('admin', 'editor'), updateNewCargo);
+router.get('/dotacion-kpis',           authenticateJWT, getDotacionKpis);
+router.get('/dotacion-kpis/evolucion', authenticateJWT, getDotacionEvolucion);
+router.get('/recientes',               authenticateJWT, listRecientes);
 router.get('/bajas/search',   authenticateJWT, searchBajas);
 router.get('/especialidades', authenticateJWT, listEspecialidades);
+router.get('/especialidades-puesto', authenticateJWT, listEspecialidadesPuesto);
 router.post('/upload-dotacion', authenticateJWT, authorizeRoles('admin', 'editor'), upload.single('file'), uploadDotacion);
 
 router.get('/',    authenticateJWT, listAltas);

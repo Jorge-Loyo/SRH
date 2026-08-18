@@ -8,54 +8,60 @@ import ErrorBoundary, { CHUNK_RELOAD_FLAG } from './components/ui/ErrorBoundary.
 
 // Páginas cargadas con lazy load para mejor performance
 const LoginPage     = lazy(() => import('./pages/LoginPage.jsx'))
-const HomePage      = lazy(() => import('./pages/vista_usuario/HomePage.jsx'))
+const HomePage      = lazy(() => import('./pages/panel/HomePage.jsx'))
 
 // Hospitales
-const HospitalesPage        = lazy(() => import('./pages/vista_hospitales/HospitalesPage.jsx'))
-const OrganizacionTablaPage = lazy(() => import('./pages/vista_hospitales/OrganizacionTablaPage.jsx'))
-const POUPage               = lazy(() => import('./pages/vista_hospitales/POUPage.jsx'))
-const POUComparativaPage    = lazy(() => import('./pages/vista_hospitales/POUComparativaPage.jsx'))
+const HospitalesPage        = lazy(() => import('./pages/hospitales/HospitalesPage.jsx'))
+const OrganizacionTablaPage = lazy(() => import('./pages/hospitales/OrganizacionTablaPage.jsx'))
+const POUPage               = lazy(() => import('./pages/hospitales/POUPage.jsx'))
+const POUComparativaPage    = lazy(() => import('./pages/hospitales/POUComparativaPage.jsx'))
 
 // Organigrama
-const OrganigramaHomePage    = lazy(() => import('./pages/vista_organigrama/OrganigramaHomePage.jsx'))
-const OrganigramaDetallePage = lazy(() => import('./pages/vista_organigrama/OrganigramaDetallePage.jsx'))
-const OrganigramaSeccionPage = lazy(() => import('./pages/vista_organigrama/OrganigramaSeccionPage.jsx'))
+const OrganigramaHomePage    = lazy(() => import('./pages/organigrama/OrganigramaHomePage.jsx'))
+const OrganigramaDetallePage = lazy(() => import('./pages/organigrama/OrganigramaDetallePage.jsx'))
+const OrganigramaSeccionPage = lazy(() => import('./pages/organigrama/OrganigramaSeccionPage.jsx'))
 
-// Tablas full
-const TablaPersonasPage = lazy(() => import('./pages/tablas_full/TablaPersonasPage.jsx'))
-const TablaCargosPage   = lazy(() => import('./pages/tablas_full/TablaCargosPage.jsx'))
-const TablaRolesPage    = lazy(() => import('./pages/tablas_full/TablaRolesPage.jsx'))
-const TablaSiglasPage   = lazy(() => import('./pages/tablas_full/TablaSiglasPage.jsx'))
+// Tablas
+const TablaPersonasPage = lazy(() => import('./pages/tablas/TablaPersonasPage.jsx'))
+const TablaCargosPage   = lazy(() => import('./pages/tablas/TablaCargosPage.jsx'))
+const TablaRolesPage    = lazy(() => import('./pages/tablas/TablaRolesPage.jsx'))
+const TablaSiglasPage   = lazy(() => import('./pages/tablas/TablaSiglasPage.jsx'))
 
 // Gestión
-const RecorridasPage    = lazy(() => import('./pages/vista_recorrida/RecorridasPage.jsx'))
-const DotacionTotalPage = lazy(() => import('./pages/vista_dotacion/DotacionTotalPage.jsx'))
+const RecorridasPage    = lazy(() => import('./pages/recorridas/RecorridasPage.jsx'))
+const DotacionTotalPage = lazy(() => import('./pages/dotacion/DotacionTotalPage.jsx'))
 
-// Módulo 2 — Bajas y Seguimiento CPH / CEETPS
-const BajasConsolidadasPage    = lazy(() => import('./pages/vista_concursales/BajasConsolidadasPage.jsx'))
-const SeguimientoCphPage       = lazy(() => import('./pages/vista_concursales/SeguimientoCphPage.jsx'))
-const SeguimientoCeetpsPage    = lazy(() => import('./pages/vista_concursales/SeguimientoCeetpsPage.jsx'))
-const TableroPage              = lazy(() => import('./pages/vista_concursales/TableroPage.jsx'))
-const ConfiguracionPage        = lazy(() => import('./pages/vista_concursales/ConfiguracionPage.jsx'))
+// Concursales
+const BajasConsolidadasPage    = lazy(() => import('./pages/concursales/BajasConsolidadasPage.jsx'))
+const SeguimientoCphPage       = lazy(() => import('./pages/concursales/SeguimientoCphPage.jsx'))
+const SeguimientoCeetpsPage    = lazy(() => import('./pages/concursales/SeguimientoCeetpsPage.jsx'))
+const TableroPage              = lazy(() => import('./pages/concursales/TableroPage.jsx'))
+const ConfiguracionPage        = lazy(() => import('./pages/concursales/ConfiguracionPage.jsx'))
+const RecientesAltasPage       = lazy(() => import('./pages/concursales/RecientesAltasPage.jsx'))
 
 // Director
-const DirectorHomePage = lazy(() => import('./pages/vista_director/DirectorHomePage.jsx'))
+const DirectorHomePage = lazy(() => import('./pages/director/DirectorHomePage.jsx'))
 
-// Alta de Cargo
-const CargosPage    = lazy(() => import('./pages/vista_alta_cargo/CargosPage.jsx'))
-const AltaCargoPage = lazy(() => import('./pages/vista_alta_cargo/AltaCargoPage.jsx'))
+// Cargos
+const CargosPage      = lazy(() => import('./pages/cargos/CargosPage.jsx'))
+const AltaCargoPage   = lazy(() => import('./pages/cargos/AltaCargoPage.jsx'))
+const ListaCargosPage   = lazy(() => import('./pages/cargos/ListaCargosPage.jsx'))
+const DotacionKpisPage  = lazy(() => import('./pages/cargos/DotacionKpisPage.jsx'))
+const SubirDataPage     = lazy(() => import('./pages/cargos/SubirDataPage.jsx'))
 
-// Seguridad (solo admin)
-const AuditoriaPage = lazy(() => import('./pages/vista_seguridad/AuditoriaPage.jsx'))
-const TokensPage    = lazy(() => import('./pages/vista_seguridad/TokensPage.jsx'))
-const UsuariosPage  = lazy(() => import('./pages/vista_seguridad/UsuariosPage.jsx'))
-const PermisosPage  = lazy(() => import('./pages/vista_seguridad/PermisosPage.jsx'))
-const CargaMasivaPage = lazy(() => import('./pages/vista_seguridad/CargaMasivaPage.jsx'))
+// Seguridad
+const AuditoriaPage = lazy(() => import('./pages/seguridad/AuditoriaPage.jsx'))
+const TokensPage    = lazy(() => import('./pages/seguridad/TokensPage.jsx'))
+const UsuariosPage  = lazy(() => import('./pages/seguridad/UsuariosPage.jsx'))
+const PermisosPage  = lazy(() => import('./pages/seguridad/PermisosPage.jsx'))
+const RolesPage     = lazy(() => import('./pages/seguridad/RolesPage.jsx'))
+const CargaMasivaPage = lazy(() => import('./pages/seguridad/CargaMasivaPage.jsx'))
 
 // Herramientas
-const TablasVistaPage  = lazy(() => import('./pages/vista_herramientas/TablasVistaPage.jsx'))
-const TablasAdminPage  = lazy(() => import('./pages/vista_herramientas/TablasAdminPage.jsx'))
-const DotaneitorPage   = lazy(() => import('./pages/vista_herramientas/DotaneitorPage.jsx'))
+const TablasVistaPage  = lazy(() => import('./pages/herramientas/TablasVistaPage.jsx'))
+const TablasAdminPage  = lazy(() => import('./pages/herramientas/TablasAdminPage.jsx'))
+const DotaneitorPage   = lazy(() => import('./pages/herramientas/DotaneitorPage.jsx'))
+const DotacionPadronPage = lazy(() => import('./pages/herramientas/DotacionPadronPage.jsx'))
 
 // Roles permitidos por sección
 const ALL_ROLES              = ['admin', 'editor', 'viewer', 'director', 'gerencia', 'concursales']
@@ -164,6 +170,9 @@ export default function App() {
                 <Route path="concursales/configuracion" element={
                   <ProtectedRoute roles={[...EDIT_ROLES, 'gerencia', 'concursales']}><ConfiguracionPage /></ProtectedRoute>
                 } />
+                <Route path="concursales/recientes" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><RecientesAltasPage /></ProtectedRoute>
+                } />
                 <Route path="modulo2/bajas" element={<Navigate to="/concursales/bajas" replace />} />
                 <Route path="modulo2/seguimiento-cph" element={<Navigate to="/concursales/seguimiento-cph" replace />} />
 
@@ -174,16 +183,22 @@ export default function App() {
 
                 {/* Cargo (Alta + Lista) */}
                 <Route path="cargos" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/lista" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="ListaCargos"><ListaCargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/kpis" element={
+                  <ProtectedRoute roles={GESTION_ROLES}><DotacionKpisPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/subir" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="SubirData"><SubirDataPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/decreto" element={
-                  <ProtectedRoute roles={EDIT_ROLES}><CargosPage /></ProtectedRoute>
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
+                } />
+                <Route path="cargos/pou" element={
+                  <ProtectedRoute roles={EDIT_ROLES} moduleKey="AltasCargo"><CargosPage /></ProtectedRoute>
                 } />
                 <Route path="cargos/alta" element={<Navigate to="/cargos" replace />} />
 
@@ -200,11 +215,17 @@ export default function App() {
                 <Route path="seguridad/permisos" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><PermisosPage /></ProtectedRoute>
                 } />
+                <Route path="seguridad/roles" element={
+                  <ProtectedRoute roles={ADMIN_ONLY}><RolesPage /></ProtectedRoute>
+                } />
                 <Route path="seguridad/carga-masiva" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><CargaMasivaPage /></ProtectedRoute>
                 } />
 
                 {/* Herramientas */}
+                <Route path="herramientas/dotacion-padron" element={
+                  <ProtectedRoute roles={EDIT_ROLES}><DotacionPadronPage /></ProtectedRoute>
+                } />
                 <Route path="herramientas/tablas-vista" element={
                   <ProtectedRoute roles={EDIT_ROLES}><TablasVistaPage /></ProtectedRoute>
                 } />

@@ -14,25 +14,33 @@ yarn-error.log*
 .env.*
 !.env.example
 
-# Archivos de Base de Datos y Dumps
+# Archivos de Base de Datos y Dumps (raíz)
 *.sql
 *.sql.save
 *.sqlite
+# Pero sí incluir el schema de referencia
+!Doc/schema_only.sql
 
 # Frameworks / Cache
 .DS_Store
+__pycache__/
+*.pyc
+*.pyo
 
 # Build del frontend
 app/public/spa/
 frontend/node_modules/
 frontend/dist/
 
-# Archivos solo para GitLab/Docker
-app/Dockerfile
+# Archivos temporales del python-service
+app/python-service/tmp/
+
+# Archivos solo para GitLab
 docker-compose.yml
 
 # Archivos temporales de Linux/Git
 *~
 
-app/public/spa/
-frontend/node_modules/
+# Archivos temporales de análisis
+app/temp_*.xlsx
+app/temp_*.csv

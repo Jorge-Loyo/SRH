@@ -19,6 +19,22 @@ function createApp(options = {}) {
   const { AppDataSource, toCsvBase64 } = options
   const app = express();
 
+  // CORS — permite el frontend en Vercel y localhost en desarrollo
+  const cors = require('cors');
+  const allowedOrigins = [
+    'https://srh-pi.vercel.app',
+    'https://srh-56558obpq-jorge-loyos-projects.vercel.app',
+    ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
+    ...(config.nodeEnv !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
+  ];
+  app.use(cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS bloqueado: ${origin}`));
+    },
+    credentials: true,
+  }));
+
   // Confiar en el proxy reverso (Nginx/Docker) para que req.ip sea la IP real del cliente
   // Sin esto, todos los usuarios comparten la misma IP del proxy y se bloquean mutuamente en rate limiting
   if (process.env.TRUST_PROXY === 'true' || process.env.TRUST_PROXY === '1') {
@@ -65,6 +81,18 @@ function createApp(options = {}) {
     res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
   });
 
+  // Landing page — también accesible en /landing.html (botón "Portal" del header)
+  app.get('/landing.html', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
+  });
+
+  // Obras — accesible en /obras.html
+  app.get('/obras.html', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.resolve(__dirname, '..', 'public', 'obras.html'));
+  });
+
   // Assets propios de la landing (CSS de Tailwind compilado, imágenes, fuente)
   // servidos desde /landing/** — ver frontend/landing/README.md para regenerarlos.
   app.use('/landing', express.static(path.resolve(__dirname, '..', 'public', 'landing'), {
@@ -72,19 +100,33 @@ function createApp(options = {}) {
     maxAge: '7d',
   }));
 
-  // Servir el frontend SPA (React) desde el resto de rutas
+  // Servir el frontend SPA (React) desde el resto de rutas — solo si existe localmente
   // Assets con hash Vite → caché 1 año; index.html → sin caché
-  app.use(express.static(path.resolve(__dirname, '..', 'public', 'spa'), {
-    etag: true,
-    maxAge: 0,
-    setHeaders: (res, filePath) => {
-      if (/[/\\]assets[/\\].+\.[a-f0-9]{8,}\.(js|css)$/.test(filePath)) {
-        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-      } else {
-        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-      }
-    },
-  }));
+  const spaDir = path.resolve(__dirname, '..', 'public', 'spa');
+  if (require('fs').existsSync(spaDir)) {
+    app.use(express.static(spaDir, {
+      etag: true,
+      maxAge: 0,
+      setHeaders: (res, filePath) => {
+        if (/[/\\]assets[/\\].+\.[a-f0-9]{8,}\.(js|css)$/.test(filePath)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        }
+      },
+    }));
+  }
+
+  // Swagger UI — solo en desarrollo
+  if (config.env !== 'production') {
+    const swaggerUi   = require('swagger-ui-express')
+    const swaggerSpec = require('./config/swagger')
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+      customSiteTitle: 'Dotacion RRHH — API Docs',
+      swaggerOptions: { persistAuthorization: true },
+    }))
+    app.get('/api/docs.json', (req, res) => res.json(swaggerSpec))
+  }
 
   // Health check endpoint
   app.get('/health', async (req, res) => {
@@ -138,10 +180,14 @@ function createApp(options = {}) {
     res.redirect(301, '/');
   });
 
-  // SPA catch-all: cualquier ruta sin handler Express la resuelve React Router
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '..', 'public', 'spa', 'index.html'));
-  });
+  // SPA catch-all: solo si el SPA está presente (no en Render con frontend en Vercel)
+  const spaIndex = path.resolve(__dirname, '..', 'public', 'spa', 'index.html');
+  const fs = require('fs');
+  if (fs.existsSync(spaIndex)) {
+    app.get('*', (req, res) => res.sendFile(spaIndex));
+  } else {
+    app.get('*', (req, res) => res.status(404).json({ error: 'Not found' }));
+  }
 
   // Generic error handler
   // ✅ BLOQUEANTE FIX: Diferencia 4xx vs 5xx, no expone stack

@@ -13,21 +13,30 @@ import LoadingScreen from '../components/ui/LoadingScreen.jsx'
  * Props:
  *   roles?: string[]  — roles permitidos. Si se omite, cualquier usuario autenticado pasa.
  */
-export function ProtectedRoute({ children, roles }) {
-  const { user, loading } = useAuth()
+export function ProtectedRoute({ children, roles, moduleKey }) {
+  const { user, loading, allowedModules } = useAuth()
   const location = useLocation()
 
-  if (loading) {
-    return <LoadingScreen />
+  if (loading) return <LoadingScreen />
+
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />
+
+  // Verificar acceso: por rol hardcodeado O por moduleKey en allowedModules
+  const hasRoleAccess = !roles || roles.includes(user.role)
+  const hasModuleAccess = !moduleKey || user.role === 'admin' || allowedModules === null
+    || (Array.isArray(allowedModules) && allowedModules.includes(moduleKey))
+
+  if (!hasRoleAccess && !hasModuleAccess) {
+    const fallback = user.role === 'director' ? '/director'
+      : user.role === 'autoridades' ? '/organigrama'
+      : '/'
+    return <Navigate to={fallback} replace />
   }
 
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
-  }
+  // Si tiene acceso por moduleKey pero no por rol, igual pasa
+  if (!hasRoleAccess && hasModuleAccess && moduleKey) return children
 
-  if (roles && !roles.includes(user.role)) {
-    // El usuario está autenticado pero no tiene el rol necesario.
-    // Director y Autoridades van a su página propia para evitar loop infinito en "/"
+  if (!hasRoleAccess) {
     const fallback = user.role === 'director' ? '/director'
       : user.role === 'autoridades' ? '/organigrama'
       : '/'

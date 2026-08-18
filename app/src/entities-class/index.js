@@ -9,6 +9,8 @@ const { User } = require('./User')
 const { RefreshToken } = require('./RefreshToken')
 const { AuditLog } = require('./AuditLog')
 const { Permission } = require('./Permission')
+const { CustomRole } = require('./CustomRole')
+const { ModulePermission } = require('./ModulePermission')
 const { Recorrida } = require('./Recorrida')
 const { Minuta } = require('./Minuta')
 const { Pou } = require('./Pou')
@@ -23,7 +25,7 @@ const { SeguimientoCeetps }  = require('../modules/seguimiento-ceetps/Seguimient
 const { CargosAlta }     = require('../modules/alta-cargo/AltaCargoEntity')
 const { RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof } = require('../modules/alta-cargo/AltaCargoSubEntities')
 
-const entities = [Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof]
+const entities = [Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof, CustomRole, ModulePermission]
 
-module.exports = { Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof, entities }
+module.exports = { Sigla, Persona, Cargo, Rol, User, RefreshToken, AuditLog, Permission, Recorrida, Minuta, Pou, BajaConsolidada, SeguimientoCph, ConjuntosConfig, SeguimientoCeetps, CargosAlta, RegistroCph, RegistroEnf, RegistroTecPou, RegistroTecPof, CustomRole, ModulePermission, entities }
 

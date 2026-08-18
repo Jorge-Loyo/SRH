@@ -42,6 +42,10 @@ const PAGE_PERMISSIONS = {
     'Tokens',
     'Usuarios',
     'Permisos',
+    // Altas de cargo
+    'AltasCargo',
+    'ListaCargos',
+    'SubirData',
   ],
   
   // EDITOR: Puede ver estructura, tablas BD, recorridas, pero NO seguridad
@@ -62,6 +66,10 @@ const PAGE_PERMISSIONS = {
     'DotacionTotal',
     'POUDetalle',
     'POUComparativa',
+    // Altas de cargo
+    'AltasCargo',
+    'ListaCargos',
+    'SubirData',
   ],
   
   // VIEWER: Puede ver estructura, organigrama, recorridas (solo lectura)
@@ -106,6 +114,10 @@ const PAGE_PERMISSIONS = {
     'SeguimientoCph',
     'SeguimientoCeetps',
     'TableroKpis',
+    // Altas de cargo
+    'AltasCargo',
+    'ListaCargos',
+    'SubirData',
   ],
 
   // GERENCIA: Igual que viewer + CRUD completo en recorridas y minutas
