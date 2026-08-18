@@ -1,6 +1,6 @@
 {
   "name": "proyecto-salud-backend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Backend Node.js + Express + TypeORM para sistema de salud (MySQL ahora, Oracle luego).",
   "main": "src/server.js",
