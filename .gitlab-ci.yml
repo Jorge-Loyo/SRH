@@ -3,6 +3,16 @@ stages:
   - build
   - deploy
 
+default:
+  # Todos los jobs de un pipeline comparten el mismo directorio de trabajo en este
+  # runner (shell executor). Si una corrida anterior dejó archivos root-owned (ej.
+  # node_modules/dist creados por un `docker run` sin --user), el `git clean` del
+  # próximo `get_sources` falla ANTES de que corra el script de ningún job. Este
+  # hook corre justo antes de eso, así que es el único lugar donde se puede arreglar.
+  hooks:
+    pre_get_sources_script:
+      - if [ -d "$CI_PROJECT_DIR" ]; then docker run --rm -v "$CI_PROJECT_DIR":/app alpine chown -R $(id -u):$(id -g) /app || true; fi
+
 chequeo_sintaxis:
   stage: validate
   script:
