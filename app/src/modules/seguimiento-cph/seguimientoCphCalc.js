@@ -20,7 +20,6 @@ function parseDate(d) {
 }
 
 function calcEstado(row) {
-  if (row.suspendido) return 'SUSPENDIDO';
   if (row.resolucion_designacion) return 'FINALIZADO';
   if (row.ee_baja && row.ee_concurso && row.fecha_baja && row.fecha_ee_concurso) return 'ACTIVO';
   return 'NO INICIADO';
@@ -28,7 +27,6 @@ function calcEstado(row) {
 
 function calcSubEstado(row) {
   if (row.fecha_dispo_desierta && row.dispo_desierta)     return 'Q-DESIERTO';
-  if (row.suspendido)                                     return 'P-SUSPENDIDO';
   if (row.cargo_sial)                                     return 'O-ALTA SIAL';
   if (row.fecha_resolucion && row.resolucion_designacion) return 'N-DESIGNADO';
   if (row.reso_a_la_firma)                                return 'M-RESO A LA FIRMA';

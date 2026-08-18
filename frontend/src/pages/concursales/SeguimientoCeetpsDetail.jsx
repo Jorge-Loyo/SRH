@@ -4,7 +4,8 @@ import BaseModal from '../../components/ui/modals/BaseModal'
 import { seguimientoCeetpsApi, configApi, bajasApi } from '../../api/concursalesApi'
 import { OPCIONES_USUARIOS_CEETPS, SIGLAS_POR_USUARIO_CEETPS, SIGLAS_DATA, OPCIONES_PUESTO_CEETPS_TODOS, isoToDmy, dmyToIso, computeEstadoConcurso, formatDateMask } from '../../utils/concursalesHelpers'
 import { applyRulesCeetps } from '../../utils/conjuntosRulesCeetps'
-import { Section, CheckField } from '../../components/ui/ConcursalesFormFields'
+import { getCasoCeetps, exportCeetpsPdf, exportCeetpsWord } from '../../utils/exportReport'
+import { Section, CheckField, ExportDropdown } from '../../components/ui/ConcursalesFormFields'
 
 const TABS = [
   { label: 'Enfermeros',      codigo: 87 },
@@ -64,9 +65,14 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     carga_horaria:            initial?.carga_horaria            ?? '',
     motivo_baja:              initial?.motivo_baja              ?? '',
     doc_respaldatoria:        initial?.doc_respaldatoria        ?? '',
+    partida_presupuestaria:   initial?.partida_presupuestaria   ?? '',
     // Solicitud de cambio
     cambio_especialidad:      initial?.cambio_especialidad      ?? 'NO',
     doc_cambio_especialidad:  initial?.doc_cambio_especialidad  ?? '',
+    // Apertura 2x18hs (excepción Enfermería — ver FORMULARIOS X CASO)
+    apertura_2x18:            initial?.apertura_2x18            ?? false,
+    informe_apertura:         initial?.informe_apertura         ?? '',
+    expediente_concurso_2:    initial?.expediente_concurso_2    ?? '',
   })
 
   const [saving, setSaving] = useState(false)
@@ -100,7 +106,7 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     'sigla_efector', 'descr_efector',
     'codigo_registro', 'cuil', 'nombre_apellido_baja', 'cargo',
     'puesto_baja', 'especialidad_baja', 'fecha_baja', 'carga_horaria',
-    'motivo_baja', 'ex_baja', 'sigla', 'efector', 'doc_respaldatoria',
+    'motivo_baja', 'ex_baja', 'sigla', 'efector', 'doc_respaldatoria', 'partida_presupuestaria',
     'tipificador_origen', 'expediente_concurso',
     'puesto_solicitado', 'dispo_llamado',
     'fecha_caratulacion', 'fecha_autorizacion', 'fecha_ifacs', 'fecha_insal', 'estado_concurso',
@@ -211,6 +217,13 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
     }
   }
 
+  // Apertura 2x18hs es una excepción exclusiva de Enfermería (código 87)
+  const esEnfermeria = Number(form.codigo_registro) === 87
+
+  // Caso del formulario (ver FORMULARIOS X CASO) — determina si corresponde el
+  // documento de Validación además del de Autorización, y qué campos lleva cada uno.
+  const caso = getCasoCeetps(form)
+
   if (readOnly) return <PipelineViewCeetps initial={initial} onClose={onClose} />
 
   return (
@@ -221,6 +234,14 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
       subtitle={isEdit ? `${initial.nombre_apellido_baja || '—'} · CUIL ${initial.cuil || '—'} · ${initial.sigla_efector || '—'}` : undefined}
       size="xl"
       borderTop="border-teal-500"
+      headerExtra={isEdit && (
+        <div className="flex items-center gap-2">
+          {caso.validacion && (
+            <ExportDropdown label="Validación" onExport={fmt => fmt === 'pdf' ? exportCeetpsPdf(form, 'validacion') : exportCeetpsWord(form, 'validacion')} />
+          )}
+          <ExportDropdown label="Autorización" onExport={fmt => fmt === 'pdf' ? exportCeetpsPdf(form, 'autorizacion') : exportCeetpsWord(form, 'autorizacion')} />
+        </div>
+      )}
     >
         <form onSubmit={handleSubmit} className="px-2 py-2 space-y-7">
 
@@ -246,6 +267,18 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
               <DateMaskField label="Fecha INSAL"                    value={form.fecha_insal}               onChange={set('fecha_insal')}                cols={1} />
               <StyledSelectField label="Puesto Solicitado"          value={form.puesto_solicitado}         onChange={set('puesto_solicitado')}          options={OPCIONES_PUESTO_CEETPS_TODOS} cols={2} />
               <Field         label="Dispo. Llamado a Concurso"      value={form.dispo_llamado}             onChange={set('dispo_llamado')}              cols={2} />
+              {esEnfermeria && (
+                <>
+                  <CheckField label="Apertura 2x18hs" value={form.apertura_2x18}
+                    onChange={setBool('apertura_2x18')} cols={1} />
+                  {form.apertura_2x18 ? (
+                    <>
+                      <Field label="N° Informe apertura"    value={form.informe_apertura}      onChange={set('informe_apertura')}      cols={1} />
+                      <Field label="2do Expediente Concurso" value={form.expediente_concurso_2} onChange={set('expediente_concurso_2')} cols={2} />
+                    </>
+                  ) : <div className="col-span-3" />}
+                </>
+              )}
             </div>
           </Section>
 
@@ -286,7 +319,8 @@ export default function SeguimientoCeetpsDetail({ initial, onSaved, onClose, rea
               <DateMaskField label="Fecha de Baja / Ampl."  value={form.fecha_baja}       onChange={set('fecha_baja')}       cols={1} disabled={hasBajaLink} />
               <Field         label="Carga Horaria"          value={form.carga_horaria}    onChange={e => { const v = e.target.value.replace(/\D/g,'').slice(0,2); setForm(p => ({...p, carga_horaria: v})) }} cols={1} disabled={hasBajaLink} />
               <Field         label="Motivo de Baja"         value={form.motivo_baja}      onChange={set('motivo_baja')}      cols={2} disabled={hasBajaLink} />
-              <Field         label="Doc. Respaldatoria"     value={form.doc_respaldatoria} onChange={set('doc_respaldatoria')} cols={4} disabled={hasBajaLink} />
+              <Field         label="Doc. Respaldatoria"     value={form.doc_respaldatoria} onChange={set('doc_respaldatoria')} cols={2} disabled={hasBajaLink} />
+              <Field         label="Partida Presupuestaria" value={form.partida_presupuestaria} onChange={set('partida_presupuestaria')} cols={2} />
             </div>
           </Section>
 
@@ -344,6 +378,11 @@ function PipelineViewCeetps({ initial, onClose }) {
         ['Dispo. Llamado',      initial?.dispo_llamado],
         ['F. IFACS',            initial?.fecha_ifacs],
         ['F. INSAL',            initial?.fecha_insal],
+        ...(initial?.apertura_2x18 ? [
+          ['Apertura 2x18hs',    'Sí'],
+          ['N° Informe apertura', initial?.informe_apertura],
+          ['2do Exp. Concurso',  initial?.expediente_concurso_2],
+        ] : []),
       ]
     },
     {
@@ -377,6 +416,7 @@ function PipelineViewCeetps({ initial, onClose }) {
         ['Carga Horaria',   initial?.carga_horaria],
         ['Motivo Baja',     initial?.motivo_baja],
         ['Doc. Respaldatoria', initial?.doc_respaldatoria],
+        ['Partida Presup.', initial?.partida_presupuestaria],
       ]
     },
     {

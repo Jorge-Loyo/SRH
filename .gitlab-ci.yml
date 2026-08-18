@@ -3,6 +3,16 @@ stages:
   - build
   - deploy
 
+default:
+  # Todos los jobs de un pipeline comparten el mismo directorio de trabajo en este
+  # runner (shell executor). Si una corrida anterior dejó archivos root-owned (ej.
+  # node_modules/dist creados por un `docker run` sin --user), el `git clean` del
+  # próximo `get_sources` falla ANTES de que corra el script de ningún job. Este
+  # hook corre justo antes de eso, así que es el único lugar donde se puede arreglar.
+  hooks:
+    pre_get_sources_script:
+      - if [ -d "$CI_PROJECT_DIR" ]; then docker run --rm -v "$CI_PROJECT_DIR":/app alpine chown -R $(id -u):$(id -g) /app || true; fi
+
 chequeo_sintaxis:
   stage: validate
   script:
@@ -12,13 +22,19 @@ chequeo_sintaxis:
 
 build_frontend:
   stage: build
-  image: core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine
   only:
     - develop
   script:
-    - cd frontend
-    - npm ci
-    - VERCEL=1 npm run build
+    - echo "Build del frontend..."
+    # Por si quedaron node_modules/dist root-owned de una corrida anterior (ver nota
+    # abajo), se los devolvemos al usuario del runner antes de tocar nada, si no el
+    # checkout de la próxima corrida no puede limpiarlos.
+    - docker run --rm -v $(pwd):/app alpine chown -R $(id -u):$(id -g) /app
+    # El runner es shell executor: ignora la keyword `image:`, por eso invocamos
+    # Docker explícitamente (mismo patrón que chequeo_sintaxis, que sí funciona).
+    # --user + HOME=/tmp: corre npm como el usuario del runner (no root), para que
+    # node_modules/dist no queden root-owned en el disco del runner.
+    - docker run --rm -v $(pwd):/app -w /app/frontend -e VERCEL=1 -e HOME=/tmp --user "$(id -u):$(id -g)" core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine sh -c "npm ci && npm run build"
   artifacts:
     paths:
       - frontend/dist/
@@ -40,7 +56,9 @@ deploy_dev:
     - chmod 600 ~/.ssh/config
   script:
     - echo "Conectando a la VM $SERVER_IP para actualizar la App Dotación..."
-    - ssh $SERVER_USER@$SERVER_IP "sudo mkdir -p /opt/dotacion-rrhh/app/public/spa"
+    # sudo mkdir crea el directorio como root; sin el chown, el scp de abajo (que
+    # corre como $SERVER_USER sin sudo) no tiene permiso de escritura ahí.
+    - ssh $SERVER_USER@$SERVER_IP "sudo mkdir -p /opt/dotacion-rrhh/app/public/spa && sudo chown -R $SERVER_USER:$SERVER_USER /opt/dotacion-rrhh/app/public/spa"
     - scp -r frontend/dist/* $SERVER_USER@$SERVER_IP:/opt/dotacion-rrhh/app/public/spa/
     - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git fetch origin develop && sudo git reset --hard origin/develop && sudo git clean -fd && sudo docker compose build --no-cache app && sudo docker compose up -d app"
     - echo "Despliegue finalizado con éxito!"

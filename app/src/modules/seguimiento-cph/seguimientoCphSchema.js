@@ -67,16 +67,16 @@ const seguimientoCphEditableFields = z.object({
   examen_publicado:      z.boolean().optional().nullable(),
   fecha_examen:          z.string().max(15).optional().nullable(),
 
-  // Orden de mérito
-  orden_merito:          z.boolean().optional().nullable(),
+  // Orden de mérito (texto libre — antes booleano)
+  orden_merito:          z.string().max(150).optional().nullable(),
   fecha_orden_merito:    z.string().max(15).optional().nullable(),
 
   // IFACS
   ifacs:                 z.boolean().optional().nullable(),
   fecha_ifacs:           z.string().max(15).optional().nullable(),
 
-  // INSAL
-  insal:                 z.boolean().optional().nullable(),
+  // INSAL (texto libre — antes booleano)
+  insal:                 z.string().max(150).optional().nullable(),
   fecha_insal:           z.string().max(15).optional().nullable(),
 
   // Designación
@@ -95,7 +95,6 @@ const seguimientoCphEditableFields = z.object({
   cargo_sial:            z.string().max(50).optional().nullable(),
 
   // Control
-  suspendido:            z.boolean().optional().nullable(),
   dispo_desierta:        z.boolean().optional().nullable(),
   fecha_dispo_desierta:  z.string().max(15).optional().nullable(),
   observaciones:         z.string().max(1000).optional().nullable(),
@@ -135,7 +134,6 @@ const seguimientoCphPaginationSchema = z.object({
   cambio_especialidad:     z.string().optional(),
   dispo_desierta:          z.string().optional(),
   tipo_baja:               z.string().optional(),
-  suspendido:              z.string().optional(),
   examen_publicado:        z.string().optional(),
   orden_merito:            z.string().optional(),
   insal:                   z.string().optional(),

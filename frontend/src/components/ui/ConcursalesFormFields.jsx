@@ -423,7 +423,7 @@ export function DateMaskField({ label, value, onChange, cols = 1, disabled = fal
   )
 }
 
-export function ExportDropdown({ onExport }) {
+export function ExportDropdown({ onExport, label = 'Exportar informe' }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
@@ -433,7 +433,7 @@ export function ExportDropdown({ onExport }) {
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
       >
         <ArrowDownTrayIcon className="w-3.5 h-3.5" />
-        Exportar informe
+        {label}
         <ChevronDownIcon className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (

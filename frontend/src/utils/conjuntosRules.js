@@ -68,10 +68,10 @@ export const CAMPOS_DISPONIBLES = [
   { key: 'q_inscriptos',            label: 'Cant. inscriptos',          type: 'number',                          group: 'Concurso' },
   { key: 'examen_publicado',        label: 'Examen publicado',          type: 'boolean', options: BOOL_OPTS, optionLabels: BOOL_LABELS, group: 'Concurso' },
   { key: 'fecha_examen',            label: 'Fecha examen',              type: 'date',                            group: 'Concurso' },
-  { key: 'orden_merito',            label: 'Orden de mérito',           type: 'boolean', options: BOOL_OPTS, optionLabels: BOOL_LABELS, group: 'Concurso' },
+  { key: 'orden_merito',            label: 'Orden de mérito',           type: 'text',                            group: 'Concurso' },
   { key: 'fecha_orden_merito',      label: 'F. orden de mérito',        type: 'date',                            group: 'Concurso' },
   { key: 'fecha_ifacs',             label: 'Fecha IFACS',               type: 'date',                            group: 'Concurso' },
-  { key: 'insal',                   label: 'INSAL',                     type: 'boolean', options: BOOL_OPTS, optionLabels: BOOL_LABELS, group: 'Concurso' },
+  { key: 'insal',                   label: 'INSAL',                     type: 'text',                            group: 'Concurso' },
   { key: 'fecha_insal',             label: 'Fecha INSAL',               type: 'date',                            group: 'Concurso' },
   // ── Designación ──────────────────────────────────────────────────────────────
   { key: 'ee_designacion',          label: 'EE designación',            type: 'text',                            group: 'Designación' },
@@ -88,7 +88,6 @@ export const CAMPOS_DISPONIBLES = [
   // ── Estado ────────────────────────────────────────────────────────────────────
   { key: 'estado',                  label: 'Estado',                    options: OPCIONES_ESTADO,                group: 'Estado' },
   { key: 'sub_estado_3',            label: 'Sub-estado 3',              options: OPCIONES_SUB_ESTADO_3,          group: 'Estado' },
-  { key: 'suspendido',              label: 'Suspendido',                type: 'boolean', options: BOOL_OPTS, optionLabels: BOOL_LABELS, group: 'Estado' },
   { key: 'cambio_especialidad',     label: 'Solicitud de cambio',       options: ['SI', 'NO'],                   group: 'Estado' },
   { key: 'dispo_desierta',          label: 'Dispo. desierta',           options: OPCIONES_DISPO_DESIERTA,        group: 'Estado' },
   { key: 'fecha_dispo_desierta',    label: 'Fecha dispo. desierta',     type: 'date',                            group: 'Estado' },
