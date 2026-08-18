@@ -1,24 +1,13 @@
-# ── Etapa 1: build del frontend ──────────────────────────────────────────────
-FROM node:18-alpine AS frontend-build
-WORKDIR /frontend
-COPY frontend/package*.json ./
-RUN npm ci
-COPY frontend/ ./
-RUN VERCEL=1 npm run build
-
-# ── Etapa 2: imagen final del backend ────────────────────────────────────────
+# imagen única — frontend buildeado por CI/Vercel
 FROM node:18-alpine
 WORKDIR /usr/src/app
 
-COPY app/package*.json ./
+COPY package*.json ./
 RUN npm ci --only=production
 
 RUN mkdir -p logs
 
-COPY app/ .
-
-# Copiamos el SPA compilado al lugar donde Express lo sirve
-COPY --from=frontend-build /frontend/dist ./public/spa
+COPY . .
 
 EXPOSE 3000
 
