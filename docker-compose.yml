@@ -41,7 +41,7 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "8092:5001"
+      - "8096:5001"
     depends_on:
       db:
         condition: service_healthy
