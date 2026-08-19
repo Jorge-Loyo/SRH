@@ -17,11 +17,11 @@ router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
 
 const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
 
-function proxyToPython(req, res, target) {
+function proxyToPython(req, res, target, timeoutMs = 25000) {
   const isFormData = req.headers['content-type']?.includes('multipart/form-data');
   const fetchOpts = {
     method: req.method,
-    signal: AbortSignal.timeout(120000),
+    signal: AbortSignal.timeout(timeoutMs),
     headers: isFormData ? {} : { 'content-type': req.headers['content-type'] || 'application/json' },
   };
   if (!['GET', 'HEAD'].includes(req.method)) {

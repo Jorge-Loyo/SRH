@@ -340,7 +340,19 @@ export default function DotaneitorPage() {
     setLoading(true); setError(null)
     addLog(STEP_LABELS[endpoint] ?? `Ejecutando ${endpoint}...`, 'info')
     try {
-      const data = await apiPost(`${BASE}/${endpoint}`, { session_id: state.sessionId })
+      // Iniciar job asíncrono
+      const { job_id } = await apiPost(`${BASE}/${endpoint}`, { session_id: state.sessionId })
+
+      // Polling hasta que termine
+      let data
+      for (let i = 0; i < 300; i++) {  // máx ~10 minutos
+        await new Promise(r => setTimeout(r, 2000))
+        const job = await apiGet(`${BASE}/job/${job_id}`)
+        if (job.status === 'done') { data = job.result; break }
+        if (job.status === 'error') throw new Error(job.error?.split('\n')[0] ?? 'Error en el servidor')
+      }
+      if (!data) throw new Error('Timeout esperando respuesta del servidor')
+
       ;(data.logs ?? []).forEach(l => {
         if (typeof l === 'string') addLog(l)
         else addLog(l.text ?? String(l), l.type)

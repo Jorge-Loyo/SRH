@@ -83,6 +83,10 @@ app.add_middleware(
 # { session_id: { automation, normalizado, procesado, cruzado, cargos_path, last_access } }
 sessions: dict = {}
 
+# ── Jobs asíncronos ───────────────────────────────────────────────────────────
+# { job_id: { status: 'pending'|'done'|'error', result, error } }
+jobs: dict = {}
+
 
 def get_session(session_id: str) -> dict:
     s = sessions.get(session_id)
@@ -371,6 +375,31 @@ class SessionBody(BaseModel):
     fecha_asignada: str | None = None  # YYYY-MM-DD; None = hoy (proceso vigente)
 
 
+def _start_job(fn, *args) -> str:
+    """Lanza fn(*args) en un thread y devuelve el job_id."""
+    jid = str(uuid.uuid4())
+    jobs[jid] = {'status': 'pending', 'result': None, 'error': None}
+
+    def _worker():
+        try:
+            result = fn(*args)
+            jobs[jid] = {'status': 'done', 'result': result, 'error': None}
+        except Exception as e:
+            import traceback
+            jobs[jid] = {'status': 'error', 'result': None, 'error': str(e) + '\n' + traceback.format_exc()}
+
+    Thread(target=_worker, daemon=True).start()
+    return jid
+
+
+@app.get('/job/{job_id}')
+def poll_job(job_id: str):
+    job = jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, 'Job no encontrado')
+    return job
+
+
 @app.post('/normalizar')
 async def normalizar(body: SessionBody):
     s = get_session(body.session_id)
@@ -381,18 +410,16 @@ async def normalizar(body: SessionBody):
         norm = NormalizadorCargos()
         df   = pd.read_excel(s['cargos_path'], sheet_name='Sheet1', dtype={'NUM_DOC': str})
         df_n = norm.normalizar(df)
-        # Sobreescribir el archivo con los datos normalizados
         with pd.ExcelWriter(s['cargos_path'], engine='openpyxl') as w:
             df_n.to_excel(w, index=False, sheet_name='Sheet1')
-        return norm.generar_lineas_reporte()
+        s['normalizado'] = True
+        logs = [{'text': '✓ Normalización completada', 'type': 'success'}]
+        for l in norm.generar_lineas_reporte():
+            logs.append({'text': l, 'type': 'info'})
+        return {'logs': logs}
 
-    lineas = await asyncio.to_thread(_run)
-    s['normalizado'] = True
-
-    logs = [{'text': '✓ Normalización completada', 'type': 'success'}]
-    for l in lineas:
-        logs.append({'text': l, 'type': 'info'})
-    return {'logs': logs}
+    jid = _start_job(_run)
+    return {'job_id': jid}
 
 
 @app.post('/procesar')
@@ -409,22 +436,17 @@ async def procesar(body: SessionBody):
         ok, msg = auto.procesar()
         if not ok:
             raise RuntimeError(msg)
-        return auto
+        s['automation'] = auto
+        s['procesado']  = True
+        s['cruzado']    = False
+        logs = [{'text': f'✓ {len(auto.resultado_df)} registros procesados', 'type': 'success'}]
+        for linea in auto.generar_lineas_reporte_calidad():
+            t = 'warning' if linea.startswith('[!]') else 'info'
+            logs.append({'text': linea, 'type': t})
+        return {'logs': logs}
 
-    try:
-        auto = await asyncio.to_thread(_run)
-    except RuntimeError as e:
-        raise HTTPException(500, str(e))
-
-    s['automation'] = auto
-    s['procesado']  = True
-    s['cruzado']    = False
-
-    logs = [{'text': f'✓ {len(auto.resultado_df)} registros procesados', 'type': 'success'}]
-    for linea in auto.generar_lineas_reporte_calidad():
-        t = 'warning' if linea.startswith('[!]') else 'info'
-        logs.append({'text': linea, 'type': t})
-    return {'logs': logs}
+    jid = _start_job(_run)
+    return {'job_id': jid}
 
 
 @app.post('/cruzar')
@@ -433,13 +455,13 @@ async def cruzar(body: SessionBody):
     if not s['procesado'] or not s['automation']:
         raise HTTPException(400, 'Primero procesá los datos')
 
-    try:
-        logs = await asyncio.to_thread(_cruzar_especialidades, s['automation'])
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    def _run():
+        logs = _cruzar_especialidades(s['automation'])
+        s['cruzado'] = True
+        return {'logs': logs}
 
-    s['cruzado'] = True
-    return {'logs': logs}
+    jid = _start_job(_run)
+    return {'job_id': jid}
 
 
 @app.get('/preview')
