@@ -16,8 +16,9 @@ router.put('/admin/:tableName/:id',         ...auth, adminUpdate);
 router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
 
 const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
+const PROXY_TIMEOUT  = process.env.NODE_ENV === 'production' ? 25000 : 600000;
 
-function proxyToPython(req, res, target, timeoutMs = 25000) {
+function proxyToPython(req, res, target, timeoutMs = PROXY_TIMEOUT) {
   const isFormData = req.headers['content-type']?.includes('multipart/form-data');
   const fetchOpts = {
     method: req.method,
