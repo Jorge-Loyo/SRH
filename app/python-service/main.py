@@ -84,8 +84,29 @@ app.add_middleware(
 sessions: dict = {}
 
 # ── Jobs asíncronos ───────────────────────────────────────────────────────────
-# { job_id: { status: 'pending'|'done'|'error', result, error } }
-jobs: dict = {}
+# En memoria + persistidos en disco para sobrevivir reinicios de Render
+JOBS_DIR = TMP_DIR / 'jobs'
+JOBS_DIR.mkdir(exist_ok=True)
+
+
+def _job_path(job_id: str) -> Path:
+    return JOBS_DIR / f'{job_id}.json'
+
+
+def _write_job(job_id: str, data: dict):
+    import json as _json
+    _job_path(job_id).write_text(_json.dumps(data, ensure_ascii=True, default=str), encoding='utf-8')
+
+
+def _read_job(job_id: str) -> dict | None:
+    import json as _json
+    p = _job_path(job_id)
+    if not p.exists():
+        return None
+    try:
+        return _json.loads(p.read_text(encoding='utf-8'))
+    except Exception:
+        return None
 
 
 def get_session(session_id: str) -> dict:
@@ -376,17 +397,18 @@ class SessionBody(BaseModel):
 
 
 def _start_job(fn, *args) -> str:
-    """Lanza fn(*args) en un thread y devuelve el job_id."""
+    """Lanza fn(*args) en un thread, persiste estado en disco y devuelve el job_id."""
     jid = str(uuid.uuid4())
-    jobs[jid] = {'status': 'pending', 'result': None, 'error': None}
+    _write_job(jid, {'status': 'pending', 'result': None, 'error': None})
 
     def _worker():
         try:
             result = fn(*args)
-            jobs[jid] = {'status': 'done', 'result': result, 'error': None}
+            _write_job(jid, {'status': 'done', 'result': result, 'error': None})
         except Exception as e:
             import traceback
-            jobs[jid] = {'status': 'error', 'result': None, 'error': str(e) + '\n' + traceback.format_exc()}
+            _write_job(jid, {'status': 'error', 'result': None,
+                             'error': str(e) + '\n' + traceback.format_exc()})
 
     Thread(target=_worker, daemon=True).start()
     return jid
@@ -394,14 +416,13 @@ def _start_job(fn, *args) -> str:
 
 @app.get('/job/{job_id}')
 def poll_job(job_id: str):
-    job = jobs.get(job_id)
+    job = _read_job(job_id)
     if not job:
         raise HTTPException(404, 'Job no encontrado')
     import json as _json
-    # ensure_ascii=True para evitar problemas de encoding en el proxy
-    content = _json.dumps(job, ensure_ascii=True, default=str)
     from fastapi.responses import Response
-    return Response(content=content, media_type='application/json')
+    return Response(content=_json.dumps(job, ensure_ascii=True, default=str),
+                    media_type='application/json')
 
 
 @app.post('/normalizar')

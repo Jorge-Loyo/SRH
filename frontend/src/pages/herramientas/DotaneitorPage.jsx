@@ -347,7 +347,14 @@ export default function DotaneitorPage() {
       let data
       for (let i = 0; i < 300; i++) {  // máx ~10 minutos
         await new Promise(r => setTimeout(r, 2000))
-        const job = await apiGet(`${BASE}/job/${job_id}`)
+        let job
+        try {
+          job = await apiGet(`${BASE}/job/${job_id}`)
+        } catch (e) {
+          // 404 = el servidor se reinició y perdió el job
+          if (e.status === 404) throw new Error('El servidor se reinició durante el proceso. Reintentá el paso.')
+          throw e
+        }
         if (job.status === 'done') { data = job.result; break }
         if (job.status === 'error') throw new Error(job.error?.split('\n')[0] ?? 'Error en el servidor')
       }
