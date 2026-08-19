@@ -36,7 +36,7 @@ function proxyToPython(req, res, target, timeoutMs = 25000) {
   return fetch(target, fetchOpts).then(async upstream => {
     res.status(upstream.status);
     upstream.headers.forEach((v, k) => {
-      if (!['transfer-encoding', 'connection', 'content-encoding'].includes(k)) res.setHeader(k, v);
+      if (!['transfer-encoding', 'connection', 'content-encoding', 'content-length'].includes(k)) res.setHeader(k, v);
     });
     const buf = await upstream.arrayBuffer();
     res.end(Buffer.from(buf));

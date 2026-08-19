@@ -397,7 +397,11 @@ def poll_job(job_id: str):
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, 'Job no encontrado')
-    return job
+    import json as _json
+    # ensure_ascii=True para evitar problemas de encoding en el proxy
+    content = _json.dumps(job, ensure_ascii=True, default=str)
+    from fastapi.responses import Response
+    return Response(content=content, media_type='application/json')
 
 
 @app.post('/normalizar')
