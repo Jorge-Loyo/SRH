@@ -87,8 +87,23 @@ sessions: dict = {}
 def get_session(session_id: str) -> dict:
     s = sessions.get(session_id)
     if not s:
-        raise HTTPException(404, 'Sesión no encontrada')
-    s['last_access'] = time()
+        # Intentar recuperar sesión desde disco (sobrevive reinicios del servidor)
+        folder = TMP_DIR / session_id
+        xlsx_files = list(folder.glob('*.xlsx')) if folder.exists() else []
+        if not xlsx_files:
+            raise HTTPException(404, 'Sesión no encontrada')
+        cargos_path = str(xlsx_files[0])
+        s = {
+            'automation':  None,
+            'normalizado': False,
+            'procesado':   False,
+            'cruzado':     False,
+            'cargos_path': cargos_path,
+            'last_access': time(),
+        }
+        sessions[session_id] = s
+    else:
+        s['last_access'] = time()
     return s
 
 
