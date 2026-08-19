@@ -48,12 +48,43 @@ async function apiDownload(path) {
 
 // ─── Badge de estado del servicio ────────────────────────────────────────────
 
-function ServiceBadge({ online }) {
-  if (online === null) return <span className="text-xs text-gray-400">Verificando servicio...</span>
+function ServiceBadge({ online, onWake }) {
+  const [waking, setWaking] = useState(false)
+
+  async function handleWake() {
+    setWaking(true)
+    await onWake()
+    setWaking(false)
+  }
+
+  if (online === null || waking) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-gray-400">
+        <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse" />
+        {waking ? 'Despertando servicio...' : 'Verificando servicio...'}
+      </span>
+    )
+  }
+  if (online) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs font-medium text-green-600">
+        <span className="w-2 h-2 rounded-full bg-green-500" />
+        Servicio activo
+      </span>
+    )
+  }
   return (
-    <span className={`flex items-center gap-1.5 text-xs font-medium ${online ? 'text-green-600' : 'text-red-500'}`}>
-      <span className={`w-2 h-2 rounded-full ${online ? 'bg-green-500' : 'bg-red-400'}`} />
-      {online ? 'Servicio activo' : 'Servicio no disponible'}
+    <span className="flex items-center gap-2">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+        <span className="w-2 h-2 rounded-full bg-red-400" />
+        Servicio no disponible
+      </span>
+      <button
+        onClick={handleWake}
+        className="flex items-center gap-1 px-2 py-0.5 text-xs rounded-md bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 transition-colors"
+      >
+        ⚡ Despertar
+      </button>
     </span>
   )
 }
@@ -208,21 +239,25 @@ export default function DotaneitorPage() {
     setLogs(l => [...l, { text, type: type ?? classifyLog(text) }])
   }, [])
 
-  // ── Health check al montar (reintenta hasta 3 veces por cold start) ─────────
+  // ── Health check ────────────────────────────────────────────────────────────
+  const checkHealth = useCallback(async (retries = 8, delay = 8000) => {
+    setOnline(null)
+    for (let i = 0; i < retries; i++) {
+      try {
+        // Despertar Python directo + proxy Node en paralelo
+        const [pyRes] = await Promise.all([
+          fetch('https://srh-python.onrender.com/health'),
+          apiGet(`${BASE}/health`).catch(() => {}),
+        ])
+        if (pyRes.ok) { setOnline(true); return }
+      } catch { /* ignorar */ }
+      if (i < retries - 1) await new Promise(r => setTimeout(r, delay))
+    }
+    setOnline(false)
+  }, [])
+
   useEffect(() => {
     let cancelled = false
-    async function checkHealth(retries = 3, delay = 8000) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          await apiGet(`${BASE}/health`)
-          if (!cancelled) setOnline(true)
-          return
-        } catch {
-          if (i < retries - 1) await new Promise(r => setTimeout(r, delay))
-        }
-      }
-      if (!cancelled) setOnline(false)
-    }
     checkHealth()
 
     apiGet(`${BASE}/ultima-actualizacion`)
@@ -393,7 +428,7 @@ export default function DotaneitorPage() {
     addLog('Sesión reiniciada.', 'info')
   }
 
-  const busy = loading || !online
+  const busy = loading
 
   return (
     <div className="max-w-4xl space-y-4">
@@ -403,7 +438,7 @@ export default function DotaneitorPage() {
         <div>
           <h1 className="text-base font-semibold text-gray-800">Dotaneitor</h1>
           <div className="flex items-center gap-3">
-            <ServiceBadge online={online} />
+            <ServiceBadge online={online} onWake={checkHealth} />
             {ultimaActualizacion && (
               <span className="text-xs text-gray-400">
                 BD actualizada: {new Date(ultimaActualizacion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
@@ -449,7 +484,7 @@ export default function DotaneitorPage() {
                 className="text-xs text-gray-400 hover:text-red-500">Cambiar</button>
             </div>
           )
-          : <DropZone onFile={handleFile} disabled={busy || !online} />
+          : <DropZone onFile={handleFile} disabled={busy} />
         }
       </div>
 
