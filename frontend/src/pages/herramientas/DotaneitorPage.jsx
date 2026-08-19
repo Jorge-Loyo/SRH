@@ -264,16 +264,16 @@ export default function DotaneitorPage() {
       .then(r => setUltimaActualizacion(r.ultima))
       .catch(() => {})
 
-    // Restaurar sesión si existe
+    // Restaurar solo el nombre del archivo (la sesión Python es efímera)
     const saved = sessionStorage.getItem('dotaneitor_session')
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        setState(s => ({ ...s, ...parsed }))
         if (parsed.cargosFile) {
-          setLogs([{ text: `Sesión restaurada — archivo: ${parsed.cargosFile}`, type: 'info' }])
+          setLogs([{ text: `Última sesión: ${parsed.cargosFile} — subí el archivo nuevamente para continuar`, type: 'info' }])
         }
       } catch { /* ignore */ }
+      sessionStorage.removeItem('dotaneitor_session')
     }
 
     return () => { cancelled = true }

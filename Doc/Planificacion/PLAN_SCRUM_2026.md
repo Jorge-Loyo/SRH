@@ -166,9 +166,8 @@ Sin Autorizar (campo: expediente_concurso)
 | INSAL                  | ✅                | ✅                   | ✅                   | ✅                   |
 | TAD (manual)           | ✅                | ✅                   | ✅                   | ✅                   |
 | Jornada (ATP/completa) | ❌                | ✅                   | ❌                   | ❌                   |
-| Modalidad POF/POU      | ✅                | ❌                   | Parcial\*            | ❌                   |
-| Situación revista      | Solo jefes/dir    | ❌                   | ❌                   | ❌                   |
-| Puestos individuales   | ✅                | ❌                   | ✅                   | ❌                   |
+| Modalidad POF/POU      | ✅                | ✅                   | ✅                   | ✅                   |
+| Situación revista      | Solo jefes/dir    | Solo jefes           | ❌                   | ❌                   |
 | Especialidades         | ✅                | ❌                   | ✅                   | ❌                   |
 
 \*TEC POU aplica solo a: Radiólogos, Hemoterapia, Anatomía Patológica, Instrumentadores Quirúrgicos.
