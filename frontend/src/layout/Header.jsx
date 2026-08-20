@@ -2,7 +2,10 @@ import React, { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
 
+const PENDIENTE_KEY = 'dotaneitor_pendiente_validacion'
+
 const SEGURIDAD_ITEMS = [
+  { to: '/seguridad/validacion',   label: 'Validación' },
   { to: '/seguridad/auditoria',    label: 'Auditoría' },
   { to: '/seguridad/tokens',       label: 'Tokens' },
   { to: '/seguridad/usuarios',     label: 'Usuarios' },
@@ -23,14 +26,17 @@ const ROLE_LABELS = {
   director: 'Director', gerencia: 'Gerencia', concursales: 'Concursales',
 }
 
-function DropdownMenu({ items, navigate, title, icon, onClose }) {
+function DropdownMenu({ items, navigate, title, onClose, hayPendiente }) {
   return (
     <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
       <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
       {items.map(item => (
         <button key={item.to} onClick={() => { navigate(item.to); onClose() }}
-          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
           {item.label}
+          {item.to === '/seguridad/validacion' && hayPendiente && (
+            <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+          )}
         </button>
       ))}
     </div>
@@ -105,6 +111,8 @@ export default function Header({ onMenuClick = () => {} }) {
   const sec    = useDropdown()
   const profile = useDropdown()
 
+  const hayPendiente = !!localStorage.getItem(PENDIENTE_KEY)
+
   const role        = user?.role ?? ''
   const roleAlias   = user?.role_alias ?? null
   const displayName = user?.username ?? user?.email ?? 'Usuario'
@@ -162,9 +170,17 @@ export default function Header({ onMenuClick = () => {} }) {
         {/* Seguridad */}
         {role === 'admin' && (
           <div ref={sec.ref} className="relative">
-            <IconButton icon={ICON_SHIELD} title="Seguridad" active={sec.open}
-              onClick={() => { sec.setOpen(v => !v); tools.setOpen(false); profile.setOpen(false) }} />
-            {sec.open && <DropdownMenu items={SEGURIDAD_ITEMS} navigate={navigate} title="Seguridad" onClose={() => sec.setOpen(false)} />}
+            <button onClick={() => { sec.setOpen(v => !v); tools.setOpen(false); profile.setOpen(false) }}
+              title="Seguridad"
+              className={`relative p-1.5 rounded-lg transition-colors ${
+                sec.open ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}>
+              {ICON_SHIELD}
+              {hayPendiente && (
+                <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-white" />
+              )}
+            </button>
+            {sec.open && <DropdownMenu items={SEGURIDAD_ITEMS} navigate={navigate} title="Seguridad" onClose={() => sec.setOpen(false)} hayPendiente={hayPendiente} />}
           </div>
         )}
 

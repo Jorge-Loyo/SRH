@@ -143,7 +143,8 @@ class DotacionAutomationBD(DotacionAutomation):
     def cargar_archivos(self, ruta_cargos, _ruta_ignorada=None):
         # 1. Leer Cargos_Salud desde el archivo subido
         try:
-            self.cargos_df = pd.read_excel(ruta_cargos, sheet_name='Sheet1', dtype={'NUM_DOC': str})
+            self.cargos_df = pd.read_excel(ruta_cargos, sheet_name='Sheet1',
+                                           dtype={'NUM_DOC': str, 'CODIGO DE REGISTRO': str})
         except FileNotFoundError:
             return False, f'No se encontró el archivo: {ruta_cargos}'
         except PermissionError:
@@ -337,6 +338,27 @@ def _remove_session(session_id: str):
             shutil.rmtree(folder, ignore_errors=True)
 
 
+def _save_df(session_id: str, df: pd.DataFrame):
+    """Persiste el DataFrame procesado en disco (parquet)."""
+    path = TMP_DIR / session_id / 'resultado.parquet'
+    # Forzar columnas object a string puro para evitar errores de pyarrow
+    # con columnas mixtas (int + str) como CODIGO DE REGISTRO
+    df = df.copy()
+    for col in df.select_dtypes(include='object').columns:
+        df[col] = df[col].where(df[col].isna(), df[col].astype(str))
+    df.to_parquet(path, index=False)
+
+
+def _load_df(session_id: str) -> pd.DataFrame | None:
+    path = TMP_DIR / session_id / 'resultado.parquet'
+    if not path.exists():
+        return None
+    try:
+        return pd.read_parquet(path)
+    except Exception:
+        return None
+
+
 Thread(target=_cleanup_loop, daemon=True).start()
 
 
@@ -393,7 +415,8 @@ async def upload_cargos(session_id: str = Form(...), file: UploadFile = File(...
 
 class SessionBody(BaseModel):
     session_id: str
-    fecha_asignada: str | None = None  # YYYY-MM-DD; None = hoy (proceso vigente)
+    fecha_asignada: str | None = None
+    excluidos: list[str] = []  # id_sial a excluir del guardado
 
 
 def _start_job(fn, *args) -> str:
@@ -433,7 +456,8 @@ async def normalizar(body: SessionBody):
 
     def _run():
         norm = NormalizadorCargos()
-        df   = pd.read_excel(s['cargos_path'], sheet_name='Sheet1', dtype={'NUM_DOC': str})
+        df   = pd.read_excel(s['cargos_path'], sheet_name='Sheet1',
+                             dtype={'NUM_DOC': str, 'CODIGO DE REGISTRO': str})
         df_n = norm.normalizar(df)
         with pd.ExcelWriter(s['cargos_path'], engine='openpyxl') as w:
             df_n.to_excel(w, index=False, sheet_name='Sheet1')
@@ -464,6 +488,7 @@ async def procesar(body: SessionBody):
         s['automation'] = auto
         s['procesado']  = True
         s['cruzado']    = False
+        _save_df(body.session_id, auto.resultado_df)
         logs = [{'text': f'✓ {len(auto.resultado_df)} registros procesados', 'type': 'success'}]
         for linea in auto.generar_lineas_reporte_calidad():
             t = 'warning' if linea.startswith('[!]') else 'info'
@@ -483,6 +508,7 @@ async def cruzar(body: SessionBody):
     def _run():
         logs = _cruzar_especialidades(s['automation'])
         s['cruzado'] = True
+        _save_df(body.session_id, s['automation'].resultado_df)
         return {'logs': logs}
 
     jid = _start_job(_run)
@@ -496,10 +522,16 @@ def preview(
     limit: int = Query(50, ge=1, le=200),
 ):
     s = get_session(session_id)
-    if not s['procesado'] or s['automation'] is None:
-        raise HTTPException(400, 'Sin datos procesados')
+    # Intentar desde memoria primero, luego desde disco
+    if s['automation'] is not None:
+        df = s['automation'].resultado_df
+    else:
+        df = _load_df(session_id)
+        if df is None:
+            raise HTTPException(400, 'Sin datos procesados')
+        s['procesado'] = True
 
-    df    = s['automation'].resultado_df
+    df    = df
     total = len(df)
     start = (page - 1) * limit
     chunk = df.iloc[start:start + limit]
@@ -649,7 +681,7 @@ def _cols_watch_presentes(cols_presentes):
 
 
 def _es_historico(fecha_asignada: str | None) -> bool:
-    """True si fecha_asignada es anterior a la fecha asignada del snapshot más reciente."""
+    """True si fecha_asignada es estrictamente anterior al snapshot más reciente."""
     if not fecha_asignada:
         return False
     conn = db_connect()
@@ -661,7 +693,7 @@ def _es_historico(fecha_asignada: str | None) -> bool:
     if max_fecha is None:
         return False
     from datetime import date
-    return date.fromisoformat(fecha_asignada) <= max_fecha
+    return date.fromisoformat(fecha_asignada) < max_fecha
 
 
 @app.post('/diff')
@@ -804,6 +836,10 @@ async def guardar_bd(body: SessionBody):
         from datetime import date as _date
         df = s['automation'].resultado_df.copy()
         df = df.rename(columns=COL_MAP)
+        # Aplicar exclusiones del usuario (id_sial a no guardar)
+        if body.excluidos:
+            excl = set(body.excluidos)
+            df = df[~df['id_sial'].apply(_sid).isin(excl)]
         cols_presentes = [c for c in BD_COLS if c in df.columns]
         df = df[cols_presentes].copy()
         df['id_sial'] = df['id_sial'].apply(_sid)

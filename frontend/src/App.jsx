@@ -56,6 +56,7 @@ const UsuariosPage  = lazy(() => import('./pages/seguridad/UsuariosPage.jsx'))
 const PermisosPage  = lazy(() => import('./pages/seguridad/PermisosPage.jsx'))
 const RolesPage     = lazy(() => import('./pages/seguridad/RolesPage.jsx'))
 const CargaMasivaPage = lazy(() => import('./pages/seguridad/CargaMasivaPage.jsx'))
+const ValidacionDotaneitorPage = lazy(() => import('./pages/seguridad/ValidacionDotaneitorPage.jsx'))
 
 // Herramientas
 const TablasVistaPage  = lazy(() => import('./pages/herramientas/TablasVistaPage.jsx'))
@@ -220,6 +221,9 @@ export default function App() {
                 } />
                 <Route path="seguridad/carga-masiva" element={
                   <ProtectedRoute roles={ADMIN_ONLY}><CargaMasivaPage /></ProtectedRoute>
+                } />
+                <Route path="seguridad/validacion" element={
+                  <ProtectedRoute roles={ADMIN_ONLY}><ValidacionDotaneitorPage /></ProtectedRoute>
                 } />
 
                 {/* Herramientas */}
