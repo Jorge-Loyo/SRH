@@ -19,9 +19,10 @@ function createApp(options = {}) {
   const { AppDataSource, toCsvBase64 } = options
   const app = express();
 
-  // CORS — permite el frontend en Vercel y localhost en desarrollo
+  // CORS — permite el frontend en Vercel, el dominio oficial y localhost en desarrollo
   const cors = require('cors');
   const allowedOrigins = [
+    'https://dotacion.buenosaires.gob.ar',
     'https://srh-pi.vercel.app',
     'https://srh-56558obpq-jorge-loyos-projects.vercel.app',
     'https://srh-pi-git-main-jorge-loyos-projects.vercel.app',
@@ -75,14 +76,10 @@ function createApp(options = {}) {
   // Logging estándar de requests HTTP
   app.use(morgan(config.env === 'production' ? 'combined' : 'dev'));
 
-  // Landing page (portal de enlaces), accesible desde el botón "Catálogo" del
+  // Landing page (portal de enlaces), accesible desde el botón "Portal" del
   // header una vez logueado. La raíz "/" vuelve a ser la SPA (login/sistema).
-  app.get('/catalogo', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-    res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));
-  });
-
-  // Landing page — también accesible en /landing.html (botón "Portal" del header)
+  // La verificación de sesión corre client-side dentro de landing.html (la cookie
+  // refreshToken tiene path=/api/auth, así que acá no llega para validarla server-side).
   app.get('/landing.html', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.resolve(__dirname, '..', 'public', 'landing.html'));

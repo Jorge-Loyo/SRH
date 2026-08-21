@@ -5,6 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Landing Page - GOPLYCO</title>
 
+    <!-- Chequeo de sesión: esta página es estática y queda fuera del router de React,
+         así que replica lo que hace AuthContext al montar — pide refresh con la cookie
+         httpOnly (path=/api/auth) y si no hay sesión válida, redirige a /login.
+         El html arranca oculto para no mostrar el contenido ni un instante antes de saber. -->
+    <style>html { visibility: hidden; }</style>
+    <script>
+        (function () {
+            fetch('/api/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            }).then(function (res) {
+                if (res.ok) {
+                    document.documentElement.style.visibility = 'visible';
+                } else {
+                    window.location.replace('/login');
+                }
+            }).catch(function () {
+                window.location.replace('/login');
+            });
+        })();
+    </script>
+
     <!-- Tailwind CSS compilado localmente (ver frontend/landing/) — antes se cargaba desde
          cdn.tailwindcss.com, pero la CSP del backend sólo permite recursos propios -->
     <link rel="stylesheet" href="/landing/landing.css">

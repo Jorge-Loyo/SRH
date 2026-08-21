@@ -83,13 +83,6 @@ const ICON_PANEL = (
   </svg>
 )
 
-const ICON_CATALOGO = (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 016.5 22H20V4H6.5A2.5 2.5 0 004 6.5v13z" />
-  </svg>
-)
-
 function useDropdown() {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -145,10 +138,6 @@ export default function Header({ onMenuClick = () => {} }) {
 
       {/* Derecha: acciones */}
       <div className="flex items-center gap-1">
-
-        {/* Catálogo */}
-        <IconButton icon={ICON_CATALOGO} title="Catálogo" active={false}
-          onClick={() => { window.open('/catalogo', '_blank', 'noopener,noreferrer') }} />
 
         {/* Obras */}
         <IconButton icon={ICON_OBRAS} title="Obras" active={false}
