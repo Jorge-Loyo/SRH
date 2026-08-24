@@ -312,13 +312,12 @@ async function getPadronCargos(req, res) {
   try {
     const rows = await AppDataSource.query(`
       SELECT DISTINCT
-        carrera      AS Carrera,
+        carrera      AS Escalafon,
         puesto       AS Puesto,
-        especialidad AS Especialidad,
-        modalidad    AS Modalidad
+        especialidad AS Especialidad
       FROM new_cargo
       WHERE estado = 'vigente'
-        AND carrera IN ('CPH', 'ENF', 'EG')
+        AND carrera IN ('CPH', 'ENF', 'EG', 'TEC')
         AND puesto NOT IN (
           'Director (01)', 'Sub-Director (03)',
           'Jefe de Departamento (02)', 'Jefe de División (04)',
@@ -329,7 +328,7 @@ async function getPadronCargos(req, res) {
           'No Aplica', 'Personal de Gabinete',
           'Planta Gabinete Transitorio', 'Personal Transitorio'
         )
-      ORDER BY carrera, puesto, especialidad, modalidad
+      ORDER BY carrera, puesto, especialidad
     `);
 
     if (!rows.length) return res.status(404).json({ error: 'Sin datos' });
@@ -337,7 +336,7 @@ async function getPadronCargos(req, res) {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Padrón de Cargos');
 
-    const HEADERS = ['Carrera', 'Puesto', 'Especialidad', 'Modalidad'];
+    const HEADERS = ['Escalafon', 'Puesto', 'Especialidad'];
     const FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
     const FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
 
@@ -350,7 +349,7 @@ async function getPadronCargos(req, res) {
     ws.getRow(1).height = 20;
 
     for (const r of rows)
-      ws.addRow([r.Carrera ?? '', r.Puesto ?? '', r.Especialidad ?? '', r.Modalidad ?? '']);
+      ws.addRow([r.Escalafon ?? '', r.Puesto ?? '', r.Especialidad ?? '']);
 
     ws.columns.forEach(col => {
       let max = 12;
