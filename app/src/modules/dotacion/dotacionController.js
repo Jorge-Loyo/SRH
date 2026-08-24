@@ -126,7 +126,7 @@ async function getKpis(req, res) {
     const sigla  = (req.query.sigla || '').trim().toUpperCase() || null;
 
     // Obtener el período más reciente disponible
-    const [[{ periodo }]] = await db.query(
+    const [{ periodo }] = await db.query(
       `SELECT r.periodo FROM roles r GROUP BY r.periodo ORDER BY r.periodo DESC LIMIT 1`
     );
 
@@ -140,7 +140,7 @@ async function getKpis(req, res) {
       : `WHERE r.periodo = ?`;
     const sp = sigla ? [periodo, sigla] : [periodo];
 
-    const [[globales], porEscalafon, porSitRevista, porSexo, porEfector] = await Promise.all([
+    const [globalesRows, porEscalafon, porSitRevista, porSexo, porEfector] = await Promise.all([
       db.query(`
         SELECT
           COUNT(*)                                                AS total,
@@ -178,6 +178,7 @@ async function getKpis(req, res) {
       `, sp),
     ]);
 
+    const globales = globalesRows[0];
     const toN = v => parseInt(v ?? 0, 10);
     const norm = rows => rows.map(r =>
       Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v]))
