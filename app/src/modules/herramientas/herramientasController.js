@@ -318,19 +318,16 @@ async function getPadronCargos(req, res) {
       FROM new_cargo nc
       LEFT JOIN puestos_cargo pc
         ON LOWER(pc.carrera) = LOWER(nc.carrera)
-        AND pc.nombre = nc.puesto
+        AND LOWER(pc.nombre) = LOWER(nc.puesto)
       WHERE nc.estado = 'vigente'
         AND nc.carrera IN ('CPH', 'ENF', 'EG', 'TEC')
-        AND (
-          nc.carrera != 'EG'
-          OR (pc.es_estructura = 0 AND pc.activo = 1)
-        )
         AND nc.puesto NOT IN (
           'Director (01)', 'Sub-Director (03)',
           'Jefe de Departamento (02)', 'Jefe de División (04)',
           'Jefe de Sección (06)', 'Jefe de Unidad (05)',
           'No Aplica'
         )
+        AND (nc.carrera != 'EG' OR (pc.es_estructura = 0 AND pc.activo = 1))
       ORDER BY nc.carrera, nc.puesto, nc.especialidad
     `);
 
