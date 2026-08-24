@@ -233,10 +233,9 @@ async function getCatalogoCargos(req, res) {
       filas.push({ escalafon: 'Enfermería', puesto: p, modalidad: '-', especialidad: '-', subespecialidad: '-' });
     }
 
-    // Escalafón General (Anexo II) — con cargos vigentes, sin jefaturas/gerencias
+    // Escalafón General (Anexo II) — todos los activos, sin jefaturas/gerencias
     const egPuestos = await AppDataSource.query(`
       SELECT DISTINCT pc.nombre FROM puestos_cargo pc
-      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
       WHERE pc.carrera = 'eg' AND pc.activo = 1 AND pc.id NOT IN (149,150,151,152,153)
       ORDER BY pc.nombre
     `);
