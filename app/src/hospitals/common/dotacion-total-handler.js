@@ -121,7 +121,16 @@ function buildWhere(query, periodo, excludeField = null) {
   return { params, whereSQL: clauses.length ? ' AND ' + clauses.join(' AND ') : '' }
 }
 
-module.exports.handleDotacionTotal = async function handleDotacionTotal({ 
+module.exports.buildWhere = buildWhere;
+module.exports.MULTI_FILTERS = MULTI_FILTERS;
+module.exports.SIGLAS_FILTERS = SIGLAS_FILTERS;
+module.exports.FROM_JOINS = `
+  FROM roles r
+  LEFT JOIN cargos c   ON r.id_cargo   = c.id_cargo   AND r.periodo = c.periodo
+  LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+  LEFT JOIN siglas s   ON r.id_sigla   = s.id_sigla
+`;
+ 
   AppDataSource, 
   req
 }) {
@@ -205,42 +214,11 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
 
     const skipDistinct = query.skipDistinct === 'true'
 
-    // ── Queries SELECT DISTINCT (saltear si solo cambió página/orden) ──
-    const distinctPromises = skipDistinct ? [] : MULTI_FILTERS.map(({ key, column }) => {
-      const { params, whereSQL: dWhereSQL } = buildWhere(query, periodo, key)
-      const sql = `
-        SELECT DISTINCT ${column} AS val
-        ${FROM_JOINS}
-        WHERE r.periodo = ? ${dWhereSQL} AND ${column} IS NOT NULL
-        ORDER BY val ASC
-      `
-      return AppDataSource.query(sql, params).then(rows => ({
-        key,
-        values: rows.map(r => r.val).filter(Boolean)
-      }))
-    })
-
-    const siglasDistinctPromises = skipDistinct ? [] : SIGLAS_FILTERS.map(({ key, column }) => {
-      const { params, whereSQL: dWhereSQL } = buildWhere(query, periodo, key)
-      const sql = `
-        SELECT DISTINCT ${column} AS val
-        ${FROM_JOINS}
-        WHERE r.periodo = ? ${dWhereSQL} AND ${column} IS NOT NULL
-        ORDER BY val ASC
-      `
-      return AppDataSource.query(sql, params).then(rows => ({
-        key,
-        values: rows.map(r => r.val).filter(Boolean)
-      }))
-    })
-
     // ── Ejecutar todo en paralelo ──────────────────────────────────────
-    const [countRows, kpiRows, dataRows, ...allDistinctResults] = await Promise.all([
+    const [countRows, kpiRows, dataRows] = await Promise.all([
       AppDataSource.query(countSQL, mainParams),
       AppDataSource.query(kpiSQL,   mainParams),
       AppDataSource.query(dataSQL,  mainParams),
-      ...distinctPromises,
-      ...siglasDistinctPromises
     ])
 
     const total = parseInt(countRows[0]?.total || 0)
@@ -256,16 +234,9 @@ module.exports.handleDotacionTotal = async function handleDotacionTotal({
       else if (n.includes('retencion'))              kpis.retencion += c
     })
 
-    // distinctValues desde los SELECT DISTINCT (MULTI_FILTERS + SIGLAS_FILTERS)
+    // distinctValues: vacío en la respuesta principal (se cargan por endpoint separado)
     const distinctValues = {}
     const siglasDistinctValues = {}
-    allDistinctResults.forEach(({ key, values }) => {
-      if (SIGLAS_FILTERS.some(f => f.key === key)) {
-        siglasDistinctValues[key] = values
-      } else {
-        distinctValues[key] = values
-      }
-    })
 
     const columns = dataRows.length > 0 ? Object.keys(dataRows[0]) : []
 

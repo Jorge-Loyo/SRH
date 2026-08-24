@@ -227,8 +227,6 @@ export default function DotacionTotalPage() {
         total: data.total || 0, kpis: data.kpis || s.kpis,
         error: null, page, perPage, sortBy, sortDir,
       }));
-      if (data.distinctValues) setDistinctValues(data.distinctValues);
-      if (data.siglasDistinctValues) setSiglasDistinctValues(data.siglasDistinctValues);
     } catch (e) {
       const msg = e instanceof ApiError ? `Error ${e.status}: ${e.message}` : (e.message || 'Error al cargar datos');
       setTableState(s => ({ ...s, loading: false, error: msg }));
@@ -254,7 +252,16 @@ export default function DotacionTotalPage() {
   }, []);
 
   useEffect(() => {
-    if (periodo) fetchData({ page: 1 });
+    if (periodo) {
+      fetchData({ page: 1 });
+      // Cargar filtros disponibles por separado (no bloquea la tabla)
+      apiGet('/api/dotacion-total/filtros', { periodo })
+        .then(d => {
+          if (d.distinctValues)      setDistinctValues(d.distinctValues);
+          if (d.siglasDistinctValues) setSiglasDistinctValues(d.siglasDistinctValues);
+        })
+        .catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo]);
 
