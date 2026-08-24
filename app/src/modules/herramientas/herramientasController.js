@@ -147,19 +147,31 @@ async function getCatalogoCargos(req, res) {
   try {
     // JOIN carreras → especialidades para armar el catálogo completo
     const rows = await AppDataSource.query(`
-      SELECT c.nombre AS carrera, c.codigo AS codigo_carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      -- Puestos NO medicos: sus especialidades via puesto_especialidades
+      SELECT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
-      WHERE pc.activo = 1
+      WHERE pc.activo = 1 AND pc.es_medico = 0
 
       UNION ALL
 
-      SELECT c.nombre AS carrera, c.codigo AS codigo_carrera, pt.nombre AS puesto, NULL AS especialidad
-      FROM puestos_tec pt
-      CROSS JOIN carreras c
-      WHERE c.codigo = 'ENF' AND pt.activo = 1
+      -- Puestos medicos (es_medico=1): todas las especialidades CPH (id_carrera=1)
+      SELECT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      FROM puestos_cargo pc
+      JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
+      CROSS JOIN especialidades e
+      WHERE pc.activo = 1 AND pc.es_medico = 1 AND e.id_carrera = 1 AND e.activo = 1
+
+      UNION ALL
+
+      SELECT 'Enfermería (Ley 6.767)' AS carrera, puesto, NULL AS especialidad
+      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION ALL SELECT 'Enfermero Profesional') enf
+
+      UNION ALL
+
+      SELECT 'Escalafón General - Enfermería (Ley 471)' AS carrera, 'Auxiliar de Enfermería' AS puesto, NULL AS especialidad
 
       ORDER BY carrera, puesto, especialidad
     `);
@@ -179,11 +191,11 @@ async function getCatalogoCargos(req, res) {
 
     // Hoja resumen con todo
     const resumenData = [
-      ['Carrera', 'Cód. Carrera', 'Puesto', 'Especialidad'],
-      ...rows.map(r => [r.carrera, r.codigo_carrera, r.puesto, r.especialidad ?? '-']),
+      ['Carrera', 'Puesto', 'Especialidad'],
+      ...rows.map(r => [r.carrera, r.puesto, r.especialidad ?? '-']),
     ];
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-    wsResumen['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 35 }, { wch: 40 }];
+    wsResumen['!cols'] = [{ wch: 40 }, { wch: 35 }, { wch: 40 }];
     XLSX.utils.book_append_sheet(wb, wsResumen, 'Catálogo Completo');
 
     // Una hoja por carrera
