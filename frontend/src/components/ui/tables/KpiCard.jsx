@@ -12,7 +12,7 @@ const KpiCard = memo(({ def, value, active, onClick }) => (
   <button
     onClick={() => def.estadoValue && onClick(def.estadoValue)}
     className={[
-      'flex flex-col items-center justify-center rounded-lg px-5 sm:px-8 py-2.5 min-w-[120px] sm:min-w-[170px] transition-all',
+      'flex flex-col items-center justify-center rounded-lg px-3 py-2 flex-1 min-w-0 transition-all',
       def.color,
       def.estadoValue
         ? active
@@ -21,8 +21,8 @@ const KpiCard = memo(({ def, value, active, onClick }) => (
         : 'cursor-default',
     ].join(' ')}
   >
-    <span className={`text-2xl font-bold ${def.textColor}`}>{(value ?? 0).toLocaleString('es-AR')}</span>
-    <span className={`text-xs mt-0.5 ${def.key === 'bloqueados' ? 'text-gray-300' : 'text-gray-500'}`}>{def.label}</span>
+    <span className={`text-xl sm:text-2xl font-bold ${def.textColor}`}>{(value ?? 0).toLocaleString('es-AR')}</span>
+    <span className={`text-[10px] sm:text-xs mt-0.5 text-center leading-tight ${def.key === 'bloqueados' ? 'text-gray-300' : 'text-gray-500'}`}>{def.label}</span>
   </button>
 ));
 KpiCard.displayName = 'KpiCard';

@@ -485,24 +485,88 @@ export default function DotacionTotalPage() {
 
       {/* KPIs + Cargos Vacantes */}
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* KPIs */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {KPI_DEFS_DOTACION.map(def => (
-              <KpiCard key={def.key} def={def}
-                value={tableState.kpis?.[def.key]}
-                active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
-                onClick={handleKpiClick} />
-            ))}
-            {estadoFilter && (
-              <button onClick={() => setEstadoFilter('')}
-                className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
-                <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
-              </button>
-            )}
-          </div>
+        <div className="flex items-stretch gap-2">
+          {KPI_DEFS_DOTACION.map(def => (
+            <KpiCard key={def.key} def={def}
+              value={tableState.kpis?.[def.key]}
+              active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
+              onClick={handleKpiClick} />
+          ))}
         </div>
+        {estadoFilter && (
+          <button onClick={() => setEstadoFilter('')}
+            className="mt-1.5 text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+            <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
+          </button>
+        )}
       </div>
+
+      {/* Chips de filtros activos */}
+      {hasActiveFilters && (
+        <div className="flex-shrink-0 px-4 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-1.5">
+          {Object.entries(filters).flatMap(([key, vals]) =>
+            vals.map(val => {
+              const label = MULTI_FILTERS.find(f => f.key === key)?.label || key;
+              return (
+                <span key={`${key}:${val}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 text-primary-800 text-xs">
+                  <span className="text-primary-500 font-medium">{label}:</span> {val}
+                  <button onClick={() => setFilters(f => ({ ...f, [key]: f[key].filter(v => v !== val) }))} className="ml-0.5 hover:text-red-600">
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
+          )}
+          {Object.entries(siglasFilters).flatMap(([key, vals]) =>
+            vals.map(val => {
+              const label = SIGLAS_FILTERS.find(f => f.key === key)?.label || key;
+              return (
+                <span key={`${key}:${val}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">
+                  <span className="text-blue-500 font-medium">{label}:</span> {val}
+                  <button onClick={() => setSiglasFilters(f => ({ ...f, [key]: f[key].filter(v => v !== val) }))} className="ml-0.5 hover:text-red-600">
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
+          )}
+          {Object.entries(quickSearch).filter(([, v]) => v.trim()).map(([key, val]) => {
+            const label = QUICK_FIELDS.find(f => f.key === key)?.label || key;
+            return (
+              <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+                <span className="text-amber-600 font-medium">{label}:</span> {val}
+                <button onClick={() => setQuickSearch(q => ({ ...q, [key]: '' }))} className="ml-0.5 hover:text-red-600">
+                  <XMarkIcon className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+          {(rangoEdad.min || rangoEdad.max) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+              Edad: {rangoEdad.min || '0'} – {rangoEdad.max || '∞'}
+              <button onClick={() => setRangoEdad({ min: '', max: '' })} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {(antiguedad.min || antiguedad.max) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+              Antigüedad: {antiguedad.min || '0'} – {antiguedad.max || '∞'}
+              <button onClick={() => setAntiguedad({ min: '', max: '' })} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {estadoFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 text-xs">
+              Estado: {estadoFilter}
+              <button onClick={() => setEstadoFilter('')} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tabla + controles */}
       <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 min-h-0">
