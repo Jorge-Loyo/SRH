@@ -1,6 +1,6 @@
 const { AppDataSource } = require('../../config/data-source');
 const logger = require('../../utils/logger');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 async function getErdSchema(req, res) {
   try {
@@ -187,34 +187,44 @@ async function getCatalogoCargos(req, res) {
       porCarrera[r.carrera].push(r);
     }
 
-    const wb = XLSX.utils.book_new();
+    const wb = new ExcelJS.Workbook();
+    const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+    const HEADER_FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
 
-    // Hoja resumen con todo
-    const resumenData = [
-      ['Carrera', 'Puesto', 'Especialidad'],
-      ...rows.map(r => [r.carrera, r.puesto, r.especialidad ?? '-']),
-    ];
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-    wsResumen['!cols'] = [{ wch: 40 }, { wch: 35 }, { wch: 40 }];
-    XLSX.utils.book_append_sheet(wb, wsResumen, 'Catálogo Completo');
-
-    // Una hoja por carrera
-    for (const [carrera, items] of Object.entries(porCarrera)) {
-      const sheetData = [
-        ['Puesto', 'Especialidad'],
-        ...items.map(r => [r.puesto, r.especialidad ?? '-']),
-      ];
-      const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      ws['!cols'] = [{ wch: 35 }, { wch: 40 }];
-      // Nombre de hoja máx 31 chars (límite Excel)
-      const sheetName = carrera.substring(0, 31);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    function addSheet(name, headers, data) {
+      const ws = wb.addWorksheet(name);
+      ws.addRow(headers);
+      ws.getRow(1).eachCell(cell => {
+        cell.fill = HEADER_FILL;
+        cell.font = HEADER_FONT;
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+      ws.getRow(1).height = 20;
+      data.forEach(r => ws.addRow(r));
+      ws.columns.forEach(col => {
+        let max = 10;
+        col.eachCell(cell => { if (cell.value) max = Math.max(max, String(cell.value).length + 2); });
+        col.width = Math.min(max, 50);
+      });
     }
 
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    addSheet('Catálogo Completo',
+      ['Carrera', 'Puesto', 'Especialidad'],
+      rows.map(r => [r.carrera, r.puesto, r.especialidad ?? '-'])
+    );
+
+    for (const [carrera, items] of Object.entries(porCarrera)) {
+      addSheet(
+        carrera.substring(0, 31),
+        ['Puesto', 'Especialidad'],
+        items.map(r => [r.puesto, r.especialidad ?? '-'])
+      );
+    }
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="catalogo-cargos.xlsx"');
-    res.send(buffer);
+    await wb.xlsx.write(res);
+    res.end();
   } catch (err) {
     logger.error('[herramientasController] getCatalogoCargos', { error: err.message });
     res.status(500).json({ error: err.message });
