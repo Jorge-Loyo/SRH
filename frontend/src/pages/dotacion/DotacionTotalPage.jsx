@@ -485,20 +485,15 @@ export default function DotacionTotalPage() {
 
       {/* KPIs + Cargos Vacantes */}
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-100">
-        <div className="flex items-stretch gap-2">
-          {KPI_DEFS_DOTACION.map(def => (
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
+          {KPI_DEFS_DOTACION.map((def, i) => (
             <KpiCard key={def.key} def={def}
               value={tableState.kpis?.[def.key]}
               active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
-              onClick={handleKpiClick} />
+              onClick={handleKpiClick}
+              colSpanFull={i === 0} />
           ))}
         </div>
-        {estadoFilter && (
-          <button onClick={() => setEstadoFilter('')}
-            className="mt-1.5 text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-            <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
-          </button>
-        )}
       </div>
 
       {/* Chips de filtros activos */}
