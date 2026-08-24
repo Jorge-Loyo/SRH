@@ -165,7 +165,7 @@ export default function DotacionTotalPage() {
   const [codigoRegistroFilter, setCodigoRegistroFilter] = useState(searchParams.get('codigo_registro') || '');
   const [distinctValues, setDistinctValues] = useState({ ...EMPTY_MULTI });
   const [siglasDistinctValues, setSiglasDistinctValues] = useState({ ...EMPTY_SIGLAS });
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [tablaAmpliada, setTablaAmpliada] = useState(false);
 
   // refs para callbacks sin dependencias
@@ -383,39 +383,62 @@ export default function DotacionTotalPage() {
 
 
 
-      {/* Panel de filtros */}
+      {/* Drawer de búsqueda avanzada */}
       {showFilters && (
-        <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b border-gray-200 space-y-3">
-          {/* Filtros de segmentación de hospitales */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Segmentación de hospitales</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {SIGLAS_FILTERS.map(({ key, label }) => (
-                <MultiSelectDropdown key={key} label={label}
-                  value={siglasFilters[key]} options={siglasDistinctValues[key] || []}
-                  onChange={v => setSiglasFilters(f => ({ ...f, [key]: v }))} />
-              ))}
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFilters(false)} />
+          {/* Panel — desliza desde la derecha */}
+          <div className="relative ml-auto w-full max-w-lg h-full bg-white shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <FunnelIcon className="w-4 h-4 text-primary-600" />
+                <span className="font-semibold text-gray-800">Búsqueda avanzada</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                    <XMarkIcon className="w-3.5 h-3.5" />Limpiar
+                  </button>
+                )}
+                <button onClick={() => setShowFilters(false)} className="p-1 rounded hover:bg-gray-100">
+                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
             </div>
-          </div>
-          {/* Filtros de dotación */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtros de dotación</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
-              {MULTI_FILTERS.map(({ key, label }) => (
-                <MultiSelectDropdown key={key} label={label}
-                  value={filters[key]} options={distinctValues[key] || []}
-                  onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
-              ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-              {QUICK_FIELDS.map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                  <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
-                    onChange={e => setQuickSearch(q => ({ ...q, [key]: e.target.value }))} />
-                </div>
-              ))}
+            {/* Contenido scrolleable */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+              {/* Segmentación hospitales */}
               <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Segmentación de hospitales</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SIGLAS_FILTERS.map(({ key, label }) => (
+                    <MultiSelectDropdown key={key} label={label}
+                      value={siglasFilters[key]} options={siglasDistinctValues[key] || []}
+                      onChange={v => setSiglasFilters(f => ({ ...f, [key]: v }))} />
+                  ))}
+                </div>
+              </div>
+              {/* Filtros de dotación */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtros de dotación</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {MULTI_FILTERS.map(({ key, label }) => (
+                    <MultiSelectDropdown key={key} label={label}
+                      value={filters[key]} options={distinctValues[key] || []}
+                      onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {QUICK_FIELDS.map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                      <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
+                        onChange={e => setQuickSearch(q => ({ ...q, [key]: e.target.value }))} />
+                    </div>
+                  ))}
+                  <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Edad</label>
                     <div className="flex items-center gap-2">
                       <input type="number" value={rangoEdad.min} min="0" max="120" placeholder="Mín."
@@ -439,6 +462,15 @@ export default function DotacionTotalPage() {
                         onChange={e => setAntiguedad(a => ({ ...a, max: e.target.value }))} />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200">
+              <button onClick={() => setShowFilters(false)}
+                className="w-full btn-primary text-sm py-2">
+                Aplicar filtros
+              </button>
             </div>
           </div>
         </div>
