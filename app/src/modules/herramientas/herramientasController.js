@@ -147,7 +147,9 @@ async function getCatalogoCargos(req, res) {
   try {
     // JOIN carreras → especialidades para armar el catálogo completo
     const rows = await AppDataSource.query(`
-      SELECT DISTINCT c.nombre AS escalafon, pc.nombre AS puesto, e.nombre AS especialidad
+      SELECT DISTINCT
+        CASE c.nombre WHEN 'Escalafón General' THEN 'Escalafón General (Anexo II)' ELSE c.nombre END AS escalafon,
+        pc.nombre AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
@@ -165,12 +167,8 @@ async function getCatalogoCargos(req, res) {
 
       UNION
 
-      SELECT 'Enfermería (Ley 6.767)' AS escalafon, puesto, NULL AS especialidad
-      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION SELECT 'Enfermero Profesional') enf
-
-      UNION
-
-      SELECT 'Escalafón General - Enfermería (Ley 471)' AS escalafon, 'Auxiliar de Enfermería' AS puesto, NULL AS especialidad
+      SELECT 'Enfermería' AS escalafon, puesto, NULL AS especialidad
+      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION SELECT 'Enfermero Profesional' UNION SELECT 'Auxiliar de Enfermería') enf
 
       ORDER BY escalafon, puesto, especialidad
     `);
