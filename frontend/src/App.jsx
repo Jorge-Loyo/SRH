@@ -27,6 +27,8 @@ const TablaCargosPage   = lazy(() => import('./pages/tablas/TablaCargosPage.jsx'
 const TablaRolesPage    = lazy(() => import('./pages/tablas/TablaRolesPage.jsx'))
 const TablaSiglasPage   = lazy(() => import('./pages/tablas/TablaSiglasPage.jsx'))
 
+const DashboardGestionPage = lazy(() => import('./pages/gestion/DashboardGestionPage.jsx'))
+
 // Gestión
 const RecorridasPage    = lazy(() => import('./pages/recorridas/RecorridasPage.jsx'))
 const DotacionTotalPage = lazy(() => import('./pages/dotacion/DotacionTotalPage.jsx'))
@@ -142,6 +144,9 @@ export default function App() {
                 } />
 
                 {/* Gestión */}
+                <Route path="gestion/dashboard" element={
+                  <ProtectedRoute roles={GESTION_ROLES}><DashboardGestionPage /></ProtectedRoute>
+                } />
                 <Route path="recorridas" element={
                   <ProtectedRoute roles={NO_DIRECTOR}><RecorridasPage /></ProtectedRoute>
                 } />

@@ -18,6 +18,18 @@ router.use(authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'director', '
  *               + filtros dinámicos (especialidad, escalafon, etc.)
  *               + export=xlsx para exportar
  */
+router.get('/filtros', async (req, res) => {
+  try {
+    const { AppDataSource } = require('../config/data-source');
+    const { handleDotacionTotalFiltros } = require('../hospitals/dotacion-pages');
+    const result = await handleDotacionTotalFiltros({ AppDataSource, req });
+    return res.json(result);
+  } catch (e) {
+    logger.error('[DotacionTotalAPI] GET /api/dotacion-total/filtros', { error: e.message });
+    return res.status(500).json({ error: e.message || 'Error interno' });
+  }
+});
+
 router.get('/', async (req, res) => {
   try {
     if (req.query.export === 'xlsx' && req.user.role === 'autoridades') {

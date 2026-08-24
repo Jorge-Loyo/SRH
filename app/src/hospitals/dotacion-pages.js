@@ -105,4 +105,33 @@ async function handleDotacionTotalPage({ AppDataSource, req }){
   return result
 }
 
-module.exports = { handleDotacionTotalPage }
+async function handleDotacionTotalFiltros({ AppDataSource, req }) {
+  if (!req.query.periodo) return { distinctValues: {}, siglasDistinctValues: {} };
+
+  const { MULTI_FILTERS, SIGLAS_FILTERS } = require('./common/dotacion-total-handler');
+  const dotacionCache = require('./common/dotacion-cache');
+  const periodo = req.query.periodo;
+
+  // Usar el caché — si ya está construido es instantáneo
+  const allRows = await dotacionCache.getRows(AppDataSource, periodo);
+
+  const distinctValues = {};
+  const siglasDistinctValues = {};
+
+  for (const { key, col, internalCol } of MULTI_FILTERS) {
+    const field = internalCol || col;
+    const vals = [...new Set(allRows.map(r => r[field]).filter(Boolean))].sort();
+    distinctValues[key] = vals;
+  }
+
+  // Siglas: Hospital ya está en la fila
+  siglasDistinctValues['sigla'] = [...new Set(allRows.map(r => r['Hospital']).filter(Boolean))].sort();
+  // universo, tipo, monovalencia no están en el caché actual — devolver vacío por ahora
+  siglasDistinctValues['universo_totalizador'] = [];
+  siglasDistinctValues['tipo_hospital_sigla']  = [];
+  siglasDistinctValues['monovalencia']         = [];
+
+  return { distinctValues, siglasDistinctValues };
+}
+
+module.exports = { handleDotacionTotalPage, handleDotacionTotalFiltros }

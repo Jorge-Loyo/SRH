@@ -123,62 +123,77 @@ async function getEstadoCargos(req, res) {
 async function getKpis(req, res) {
   try {
     const db = AppDataSource;
-    const sigla = (req.query.sigla || '').trim().toUpperCase() || null;
-    const siglaWhere = sigla ? 'WHERE siglas = ?' : '';
-    const sp = sigla ? [sigla] : [];
+    const sigla  = (req.query.sigla || '').trim().toUpperCase() || null;
 
-    const [[globales], porEscalafon, porSitRevista, porSexo, porEfector] = await Promise.all([
+    // Obtener el período más reciente disponible
+    const [{ periodo }] = await db.query(
+      `SELECT r.periodo FROM roles r GROUP BY r.periodo ORDER BY r.periodo DESC LIMIT 1`
+    );
+
+    const FROM = `
+      FROM roles r
+      LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+      LEFT JOIN siglas   s ON r.id_sigla   = s.id_sigla
+    `;
+    const WHERE = sigla
+      ? `WHERE r.periodo = ? AND s.sigla = ?`
+      : `WHERE r.periodo = ?`;
+    const sp = sigla ? [periodo, sigla] : [periodo];
+
+    const [globalesRows, porEscalafon, porSitRevista, porSexo, porEfector, porAgrupador, porUniverso, porEstado, porJefatura] = await Promise.all([
       db.query(`
         SELECT
-          COUNT(*)                                                        AS total,
-          SUM(situacion_de_revista = 'Activo')                           AS activos,
-          SUM(situacion_de_revista LIKE 'Retenci%n de Cargo')            AS retencion,
-          SUM(situacion_de_revista = 'Comisi%n')                         AS comision,
-          SUM(sexo = 'F')                                                AS mujeres,
-          SUM(sexo = 'M')                                                AS varones,
-          COUNT(DISTINCT siglas)                                         AS efectores
-        FROM dot_resultado ${siglaWhere}
+          COUNT(*)                                                AS total,
+          COUNT(DISTINCT p.cuil)                                  AS personas_unicas,
+          COUNT(DISTINCT s.sigla)                                 AS efectores,
+          SUM(r.situacion_revista = 'Activo')                     AS activos,
+          SUM(r.situacion_revista LIKE 'Retenci%n de Cargo')      AS retencion,
+          SUM(r.situacion_revista LIKE 'Comisi%n')                AS comision,
+          SUM(p.sexo = 'F')                                       AS mujeres,
+          SUM(p.sexo = 'M')                                       AS varones,
+          SUM(r.jefaturas IS NOT NULL AND r.jefaturas != '')      AS jefaturas
+        ${FROM} ${WHERE}
       `, sp),
 
+      db.query(`SELECT r.escalafon, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.escalafon ORDER BY total DESC`, sp),
+      db.query(`SELECT r.situacion_revista AS situacion, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.situacion_revista ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(p.sexo, 'Sin dato') AS sexo, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY p.sexo ORDER BY total DESC`, sp),
+
+      // Por efector con detalle
       db.query(`
-        SELECT escalafon, COUNT(*) AS total
-        FROM dot_resultado ${siglaWhere}
-        GROUP BY escalafon ORDER BY total DESC
+        SELECT s.sigla,
+          COUNT(*) AS total,
+          SUM(r.situacion_revista = 'Activo') AS activos,
+          SUM(r.situacion_revista LIKE 'Retenci%n de Cargo') AS retencion,
+          SUM(r.situacion_revista LIKE 'Comisi%n') AS comision,
+          SUM(r.jefaturas IS NOT NULL AND r.jefaturas != '') AS jefaturas
+        ${FROM} ${WHERE}
+        GROUP BY s.sigla ORDER BY total DESC
       `, sp),
 
-      db.query(`
-        SELECT situacion_de_revista AS situacion, COUNT(*) AS total
-        FROM dot_resultado ${siglaWhere}
-        GROUP BY situacion_de_revista ORDER BY total DESC
-      `, sp),
-
-      db.query(`
-        SELECT COALESCE(sexo, 'Sin dato') AS sexo, COUNT(*) AS total
-        FROM dot_resultado ${siglaWhere}
-        GROUP BY sexo ORDER BY total DESC
-      `, sp),
-
-      db.query(`
-        SELECT siglas AS sigla, COUNT(*) AS total,
-          SUM(situacion_de_revista = 'Activo') AS activos,
-          SUM(situacion_de_revista LIKE 'Retenci%n de Cargo') AS retencion,
-          SUM(situacion_de_revista LIKE 'Comisi%n') AS comision
-        FROM dot_resultado ${siglaWhere}
-        GROUP BY siglas ORDER BY total DESC LIMIT 20
-      `, sp),
+      db.query(`SELECT COALESCE(r.agrupador,'Sin agrupador') AS agrupador, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.agrupador ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(s.universo_totalizador,'Sin universo') AS universo, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY s.universo_totalizador ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(r.situacion_revista,'Sin estado') AS estado, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.situacion_revista ORDER BY total DESC`, sp),
+      db.query(`SELECT r.jefaturas AS jefe_escalafon, COUNT(*) AS total ${FROM} WHERE r.periodo = ? AND r.jefaturas IS NOT NULL AND r.jefaturas != '' ${sigla ? 'AND s.sigla = ?' : ''} GROUP BY r.jefaturas ORDER BY total DESC`, sp),
     ]);
 
+    const globales = globalesRows[0];
     const toN = v => parseInt(v ?? 0, 10);
     const norm = rows => rows.map(r =>
       Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === 'string' && /^\d+$/.test(v) ? toN(v) : v]))
     );
 
     res.json({
-      globales: Object.fromEntries(Object.entries(globales).map(([k, v]) => [k, toN(v)])),
-      porEscalafon:   norm(porEscalafon),
-      porSitRevista:  norm(porSitRevista),
-      porSexo:        norm(porSexo),
-      porEfector:     norm(porEfector),
+      periodo,
+      globales:      Object.fromEntries(Object.entries(globales).map(([k, v]) => [k, toN(v)])),
+      porEscalafon:  norm(porEscalafon),
+      porSitRevista: norm(porSitRevista),
+      porSexo:       norm(porSexo),
+      porEfector:    norm(porEfector),
+      porAgrupador:  norm(porAgrupador),
+      porUniverso:   norm(porUniverso),
+      porEstado:     norm(porEstado),
+      porJefatura:   norm(porJefatura),
     });
   } catch (e) {
     logger.error('[Dotacion] Error en getKpis', { error: e.message });

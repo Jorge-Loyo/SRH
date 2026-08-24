@@ -5,7 +5,7 @@ import { useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronUpIcon, ChevronDownIcon, ArrowLeftIcon,
   ArrowDownTrayIcon, FunnelIcon, XMarkIcon,
-  TableCellsIcon, ChevronRightIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import KpiCard, { KPI_DEFS_DOTACION } from '../../components/ui/tables/KpiCard';
 import { apiGet, ApiError } from '../../api/client';
@@ -16,6 +16,7 @@ import Spinner from '../../components/ui/Spinner';
 import TablaAmpliadaModal from '../../components/ui/TablaAmpliadaModal';
 import PeriodoSelect from '../../components/ui/PeriodoSelect';
 import { formatCellValue } from '../../utils/formatValue';
+
 
 // ─── constantes ─────────────────────────────────────────────────────────────
 
@@ -114,155 +115,7 @@ DataTable.displayName = 'DataTable';
 
 // ─── Panel de KPIs ──────────────────────────────────────────────────────────
 
-const SIT_COLORS = {
-  'Activo':              'bg-green-500',
-  'Retención de Cargo':  'bg-orange-400',
-  'Comisión':            'bg-blue-400',
-}
-const SEXO_COLORS = { F: 'bg-pink-400', M: 'bg-blue-400', NB: 'bg-purple-400', 'Sin dato': 'bg-gray-300' }
-const ESC_COLORS = ['bg-primary-500','bg-primary-400','bg-primary-300','bg-emerald-500','bg-emerald-400','bg-amber-400','bg-orange-400','bg-rose-400','bg-gray-400','bg-gray-300']
 
-function MiniBar({ pct, color }) {
-  return (
-    <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-      <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${Math.max(1, pct)}%` }} />
-    </div>
-  )
-}
-
-function KpisPanel({ onFilterSigla }) {
-  const [data, setData]       = useState(null)
-  const [open, setOpen]       = useState(true)
-  const [sigla, setSigla]     = useState('')
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    apiGet('/api/dotacion/kpis', sigla ? { sigla } : {})
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [sigla])
-
-  const g = data?.globales ?? {}
-  const total = g.total || 1
-
-  return (
-    <div className="flex-shrink-0 border-b border-gray-200 bg-white">
-      {/* Header del panel */}
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-gray-50 transition-colors"
-      >
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Panel de KPIs</span>
-        <ChevronRightIcon className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 space-y-4">
-          {/* Selector efector */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Efector:</span>
-            <select value={sigla} onChange={e => { setSigla(e.target.value); onFilterSigla?.(e.target.value) }}
-              className="form-input text-xs py-1 w-40">
-              <option value="">Todos</option>
-              {(data?.porEfector ?? []).map(r => (
-                <option key={r.sigla} value={r.sigla}>{r.sigla}</option>
-              ))}
-            </select>
-            {sigla && (
-              <button onClick={() => { setSigla(''); onFilterSigla?.('') }}
-                className="text-xs text-red-500 hover:text-red-700 flex items-center gap-0.5">
-                <XMarkIcon className="w-3 h-3" /> Quitar
-              </button>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="flex items-center gap-2 text-gray-400 text-sm py-2"><Spinner size="sm" /> Cargando...</div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-              {/* Col 1: KPI cards + barra global */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Total',      val: g.total,     cls: 'bg-gray-50 text-gray-800' },
-                    { label: 'Activos',    val: g.activos,   cls: 'bg-green-50 text-green-700' },
-                    { label: 'Retención',  val: g.retencion, cls: 'bg-orange-50 text-orange-700' },
-                    { label: 'Comisión',   val: g.comision,  cls: 'bg-blue-50 text-blue-700' },
-                    { label: 'Mujeres',    val: g.mujeres,   cls: 'bg-pink-50 text-pink-700' },
-                    { label: 'Varones',    val: g.varones,   cls: 'bg-sky-50 text-sky-700' },
-                  ].map(({ label, val, cls }) => (
-                    <div key={label} className={`rounded-lg px-3 py-2 ${cls}`}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-60">{label}</p>
-                      <p className="text-lg font-bold">{(val ?? 0).toLocaleString('es-AR')}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Barra distribución situación */}
-                <div>
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Situación de revista</p>
-                  <div className="flex rounded-full overflow-hidden h-3">
-                    {(data?.porSitRevista ?? []).map(r => (
-                      <div key={r.situacion}
-                        style={{ width: `${(r.total / total) * 100}%` }}
-                        className={`${SIT_COLORS[r.situacion] ?? 'bg-gray-300'} transition-all`}
-                        title={`${r.situacion}: ${r.total.toLocaleString('es-AR')}`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {(data?.porSitRevista ?? []).map(r => (
-                      <span key={r.situacion} className="text-[10px] text-gray-500 flex items-center gap-1">
-                        <span className={`inline-block w-2 h-2 rounded-full ${SIT_COLORS[r.situacion] ?? 'bg-gray-300'}`} />
-                        {r.situacion} ({((r.total / total) * 100).toFixed(1)}%)
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Col 2: Por escalafón */}
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Por escalafón</p>
-                <div className="space-y-1.5">
-                  {(data?.porEscalafon ?? []).map((r, i) => (
-                    <div key={r.escalafon}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <span className="text-gray-600 truncate max-w-[160px]">{r.escalafon ?? 'Sin dato'}</span>
-                        <span className="text-gray-500 font-medium ml-2">{r.total.toLocaleString('es-AR')}</span>
-                      </div>
-                      <MiniBar pct={(r.total / total) * 100} color={ESC_COLORS[i] ?? 'bg-gray-300'} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Col 3: Top efectores */}
-              <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Top efectores</p>
-                <div className="space-y-1.5">
-                  {(data?.porEfector ?? []).slice(0, 10).map(r => (
-                    <div key={r.sigla}>
-                      <div className="flex justify-between text-xs mb-0.5">
-                        <button onClick={() => { setSigla(r.sigla); onFilterSigla?.(r.sigla) }}
-                          className="text-primary-600 hover:underline font-medium">{r.sigla}</button>
-                        <span className="text-gray-500 font-medium ml-2">{r.total.toLocaleString('es-AR')}</span>
-                      </div>
-                      <MiniBar pct={(r.total / total) * 100} color="bg-primary-400" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── componente principal ────────────────────────────────────────────────────
 
@@ -312,7 +165,7 @@ export default function DotacionTotalPage() {
   const [codigoRegistroFilter, setCodigoRegistroFilter] = useState(searchParams.get('codigo_registro') || '');
   const [distinctValues, setDistinctValues] = useState({ ...EMPTY_MULTI });
   const [siglasDistinctValues, setSiglasDistinctValues] = useState({ ...EMPTY_SIGLAS });
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [tablaAmpliada, setTablaAmpliada] = useState(false);
 
   // refs para callbacks sin dependencias
@@ -374,8 +227,6 @@ export default function DotacionTotalPage() {
         total: data.total || 0, kpis: data.kpis || s.kpis,
         error: null, page, perPage, sortBy, sortDir,
       }));
-      if (data.distinctValues) setDistinctValues(data.distinctValues);
-      if (data.siglasDistinctValues) setSiglasDistinctValues(data.siglasDistinctValues);
     } catch (e) {
       const msg = e instanceof ApiError ? `Error ${e.status}: ${e.message}` : (e.message || 'Error al cargar datos');
       setTableState(s => ({ ...s, loading: false, error: msg }));
@@ -401,7 +252,16 @@ export default function DotacionTotalPage() {
   }, []);
 
   useEffect(() => {
-    if (periodo) fetchData({ page: 1 });
+    if (periodo) {
+      fetchData({ page: 1 });
+      // Cargar filtros disponibles por separado (no bloquea la tabla)
+      apiGet('/api/dotacion-total/filtros', { periodo })
+        .then(d => {
+          if (d.distinctValues)      setDistinctValues(d.distinctValues);
+          if (d.siglasDistinctValues) setSiglasDistinctValues(d.siglasDistinctValues);
+        })
+        .catch(() => {});
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo]);
 
@@ -528,42 +388,64 @@ export default function DotacionTotalPage() {
         </div>
       </div>
 
-      {/* Panel KPIs */}
-      <KpisPanel onFilterSigla={v => setSiglasFilters(f => ({ ...f, sigla: v ? [v] : [] }))} />
 
-      {/* Panel de filtros */}
+
+      {/* Drawer de búsqueda avanzada */}
       {showFilters && (
-        <div className="flex-shrink-0 px-4 py-3 bg-gray-50 border-b border-gray-200 space-y-3">
-          {/* Filtros de segmentación de hospitales */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Segmentación de hospitales</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {SIGLAS_FILTERS.map(({ key, label }) => (
-                <MultiSelectDropdown key={key} label={label}
-                  value={siglasFilters[key]} options={siglasDistinctValues[key] || []}
-                  onChange={v => setSiglasFilters(f => ({ ...f, [key]: v }))} />
-              ))}
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowFilters(false)} />
+          {/* Panel — desliza desde la derecha */}
+          <div className="relative ml-auto w-full max-w-lg h-full bg-white shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <FunnelIcon className="w-4 h-4 text-primary-600" />
+                <span className="font-semibold text-gray-800">Búsqueda avanzada</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {hasActiveFilters && (
+                  <button onClick={clearFilters} className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
+                    <XMarkIcon className="w-3.5 h-3.5" />Limpiar
+                  </button>
+                )}
+                <button onClick={() => setShowFilters(false)} className="p-1 rounded hover:bg-gray-100">
+                  <XMarkIcon className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
             </div>
-          </div>
-          {/* Filtros de dotación */}
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtros de dotación</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-3">
-              {MULTI_FILTERS.map(({ key, label }) => (
-                <MultiSelectDropdown key={key} label={label}
-                  value={filters[key]} options={distinctValues[key] || []}
-                  onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
-              ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-7 gap-3">
-              {QUICK_FIELDS.map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                  <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
-                    onChange={e => setQuickSearch(q => ({ ...q, [key]: e.target.value }))} />
-                </div>
-              ))}
+            {/* Contenido scrolleable */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+              {/* Segmentación hospitales */}
               <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Segmentación de hospitales</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {SIGLAS_FILTERS.map(({ key, label }) => (
+                    <MultiSelectDropdown key={key} label={label}
+                      value={siglasFilters[key]} options={siglasDistinctValues[key] || []}
+                      onChange={v => setSiglasFilters(f => ({ ...f, [key]: v }))} />
+                  ))}
+                </div>
+              </div>
+              {/* Filtros de dotación */}
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Filtros de dotación</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                  {MULTI_FILTERS.map(({ key, label }) => (
+                    <MultiSelectDropdown key={key} label={label}
+                      value={filters[key]} options={distinctValues[key] || []}
+                      onChange={v => setFilters(f => ({ ...f, [key]: v }))} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {QUICK_FIELDS.map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                      <input type="text" value={quickSearch[key]} placeholder={placeholder} className="form-input text-sm w-full"
+                        onChange={e => setQuickSearch(q => ({ ...q, [key]: e.target.value }))} />
+                    </div>
+                  ))}
+                  <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Edad</label>
                     <div className="flex items-center gap-2">
                       <input type="number" value={rangoEdad.min} min="0" max="120" placeholder="Mín."
@@ -587,6 +469,15 @@ export default function DotacionTotalPage() {
                         onChange={e => setAntiguedad(a => ({ ...a, max: e.target.value }))} />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+            {/* Footer */}
+            <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200">
+              <button onClick={() => setShowFilters(false)}
+                className="w-full btn-primary text-sm py-2">
+                Aplicar filtros
+              </button>
             </div>
           </div>
         </div>
@@ -594,24 +485,83 @@ export default function DotacionTotalPage() {
 
       {/* KPIs + Cargos Vacantes */}
       <div className="flex-shrink-0 px-4 py-2 bg-white border-b border-gray-100">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* KPIs */}
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {KPI_DEFS_DOTACION.map(def => (
-              <KpiCard key={def.key} def={def}
-                value={tableState.kpis?.[def.key]}
-                active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
-                onClick={handleKpiClick} />
-            ))}
-            {estadoFilter && (
-              <button onClick={() => setEstadoFilter('')}
-                className="text-xs text-red-500 hover:text-red-700 ml-2 flex items-center gap-1">
-                <XMarkIcon className="w-3.5 h-3.5" />Quitar filtro estado
-              </button>
-            )}
-          </div>
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
+          {KPI_DEFS_DOTACION.map((def, i) => (
+            <KpiCard key={def.key} def={def}
+              value={tableState.kpis?.[def.key]}
+              active={estadoFilter === def.estadoValue && def.estadoValue !== ''}
+              onClick={handleKpiClick}
+              colSpanFull={i === 0} />
+          ))}
         </div>
       </div>
+
+      {/* Chips de filtros activos */}
+      {hasActiveFilters && (
+        <div className="flex-shrink-0 px-4 py-2 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-1.5">
+          {Object.entries(filters).flatMap(([key, vals]) =>
+            vals.map(val => {
+              const label = MULTI_FILTERS.find(f => f.key === key)?.label || key;
+              return (
+                <span key={`${key}:${val}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary-100 text-primary-800 text-xs">
+                  <span className="text-primary-500 font-medium">{label}:</span> {val}
+                  <button onClick={() => setFilters(f => ({ ...f, [key]: f[key].filter(v => v !== val) }))} className="ml-0.5 hover:text-red-600">
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
+          )}
+          {Object.entries(siglasFilters).flatMap(([key, vals]) =>
+            vals.map(val => {
+              const label = SIGLAS_FILTERS.find(f => f.key === key)?.label || key;
+              return (
+                <span key={`${key}:${val}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs">
+                  <span className="text-blue-500 font-medium">{label}:</span> {val}
+                  <button onClick={() => setSiglasFilters(f => ({ ...f, [key]: f[key].filter(v => v !== val) }))} className="ml-0.5 hover:text-red-600">
+                    <XMarkIcon className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
+          )}
+          {Object.entries(quickSearch).filter(([, v]) => v.trim()).map(([key, val]) => {
+            const label = QUICK_FIELDS.find(f => f.key === key)?.label || key;
+            return (
+              <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+                <span className="text-amber-600 font-medium">{label}:</span> {val}
+                <button onClick={() => setQuickSearch(q => ({ ...q, [key]: '' }))} className="ml-0.5 hover:text-red-600">
+                  <XMarkIcon className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })}
+          {(rangoEdad.min || rangoEdad.max) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+              Edad: {rangoEdad.min || '0'} – {rangoEdad.max || '∞'}
+              <button onClick={() => setRangoEdad({ min: '', max: '' })} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {(antiguedad.min || antiguedad.max) && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs">
+              Antigüedad: {antiguedad.min || '0'} – {antiguedad.max || '∞'}
+              <button onClick={() => setAntiguedad({ min: '', max: '' })} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {estadoFilter && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 text-xs">
+              Estado: {estadoFilter}
+              <button onClick={() => setEstadoFilter('')} className="ml-0.5 hover:text-red-600">
+                <XMarkIcon className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Tabla + controles */}
       <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 min-h-0">
