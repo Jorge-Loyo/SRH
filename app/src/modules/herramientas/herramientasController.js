@@ -312,23 +312,26 @@ async function getPadronCargos(req, res) {
   try {
     const rows = await AppDataSource.query(`
       SELECT DISTINCT
-        carrera      AS Escalafon,
-        puesto       AS Puesto,
-        especialidad AS Especialidad
-      FROM new_cargo
-      WHERE estado = 'vigente'
-        AND carrera IN ('CPH', 'ENF', 'EG', 'TEC')
-        AND puesto NOT IN (
+        nc.carrera      AS Escalafon,
+        nc.puesto       AS Puesto,
+        nc.especialidad AS Especialidad
+      FROM new_cargo nc
+      LEFT JOIN puestos_cargo pc
+        ON LOWER(pc.carrera) = LOWER(nc.carrera)
+        AND pc.nombre = nc.puesto
+      WHERE nc.estado = 'vigente'
+        AND nc.carrera IN ('CPH', 'ENF', 'EG', 'TEC')
+        AND (
+          nc.carrera != 'EG'
+          OR (pc.es_estructura = 0 AND pc.activo = 1)
+        )
+        AND nc.puesto NOT IN (
           'Director (01)', 'Sub-Director (03)',
           'Jefe de Departamento (02)', 'Jefe de División (04)',
           'Jefe de Sección (06)', 'Jefe de Unidad (05)',
-          'Gerente Operativo', 'Gerente Operativo Concursado',
-          'Subgerente Operativo', 'Director General',
-          'Ministro', 'Subsecretario',
-          'No Aplica', 'Personal de Gabinete',
-          'Planta Gabinete Transitorio', 'Personal Transitorio'
+          'No Aplica'
         )
-      ORDER BY carrera, puesto, especialidad
+      ORDER BY nc.carrera, nc.puesto, nc.especialidad
     `);
 
     if (!rows.length) return res.status(404).json({ error: 'Sin datos' });
