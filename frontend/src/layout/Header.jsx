@@ -241,7 +241,29 @@ export default function Header({ onMenuClick = () => {} }) {
                 <span className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400 border border-white" />
               )}
             </button>
-            {sec.open && <DropdownMenu items={SEGURIDAD_ITEMS} navigate={navigate} title="Seguridad" onClose={() => sec.setOpen(false)} hayPendiente={hayPendiente} />}
+            {sec.open && (
+              <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Seguridad</p>
+                {SEGURIDAD_ITEMS.map(item => (
+                  <button key={item.to} onClick={() => { navigate(item.to); sec.setOpen(false) }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-between">
+                    {item.label}
+                    {item.to === '/seguridad/validacion' && hayPendiente && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                    )}
+                  </button>
+                ))}
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button onClick={() => { sec.setOpen(false); window.location.reload(true) }}
+                    className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Actualizar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
