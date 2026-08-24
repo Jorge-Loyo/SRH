@@ -145,79 +145,147 @@ async function getTableData(req, res) {
 
 async function getCatalogoCargos(req, res) {
   try {
-    // JOIN carreras → especialidades para armar el catálogo completo
-    const rows = await AppDataSource.query(`
-      SELECT DISTINCT
-        CASE c.nombre WHEN 'Escalafón General' THEN 'Escalafón General (Anexo II)' ELSE c.nombre END AS escalafon,
-        pc.nombre AS puesto, e.nombre AS especialidad
+    // ── 1. Modalidades reales por puesto CPH (desde cargos vigentes) ──────────
+    const modalidadesPuesto = await AppDataSource.query(`
+      SELECT pc.id, GROUP_CONCAT(DISTINCT m.id_cod ORDER BY m.id_cod) AS modalidades
       FROM puestos_cargo pc
-      JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
+      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
+      JOIN modalidades m ON m.id = nc.id_modalidad
+      WHERE pc.carrera = 'cph' AND pc.activo = 1
+      GROUP BY pc.id
+    `);
+    const modMap = {};
+    for (const r of modalidadesPuesto) modMap[r.id] = r.modalidades.split(',');
+
+    // ── 2. CPH no médicos con sus especialidades ──────────────────────────────
+    const noMedicos = await AppDataSource.query(`
+      SELECT DISTINCT pc.id, pc.nombre AS profesion, e.nombre AS subespecialidad
+      FROM puestos_cargo pc
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
-      WHERE pc.activo = 1 AND pc.es_medico = 0
-        AND pc.id NOT IN (149, 150, 151, 152, 153)
-
-      UNION
-
-      SELECT c.nombre AS escalafon, 'Médico' AS puesto, e.nombre AS especialidad
-      FROM puestos_cargo pc
-      JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
-      CROSS JOIN especialidades e
-      WHERE pc.activo = 1 AND pc.es_medico = 1 AND pc.nombre = 'MEDICO'
-        AND e.id_carrera = 1 AND e.activo = 1 AND e.id <= 78
-
-      UNION
-
-      SELECT 'Enfermería' AS escalafon, puesto, NULL AS especialidad
-      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION SELECT 'Enfermero Profesional' UNION SELECT 'Auxiliar de Enfermería') enf
-
-      ORDER BY escalafon, puesto, especialidad
+      WHERE pc.carrera = 'cph' AND pc.activo = 1 AND pc.es_medico = 0
+      ORDER BY pc.nombre, e.nombre
     `);
 
-    if (!rows.length) {
-      return res.status(404).json({ error: 'Sin datos' });
+    // ── 3. CPH médico con especialidades médicas (id<=78) ─────────────────────
+    const medicos = await AppDataSource.query(`
+      SELECT DISTINCT e.nombre AS especialidad_raw
+      FROM especialidades e
+      WHERE e.id_carrera = 1 AND e.activo = 1 AND e.id <= 78
+      ORDER BY e.nombre
+    `);
+
+    // ── 4. Modalidades del puesto MEDICO (id=10) ──────────────────────────────
+    const modMedico = modMap[10] ?? ['POF'];
+
+    // ── 5. Construir filas ────────────────────────────────────────────────────
+    // Helper: separar especialidad y subespecialidad del paréntesis
+    function splitEsp(nombre) {
+      if (!nombre) return ['-', '-'];
+      const m = nombre.match(/^(.+?)\s*\((.+)\)\s*$/);
+      return m ? [m[1].trim(), m[2].trim()] : [nombre.trim(), '-'];
     }
 
-    // Agrupar por carrera para generar una hoja por carrera
-    const porCarrera = {};
-    for (const r of rows) {
-      if (!porCarrera[r.escalafon]) porCarrera[r.escalafon] = [];
-      porCarrera[r.escalafon].push(r);
+    const filas = [];
+
+    // CPH no médicos → una fila por (profesion × modalidad × subespecialidad)
+    for (const r of noMedicos) {
+      const mods = modMap[r.id] ?? ['POF'];
+      for (const mod of mods) {
+        filas.push({
+          escalafon: 'CPH',
+          puesto: 'No Médico',
+          modalidad: mod,
+          especialidad: r.profesion,
+          subespecialidad: r.subespecialidad ?? '-',
+        });
+      }
     }
 
-    const wb = new ExcelJS.Workbook();
+    // CPH médico → una fila por (modalidad × especialidad)
+    for (const r of medicos) {
+      const [esp, subesp] = splitEsp(r.especialidad_raw);
+      for (const mod of modMedico) {
+        filas.push({
+          escalafon: 'CPH',
+          puesto: 'Médico',
+          modalidad: mod,
+          especialidad: esp,
+          subespecialidad: subesp,
+        });
+      }
+    }
+
+    // Enfermería (hardcoded, sin modalidad)
+    for (const p of ['Licenciado en Enfermería', 'Enfermero Profesional', 'Auxiliar de Enfermería']) {
+      filas.push({ escalafon: 'Enfermería', puesto: p, modalidad: '-', especialidad: '-', subespecialidad: '-' });
+    }
+
+    // Escalafón General (Anexo II) — activos, sin jefaturas/gerencias
+    const egPuestos = await AppDataSource.query(`
+      SELECT nombre FROM puestos_cargo
+      WHERE carrera = 'eg' AND activo = 1 AND id NOT IN (149,150,151,152,153)
+      ORDER BY nombre
+    `);
+    for (const r of egPuestos) {
+      filas.push({ escalafon: 'Escalafón General (Anexo II)', puesto: r.nombre, modalidad: '-', especialidad: '-', subespecialidad: '-' });
+    }
+
+    // Técnico
+    const tecPuestos = await AppDataSource.query(`
+      SELECT pc.nombre, GROUP_CONCAT(DISTINCT m.id_cod ORDER BY m.id_cod) AS modalidades
+      FROM puestos_cargo pc
+      LEFT JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
+      LEFT JOIN modalidades m ON m.id = nc.id_modalidad
+      WHERE pc.carrera = 'tec' AND pc.activo = 1
+      GROUP BY pc.id, pc.nombre
+      ORDER BY pc.nombre
+    `);
+    for (const r of tecPuestos) {
+      const mods = r.modalidades ? r.modalidades.split(',') : ['-'];
+      for (const mod of mods) {
+        filas.push({ escalafon: 'Técnico', puesto: r.nombre, modalidad: mod, especialidad: '-', subespecialidad: '-' });
+      }
+    }
+
+    if (!filas.length) return res.status(404).json({ error: 'Sin datos' });
+
+    // ── 6. Generar Excel ──────────────────────────────────────────────────────
+    const HEADERS = ['Escalafón', 'Puesto', 'Modalidad', 'Especialidad', 'Sub-especialidad'];
     const HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
     const HEADER_FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
 
-    function addSheet(name, headers, data) {
+    const wb = new ExcelJS.Workbook();
+
+    function addSheet(name, data) {
       const ws = wb.addWorksheet(name);
-      ws.addRow(headers);
+      ws.addRow(HEADERS);
       ws.getRow(1).eachCell(cell => {
         cell.fill = HEADER_FILL;
         cell.font = HEADER_FONT;
         cell.alignment = { vertical: 'middle', horizontal: 'center' };
       });
       ws.getRow(1).height = 20;
-      data.forEach(r => ws.addRow(r));
+      for (const f of data)
+        ws.addRow([f.escalafon, f.puesto, f.modalidad, f.especialidad, f.subespecialidad]);
       ws.columns.forEach(col => {
-        let max = 10;
+        let max = 12;
         col.eachCell(cell => { if (cell.value) max = Math.max(max, String(cell.value).length + 2); });
         col.width = Math.min(max, 50);
       });
     }
 
-    addSheet('Catálogo Completo',
-      ['Escalafón', 'Puesto', 'Especialidad'],
-      rows.map(r => [r.escalafon, r.puesto, r.especialidad ?? '-'])
-    );
+    // Hoja completa
+    addSheet('Catálogo Completo', filas);
 
-    for (const [escalafon, items] of Object.entries(porCarrera)) {
-      addSheet(
-        escalafon.substring(0, 31),
-        ['Puesto', 'Especialidad'],
-        items.map(r => [r.puesto, r.especialidad ?? '-'])
-      );
+    // Una hoja por escalafón
+    const porEscalafon = {};
+    for (const f of filas) {
+      if (!porEscalafon[f.escalafon]) porEscalafon[f.escalafon] = [];
+      porEscalafon[f.escalafon].push(f);
     }
+    for (const [esc, items] of Object.entries(porEscalafon))
+      addSheet(esc.substring(0, 31), items);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="catalogo-cargos.xlsx"');
