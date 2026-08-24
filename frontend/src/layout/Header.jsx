@@ -29,6 +29,12 @@ const DESCARGABLES = [
     url: '/api/herramientas/descargables/catalogo-cargos',
     filename: 'catalogo-cargos.xlsx',
   },
+  {
+    id: 'padron-cargos',
+    label: 'Padrón de Cargos',
+    url: '/api/herramientas/descargables/padron-cargos',
+    filename: 'padron-cargos.xlsx',
+  },
 ]
 
 const ROLE_LABELS = {

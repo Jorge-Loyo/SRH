@@ -1,8 +1,12 @@
+import DotacionKpisPanel from '../../components/ui/DotacionKpisPanel';
+
 export default function DashboardGestionPage() {
   return (
-    <div className="px-6 py-8">
-      <h1 className="text-xl font-bold text-gray-900 mb-6">Dashboard</h1>
-      <p className="text-sm text-gray-400">Los indicadores se van a mostrar acá.</p>
+    <div className="flex flex-col">
+      <div className="flex-shrink-0 px-4 pt-4 pb-2 border-b border-gray-200 bg-white">
+        <h1 className="text-lg font-bold text-gray-900">Dashboard</h1>
+      </div>
+      <DotacionKpisPanel defaultOpen collapsible={false} />
     </div>
-  )
+  );
 }

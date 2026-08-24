@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "dev:render": "nodemon --env-file=.env.render src/server.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "seed:users": "node scripts/seed-users.js",

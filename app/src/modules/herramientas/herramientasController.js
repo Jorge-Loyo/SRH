@@ -308,5 +308,55 @@ async function getCatalogoCargos(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+async function getPadronCargos(req, res) {
+  try {
+    const [[{ periodo }]] = await AppDataSource.query(
+      `SELECT r.periodo FROM roles r GROUP BY r.periodo ORDER BY r.periodo DESC LIMIT 1`
+    );
 
-module.exports = { getErdSchema, getTableData, getAdminTables, adminInsert, adminUpdate, adminDelete, getCatalogoCargos };
+    const rows = await AppDataSource.query(`
+      SELECT DISTINCT
+        r.escalafon      AS Carrera,
+        r.literal_puesto AS Puesto,
+        p.especialidad   AS Especialidad
+      FROM roles r
+      LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+      WHERE r.periodo = ?
+      ORDER BY r.escalafon, r.literal_puesto, p.especialidad
+    `, [periodo]);
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Padrón de Cargos');
+
+    const HEADERS = ['Carrera', 'Puesto', 'Especialidad'];
+    const FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+    const FONT = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+
+    ws.addRow(HEADERS);
+    ws.getRow(1).eachCell(cell => {
+      cell.fill = FILL;
+      cell.font = FONT;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    ws.getRow(1).height = 20;
+
+    for (const r of rows)
+      ws.addRow([r.Carrera ?? '', r.Puesto ?? '', r.Especialidad ?? '']);
+
+    ws.columns.forEach(col => {
+      let max = 12;
+      col.eachCell(cell => { if (cell.value) max = Math.max(max, String(cell.value).length + 2); });
+      col.width = Math.min(max, 60);
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="padron-cargos-${periodo}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    logger.error('[herramientasController] getPadronCargos', { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { getErdSchema, getTableData, getAdminTables, adminInsert, adminUpdate, adminDelete, getCatalogoCargos, getPadronCargos };

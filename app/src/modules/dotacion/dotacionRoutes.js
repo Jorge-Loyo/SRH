@@ -5,25 +5,24 @@ const { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, ge
 const router = express.Router();
 
 router.use(authenticateJWT);
-router.use(authorizeRoles('admin', 'editor'));
 
-// GET /api/dotacion/kpis
-router.get('/kpis', getKpis);
+const ALL_GESTION = authorizeRoles('admin', 'editor', 'viewer', 'gerencia', 'concursales', 'autoridades');
+const EDIT_ONLY   = authorizeRoles('admin', 'editor');
 
-// GET /api/dotacion/estado — última sincronización + totales (módulo legacy)
-router.get('/estado', getEstado);
+// GET /api/dotacion/kpis — visible para todos los roles con acceso a dotación
+router.get('/kpis', ALL_GESTION, getKpis);
 
-// GET /api/dotacion/lista — dot_resultado paginado con filtros (módulo legacy)
-router.get('/lista', getLista);
+// GET /api/dotacion/estado
+router.get('/estado', EDIT_ONLY, getEstado);
 
-// POST /api/dotacion/sincronizar — dot_resultado → dotacion (módulo legacy)
-router.post('/sincronizar', sincronizar);
+// GET /api/dotacion/lista
+router.get('/lista', EDIT_ONLY, getLista);
+
+// POST /api/dotacion/sincronizar
+router.post('/sincronizar', EDIT_ONLY, sincronizar);
 
 // ── Nuevos endpoints cargo_dotacion ──────────────────────────────────────────
-// GET /api/dotacion/cargos/estado
-router.get('/cargos/estado', getEstadoCargos);
-
-// POST /api/dotacion/cargos/sincronizar
-router.post('/cargos/sincronizar', sincronizarCargos);
+router.get('/cargos/estado', EDIT_ONLY, getEstadoCargos);
+router.post('/cargos/sincronizar', EDIT_ONLY, sincronizarCargos);
 
 module.exports = router;

@@ -24,14 +24,16 @@ function createApp(options = {}) {
   const allowedOrigins = [
     'https://dotacion.buenosaires.gob.ar',
     'https://srh-pi.vercel.app',
-    'https://srh-56558obpq-jorge-loyos-projects.vercel.app',
     'https://srh-pi-git-main-jorge-loyos-projects.vercel.app',
     ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : []),
     ...(config.nodeEnv !== 'production' ? ['http://localhost:5173', 'http://localhost:3000'] : []),
   ];
   app.use(cors({
     origin: (origin, cb) => {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      // Permitir cualquier preview deploy de Vercel del proyecto srh
+      if (/^https:\/\/srh(-[a-z0-9-]+)?(-jorge-loyos-projects\.vercel\.app|.vercel\.app)$/.test(origin)) return cb(null, true);
       cb(new Error(`CORS bloqueado: ${origin}`));
     },
     credentials: true,

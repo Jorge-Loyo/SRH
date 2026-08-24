@@ -1,0 +1,419 @@
+[12:16:49] [32minfo[39m: [Env] Environment validation passed {"service":"salud-api","nodeEnv":"development"}
+[
+  {
+    "id": 1,
+    "nombre": "Alergia e Inmunopatología"
+  },
+  {
+    "id": 2,
+    "nombre": "Anatomía Patológica"
+  },
+  {
+    "id": 3,
+    "nombre": "Anestesiología"
+  },
+  {
+    "id": 4,
+    "nombre": "Anestesiología Pediátrica"
+  },
+  {
+    "id": 5,
+    "nombre": "Asistencia Respiratoria Intensiva"
+  },
+  {
+    "id": 6,
+    "nombre": "Auditoría Médica"
+  },
+  {
+    "id": 7,
+    "nombre": "Cardiología"
+  },
+  {
+    "id": 8,
+    "nombre": "Cardiología Infantil"
+  },
+  {
+    "id": 9,
+    "nombre": "Cirugía Cardiovascular"
+  },
+  {
+    "id": 10,
+    "nombre": "Cirugía General"
+  },
+  {
+    "id": 11,
+    "nombre": "Cirugía Infantil"
+  },
+  {
+    "id": 12,
+    "nombre": "Cirugía Plástica y Reparadora"
+  },
+  {
+    "id": 13,
+    "nombre": "Cirugía Torácica"
+  },
+  {
+    "id": 14,
+    "nombre": "Cirugía y Traumatología Bucomaxilofacial"
+  },
+  {
+    "id": 15,
+    "nombre": "Clínica Médica"
+  },
+  {
+    "id": 16,
+    "nombre": "Dermatología"
+  },
+  {
+    "id": 17,
+    "nombre": "Dermatología Pediátrica"
+  },
+  {
+    "id": 18,
+    "nombre": "Diagnóstico por Imágenes"
+  },
+  {
+    "id": 19,
+    "nombre": "Diagnóstico por Imágenes (Ecografía)"
+  },
+  {
+    "id": 20,
+    "nombre": "Diagnóstico por Imágenes (Tomografía)"
+  },
+  {
+    "id": 21,
+    "nombre": "Emergentología"
+  },
+  {
+    "id": 22,
+    "nombre": "Endocrinología"
+  },
+  {
+    "id": 23,
+    "nombre": "Endocrinología Infantil"
+  },
+  {
+    "id": 24,
+    "nombre": "Endoscopía"
+  },
+  {
+    "id": 25,
+    "nombre": "Enfermedades Infecciosas (Infectología)"
+  },
+  {
+    "id": 26,
+    "nombre": "Fisiatría (Medicina Física y Rehabilitación)"
+  },
+  {
+    "id": 27,
+    "nombre": "Gastroenterología"
+  },
+  {
+    "id": 28,
+    "nombre": "Gastroenterología Infantil"
+  },
+  {
+    "id": 29,
+    "nombre": "Genética Médica"
+  },
+  {
+    "id": 30,
+    "nombre": "Geriatría"
+  },
+  {
+    "id": 31,
+    "nombre": "Ginecología"
+  },
+  {
+    "id": 32,
+    "nombre": "Hematología"
+  },
+  {
+    "id": 33,
+    "nombre": "Hematología Infantil"
+  },
+  {
+    "id": 34,
+    "nombre": "Hemodinamia"
+  },
+  {
+    "id": 35,
+    "nombre": "Hemoterapia e Inmunohematología"
+  },
+  {
+    "id": 36,
+    "nombre": "Hepatología"
+  },
+  {
+    "id": 37,
+    "nombre": "Infectología"
+  },
+  {
+    "id": 38,
+    "nombre": "Infectología Infantil"
+  },
+  {
+    "id": 39,
+    "nombre": "Médico Nutricionista"
+  },
+  {
+    "id": 40,
+    "nombre": "Medicina del Trabajo"
+  },
+  {
+    "id": 41,
+    "nombre": "Medicina Familiar"
+  },
+  {
+    "id": 42,
+    "nombre": "Medicina General y/o Familiar"
+  },
+  {
+    "id": 43,
+    "nombre": "Medicina Legal"
+  },
+  {
+    "id": 44,
+    "nombre": "Medicina Nuclear"
+  },
+  {
+    "id": 45,
+    "nombre": "Medicina Sanitaria (Salud Pública)"
+  },
+  {
+    "id": 46,
+    "nombre": "Nefrología"
+  },
+  {
+    "id": 47,
+    "nombre": "Nefrología Infantil"
+  },
+  {
+    "id": 48,
+    "nombre": "Neonatología"
+  },
+  {
+    "id": 49,
+    "nombre": "Neumonología"
+  },
+  {
+    "id": 50,
+    "nombre": "Neumonología Infantil"
+  },
+  {
+    "id": 51,
+    "nombre": "Neurocirugía"
+  },
+  {
+    "id": 52,
+    "nombre": "Neurocirugía Infantil"
+  },
+  {
+    "id": 53,
+    "nombre": "Neurología"
+  },
+  {
+    "id": 54,
+    "nombre": "Neurología Infantil"
+  },
+  {
+    "id": 55,
+    "nombre": "Nutrición"
+  },
+  {
+    "id": 56,
+    "nombre": "Obstetricia"
+  },
+  {
+    "id": 57,
+    "nombre": "Oftalmología"
+  },
+  {
+    "id": 58,
+    "nombre": "Oftalmología Pediátrica"
+  },
+  {
+    "id": 59,
+    "nombre": "Oncología"
+  },
+  {
+    "id": 60,
+    "nombre": "Oncología Infantil"
+  },
+  {
+    "id": 61,
+    "nombre": "Ortopedia y Traumatología"
+  },
+  {
+    "id": 62,
+    "nombre": "Ortopedia y Traumatología Infantil"
+  },
+  {
+    "id": 63,
+    "nombre": "Otorrinolaringología"
+  },
+  {
+    "id": 64,
+    "nombre": "Otorrinolaringología Infantil"
+  },
+  {
+    "id": 65,
+    "nombre": "Pediatría"
+  },
+  {
+    "id": 66,
+    "nombre": "Psiquiatría"
+  },
+  {
+    "id": 67,
+    "nombre": "Psiquiatría Infanto Juvenil"
+  },
+  {
+    "id": 68,
+    "nombre": "Radioterapia o Terapia Radiante"
+  },
+  {
+    "id": 69,
+    "nombre": "Reumatología"
+  },
+  {
+    "id": 70,
+    "nombre": "Reumatología Infantil"
+  },
+  {
+    "id": 71,
+    "nombre": "Sin Especialidad"
+  },
+  {
+    "id": 72,
+    "nombre": "Terapia Intensiva"
+  },
+  {
+    "id": 73,
+    "nombre": "Terapia Intensiva Infantil"
+  },
+  {
+    "id": 74,
+    "nombre": "Tocoginecología"
+  },
+  {
+    "id": 75,
+    "nombre": "Toxicología"
+  },
+  {
+    "id": 76,
+    "nombre": "Trasplante Renal"
+  },
+  {
+    "id": 77,
+    "nombre": "Urología"
+  },
+  {
+    "id": 78,
+    "nombre": "Urología Infantil"
+  },
+  {
+    "id": 79,
+    "nombre": "Bioquímica Clínica"
+  },
+  {
+    "id": 80,
+    "nombre": "Bioquímica Clínica (Bacteriología)"
+  },
+  {
+    "id": 81,
+    "nombre": "Bioquímica Clínica (Genética)"
+  },
+  {
+    "id": 82,
+    "nombre": "Bioquímica Clínica (Hematología)"
+  },
+  {
+    "id": 83,
+    "nombre": "Bioquímica Clínica (Microbiología Clínica)"
+  },
+  {
+    "id": 84,
+    "nombre": "Bioquímica Clínica (Química Clínica)"
+  },
+  {
+    "id": 85,
+    "nombre": "Bioquímica Clínica sin Especialidad"
+  },
+  {
+    "id": 86,
+    "nombre": "Ciencias de la Educación"
+  },
+  {
+    "id": 87,
+    "nombre": "Endodoncia"
+  },
+  {
+    "id": 88,
+    "nombre": "Farmacia Hospitalaria"
+  },
+  {
+    "id": 89,
+    "nombre": "Fonoaudiología"
+  },
+  {
+    "id": 90,
+    "nombre": "Kinesiología"
+  },
+  {
+    "id": 91,
+    "nombre": "Lic. en Nutrición"
+  },
+  {
+    "id": 92,
+    "nombre": "Musicoterapia"
+  },
+  {
+    "id": 93,
+    "nombre": "Obstétrica"
+  },
+  {
+    "id": 94,
+    "nombre": "Odontología General"
+  },
+  {
+    "id": 95,
+    "nombre": "Odontopediatría"
+  },
+  {
+    "id": 96,
+    "nombre": "Ortodoncia y Ortopedia Maxilar"
+  },
+  {
+    "id": 97,
+    "nombre": "Periodoncia"
+  },
+  {
+    "id": 98,
+    "nombre": "Psicología Clínica"
+  },
+  {
+    "id": 99,
+    "nombre": "Psicología Infantil"
+  },
+  {
+    "id": 100,
+    "nombre": "Psicopedagogía"
+  },
+  {
+    "id": 101,
+    "nombre": "Servicio Social"
+  },
+  {
+    "id": 102,
+    "nombre": "Sociología"
+  },
+  {
+    "id": 103,
+    "nombre": "Terapia Ocupacional"
+  },
+  {
+    "id": 104,
+    "nombre": "Trabajo Social"
+  }
+]
