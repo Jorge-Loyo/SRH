@@ -1,5 +1,6 @@
 const { AppDataSource } = require('../../config/data-source');
 const logger = require('../../utils/logger');
+const XLSX = require('xlsx');
 
 async function getErdSchema(req, res) {
   try {
@@ -142,4 +143,62 @@ async function getTableData(req, res) {
   }
 }
 
-module.exports = { getErdSchema, getTableData, getAdminTables, adminInsert, adminUpdate, adminDelete };
+async function getCatalogoCargos(req, res) {
+  try {
+    // JOIN carreras → especialidades para armar el catálogo completo
+    const rows = await AppDataSource.query(`
+      SELECT
+        c.nombre_carrera  AS carrera,
+        e.nombre          AS especialidad,
+        e.codigo          AS codigo_especialidad
+      FROM especialidades e
+      JOIN carreras c ON e.id_carrera = c.id_carrera
+      ORDER BY c.nombre_carrera, e.nombre
+    `);
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Sin datos' });
+    }
+
+    // Agrupar por carrera para generar una hoja por carrera
+    const porCarrera = {};
+    for (const r of rows) {
+      if (!porCarrera[r.carrera]) porCarrera[r.carrera] = [];
+      porCarrera[r.carrera].push(r);
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Hoja resumen con todo
+    const resumenData = [
+      ['Carrera', 'Especialidad', 'Código'],
+      ...rows.map(r => [r.carrera, r.especialidad, r.codigo_especialidad ?? '']),
+    ];
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen['!cols'] = [{ wch: 40 }, { wch: 40 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Catálogo Completo');
+
+    // Una hoja por carrera
+    for (const [carrera, items] of Object.entries(porCarrera)) {
+      const sheetData = [
+        ['Especialidad', 'Código'],
+        ...items.map(r => [r.especialidad, r.codigo_especialidad ?? '']),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws['!cols'] = [{ wch: 40 }, { wch: 15 }];
+      // Nombre de hoja máx 31 chars (límite Excel)
+      const sheetName = carrera.substring(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="catalogo-cargos.xlsx"');
+    res.send(buffer);
+  } catch (err) {
+    logger.error('[herramientasController] getCatalogoCargos', { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { getErdSchema, getTableData, getAdminTables, adminInsert, adminUpdate, adminDelete, getCatalogoCargos };

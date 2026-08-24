@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.jsx'
+import { apiFetch } from '../api/client.js'
 
 const PENDIENTE_KEY = 'dotaneitor_pendiente_validacion'
 
@@ -19,6 +20,15 @@ const HERRAMIENTAS_ITEMS = [
   { to: '/herramientas/tablas-admin',    label: 'Tablas Admin' },
   { to: '/herramientas/dotaneitor',      label: 'Dotaneitor' },
   { to: '/cargos/kpis',                  label: 'KPIs Dotación' },
+]
+
+const DESCARGABLES = [
+  {
+    id: 'catalogo-cargos',
+    label: 'Catálogo de Cargos',
+    url: '/api/herramientas/descargables/catalogo-cargos',
+    filename: 'catalogo-cargos.xlsx',
+  },
 ]
 
 const ROLE_LABELS = {
@@ -83,6 +93,13 @@ const ICON_PANEL = (
   </svg>
 )
 
+const ICON_DOWNLOAD = (
+  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  </svg>
+)
+
 function useDropdown() {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -100,9 +117,35 @@ export default function Header({ onMenuClick = () => {} }) {
   const { user, logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
 
-  const tools  = useDropdown()
-  const sec    = useDropdown()
-  const profile = useDropdown()
+  const tools    = useDropdown()
+  const sec      = useDropdown()
+  const profile  = useDropdown()
+  const downloads = useDropdown()
+
+  const [downloading, setDownloading] = useState(null)
+
+  async function handleDownload(item) {
+    if (downloading) return
+    setDownloading(item.id)
+    downloads.setOpen(false)
+    try {
+      const res = await apiFetch(item.url)
+      if (!res.ok) throw new Error('Error al descargar')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = item.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDownloading(null)
+    }
+  }
 
   const hayPendiente = !!localStorage.getItem(PENDIENTE_KEY)
 
@@ -151,15 +194,38 @@ export default function Header({ onMenuClick = () => {} }) {
         {role === 'admin' && (
           <div ref={tools.ref} className="relative">
             <IconButton icon={ICON_WRENCH} title="Herramientas" active={tools.open}
-              onClick={() => { tools.setOpen(v => !v); sec.setOpen(false); profile.setOpen(false) }} />
+              onClick={() => { tools.setOpen(v => !v); sec.setOpen(false); profile.setOpen(false); downloads.setOpen(false) }} />
             {tools.open && <DropdownMenu items={HERRAMIENTAS_ITEMS} navigate={navigate} title="Herramientas" onClose={() => tools.setOpen(false)} />}
+          </div>
+        )}
+
+        {/* Descargables */}
+        {role === 'admin' && (
+          <div ref={downloads.ref} className="relative">
+            <IconButton icon={ICON_DOWNLOAD} title="Descargables" active={downloads.open}
+              onClick={() => { downloads.setOpen(v => !v); tools.setOpen(false); sec.setOpen(false); profile.setOpen(false) }} />
+            {downloads.open && (
+              <div className="absolute right-0 mt-1 w-52 bg-white border border-gray-100 rounded-xl shadow-lg z-50 py-1 overflow-hidden">
+                <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Descargables</p>
+                {DESCARGABLES.map(item => (
+                  <button key={item.id} onClick={() => handleDownload(item)}
+                    disabled={!!downloading}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 disabled:opacity-50">
+                    <svg className="w-3.5 h-3.5 text-primary-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    {downloading === item.id ? 'Descargando...' : item.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {/* Seguridad */}
         {role === 'admin' && (
           <div ref={sec.ref} className="relative">
-            <button onClick={() => { sec.setOpen(v => !v); tools.setOpen(false); profile.setOpen(false) }}
+            <button onClick={() => { sec.setOpen(v => !v); tools.setOpen(false); profile.setOpen(false); downloads.setOpen(false) }}
               title="Seguridad"
               className={`relative p-1.5 rounded-lg transition-colors ${
                 sec.open ? 'bg-gray-100 text-gray-700' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
@@ -179,7 +245,7 @@ export default function Header({ onMenuClick = () => {} }) {
         {/* Avatar / perfil */}
         <div ref={profile.ref} className="relative">
           <button
-            onClick={() => { profile.setOpen(v => !v); tools.setOpen(false); sec.setOpen(false) }}
+            onClick={() => { profile.setOpen(v => !v); tools.setOpen(false); sec.setOpen(false); downloads.setOpen(false) }}
             className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
               profile.open
                 ? 'bg-primary-600 text-white'

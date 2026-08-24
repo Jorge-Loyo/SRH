@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getErdSchema, getTableData,
   getAdminTables, adminInsert, adminUpdate, adminDelete,
+  getCatalogoCargos,
 } = require('./herramientasController');
 const { authenticateJWT, authorizeRoles } = require('../../middlewares/auth');
 
@@ -14,6 +15,7 @@ router.get('/admin/tables',                 ...auth, getAdminTables);
 router.post('/admin/:tableName',            ...auth, adminInsert);
 router.put('/admin/:tableName/:id',         ...auth, adminUpdate);
 router.delete('/admin/:tableName/:id',      ...auth, adminDelete);
+router.get('/descargables/catalogo-cargos', ...auth, getCatalogoCargos);
 
 const PYTHON_SERVICE = process.env.PYTHON_SERVICE_URL || 'http://localhost:5001';
 const PROXY_TIMEOUT  = process.env.NODE_ENV === 'production' ? 25000 : 600000;
