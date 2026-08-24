@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import * as XLSX from 'xlsx';
 import { apiGet } from '../../api/client';
 import Spinner from '../../components/ui/Spinner';
 
@@ -41,6 +42,22 @@ function JefaturasModal({ jefe, sigla, onClose }) {
       .finally(() => setLoading(false));
   }, [jefe, sigla]);
 
+  function exportExcel() {
+    const data = rows.map(r => ({
+      'Nombre': r.nombre_apellido,
+      'CUIL': r.cuil,
+      'Sigla': r.sigla,
+      'Escalafón': r.escalafon,
+      'Puesto': r.literal_puesto,
+      'Jefatura': r.jefaturas,
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Jefaturas');
+    const filename = `jefaturas_${jefe.replace(/\s+/g, '_')}${sigla ? `_${sigla}` : ''}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -50,9 +67,17 @@ function JefaturasModal({ jefe, sigla, onClose }) {
             <p className="font-semibold text-gray-800">{jefe}</p>
             <p className="text-xs text-gray-400">{rows.length} registros{sigla ? ` — ${sigla}` : ''}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
-            <XMarkIcon className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!loading && rows.length > 0 && (
+              <button onClick={exportExcel}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                <ArrowDownTrayIcon className="w-3.5 h-3.5" />Excel
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+              <XMarkIcon className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-auto">
           {loading ? (
