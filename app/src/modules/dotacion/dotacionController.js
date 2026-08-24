@@ -201,4 +201,35 @@ async function getKpis(req, res) {
   }
 }
 
-module.exports = { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, getKpis };
+async function getJefaturasDetalle(req, res) {
+  try {
+    const db = AppDataSource;
+    const sigla       = (req.query.sigla || '').trim().toUpperCase() || null;
+    const jefeEscalafon = (req.query.jefe_escalafon || '').trim() || null;
+
+    const [{ periodo }] = await db.query(
+      `SELECT r.periodo FROM roles r GROUP BY r.periodo ORDER BY r.periodo DESC LIMIT 1`
+    );
+
+    const conditions = [`r.periodo = ?`, `r.jefaturas IS NOT NULL`, `r.jefaturas != ''`];
+    const params = [periodo];
+    if (sigla)        { conditions.push(`s.sigla = ?`);       params.push(sigla); }
+    if (jefeEscalafon){ conditions.push(`r.jefaturas = ?`);   params.push(jefeEscalafon); }
+
+    const rows = await db.query(`
+      SELECT p.nombre_apellido, p.cuil, s.sigla, r.escalafon, r.literal_puesto, r.jefaturas
+      FROM roles r
+      LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
+      LEFT JOIN siglas   s ON r.id_sigla   = s.id_sigla
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY r.jefaturas, s.sigla, p.nombre_apellido
+    `, params);
+
+    res.json({ rows, total: rows.length, periodo });
+  } catch (e) {
+    logger.error('[Dotacion] Error en getJefaturasDetalle', { error: e.message });
+    return res.status(500).json({ error: e.message });
+  }
+}
+
+module.exports = { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, getKpis, getJefaturasDetalle };

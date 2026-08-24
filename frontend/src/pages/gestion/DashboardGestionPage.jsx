@@ -16,15 +16,78 @@ function KpiCard({ label, value, sub, color = 'text-primary-700' }) {
   );
 }
 
-function BarRow({ label, value, total, colorCls = 'bg-primary-500' }) {
+function BarRow({ label, value, total, colorCls = 'bg-primary-500', onClick }) {
   const p = pct(value, total);
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center gap-3 ${onClick ? 'cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1' : ''}`} onClick={onClick}>
       <span className="text-xs text-gray-600 w-40 shrink-0 truncate" title={label}>{label}</span>
       <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
         <div className={`h-2 rounded-full ${colorCls}`} style={{ width: `${p}%` }} />
       </div>
       <span className="text-xs text-gray-500 w-20 text-right shrink-0">{fmt(value)} <span className="text-gray-300">({p}%)</span></span>
+    </div>
+  );
+}
+
+function JefaturasModal({ jefe, sigla, onClose }) {
+  const [rows, setRows]       = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const params = { jefe_escalafon: jefe };
+    if (sigla) params.sigla = sigla;
+    apiGet('/api/dotacion/kpis/jefaturas-detalle', params)
+      .then(d => setRows(d.rows ?? []))
+      .finally(() => setLoading(false));
+  }, [jefe, sigla]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col mx-4">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 shrink-0">
+          <div>
+            <p className="font-semibold text-gray-800">{jefe}</p>
+            <p className="text-xs text-gray-400">{rows.length} registros{sigla ? ` — ${sigla}` : ''}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100">
+            <XMarkIcon className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-12 gap-2 text-gray-400">
+              <Spinner size="lg" /><span className="text-sm">Cargando...</span>
+            </div>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-gray-50">
+                <tr className="border-b border-gray-200">
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Nombre</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500">CUIL</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Sigla</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Escalafón</th>
+                  <th className="text-left px-4 py-2.5 font-semibold text-gray-500">Puesto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                    <td className="px-4 py-1.5 font-medium text-gray-800">{r.nombre_apellido}</td>
+                    <td className="px-4 py-1.5 font-mono text-gray-500">{r.cuil}</td>
+                    <td className="px-4 py-1.5 font-semibold text-primary-700">{r.sigla}</td>
+                    <td className="px-4 py-1.5 text-gray-600">{r.escalafon}</td>
+                    <td className="px-4 py-1.5 text-gray-600">{r.literal_puesto}</td>
+                  </tr>
+                ))}
+                {!rows.length && (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Sin registros</td></tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -36,6 +99,7 @@ export default function DashboardGestionPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
   const [sigla,   setSigla]   = useState('');
+  const [jefeModal, setJefeModal] = useState(null);
 
   const load = useCallback(async (s) => {
     setLoading(true); setError(null);
@@ -138,8 +202,12 @@ export default function DashboardGestionPage() {
                 {(data.porUniverso ?? []).map(r => <BarRow key={r.universo} label={r.universo} value={r.total} total={total} colorCls="bg-teal-500" />)}
               </div>
               <div className="card p-4 space-y-2.5">
-                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Jefaturas</p>
-                {(data.porJefatura ?? []).map((r, i) => <BarRow key={r.jefe_escalafon} label={r.jefe_escalafon} value={r.total} total={g.jefaturas} colorCls={JEFATURA_COLORS[i % JEFATURA_COLORS.length]} />)}
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Jefaturas <span className="normal-case font-normal text-gray-300">(click para ver detalle)</span></p>
+                {(data.porJefatura ?? []).map((r, i) => (
+                  <BarRow key={r.jefe_escalafon} label={r.jefe_escalafon} value={r.total} total={g.jefaturas}
+                    colorCls={JEFATURA_COLORS[i % JEFATURA_COLORS.length]}
+                    onClick={() => setJefeModal(r.jefe_escalafon)} />
+                ))}
                 {!data.porJefatura?.length && <p className="text-xs text-gray-400">Sin datos</p>}
               </div>
             </div>
@@ -195,6 +263,10 @@ export default function DashboardGestionPage() {
           </>
         )}
       </div>
+
+      {jefeModal && (
+        <JefaturasModal jefe={jefeModal} sigla={sigla} onClose={() => setJefeModal(null)} />
+      )}
     </div>
   );
 }

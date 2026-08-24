@@ -1,6 +1,6 @@
 const express = require('express');
 const { authenticateJWT, authorizeRoles } = require('../../middlewares/auth');
-const { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, getKpis } = require('./dotacionController');
+const { sincronizar, getEstado, getLista, sincronizarCargos, getEstadoCargos, getKpis, getJefaturasDetalle } = require('./dotacionController');
 
 const router = express.Router();
 
@@ -11,6 +11,7 @@ const EDIT_ONLY   = authorizeRoles('admin', 'editor');
 
 // GET /api/dotacion/kpis — visible para todos los roles con acceso a dotación
 router.get('/kpis', ALL_GESTION, getKpis);
+router.get('/kpis/jefaturas-detalle', ALL_GESTION, getJefaturasDetalle);
 
 // GET /api/dotacion/estado
 router.get('/estado', EDIT_ONLY, getEstado);
