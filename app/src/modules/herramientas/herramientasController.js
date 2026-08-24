@@ -248,8 +248,8 @@ async function getCatalogoCargos(req, res) {
     const tecPuestos = await AppDataSource.query(`
       SELECT pc.nombre, GROUP_CONCAT(DISTINCT m.id_cod ORDER BY m.id_cod) AS modalidades
       FROM puestos_cargo pc
-      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
-      JOIN modalidades m ON m.id = nc.id_modalidad
+      LEFT JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
+      LEFT JOIN modalidades m ON m.id = nc.id_modalidad
       WHERE pc.carrera = 'tec' AND pc.activo = 1
       GROUP BY pc.id, pc.nombre
       ORDER BY pc.nombre
