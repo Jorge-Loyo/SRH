@@ -34,7 +34,7 @@ build_frontend:
     # Docker explícitamente (mismo patrón que chequeo_sintaxis, que sí funciona).
     # --user + HOME=/tmp: corre npm como el usuario del runner (no root), para que
     # node_modules/dist no queden root-owned en el disco del runner.
-    - docker run --rm -v $(pwd):/app -w /app/frontend -e VERCEL=1 -e HOME=/tmp --user "$(id -u):$(id -g)" core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:18-alpine sh -c "npm ci && npm run build"
+    - docker run --rm -v $(pwd):/app -w /app/frontend -e VERCEL=1 -e HOME=/tmp --user "$(id -u):$(id -g)" core-harbor-devops-msgc.gcba.gob.ar/devops-dockerhub/node:20-alpine sh -c "npm ci && npm run build"
   artifacts:
     paths:
       - frontend/dist/
