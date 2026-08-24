@@ -57,7 +57,12 @@ deploy_dev:
   script:
     - echo "Conectando a la VM $SERVER_IP para actualizar la App Dotación..."
     # 1. Primero actualizar el código en el servidor (git reset pisa public/spa/)
-    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git fetch origin develop && sudo git reset --hard origin/develop && sudo git clean -fd"
+    # Reset contra FETCH_HEAD, no contra origin/develop: en este repo del servidor
+    # el fetch acotado a una rama ("git fetch origin develop") deja lo último en
+    # FETCH_HEAD pero no actualiza el remote-tracking ref origin/develop, así que
+    # resetear contra ese ref dejaba el deploy congelado siempre en el mismo commit
+    # viejo (el del día que se armó este script), aunque el job diera verde.
+    - ssh $SERVER_USER@$SERVER_IP "cd /opt/dotacion-rrhh && sudo git fetch origin develop && sudo git reset --hard FETCH_HEAD && sudo git clean -fd"
     # 2. Después copiar el SPA buildeado por CI (sobre el public/spa/ ya limpio)
     # sudo mkdir + chown para que scp (sin sudo) pueda escribir
     - ssh $SERVER_USER@$SERVER_IP "sudo mkdir -p /opt/dotacion-rrhh/app/public/spa && sudo chown -R $SERVER_USER:$SERVER_USER /opt/dotacion-rrhh/app/public/spa"
