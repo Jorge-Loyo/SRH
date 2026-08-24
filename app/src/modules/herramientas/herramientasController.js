@@ -310,7 +310,7 @@ async function getCatalogoCargos(req, res) {
 }
 async function getPadronCargos(req, res) {
   try {
-    const [[{ periodo }]] = await AppDataSource.query(
+    const [{ periodo }] = await AppDataSource.query(
       `SELECT r.periodo FROM roles r GROUP BY r.periodo ORDER BY r.periodo DESC LIMIT 1`
     );
 
