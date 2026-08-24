@@ -147,13 +147,21 @@ async function getCatalogoCargos(req, res) {
   try {
     // JOIN carreras → especialidades para armar el catálogo completo
     const rows = await AppDataSource.query(`
-      SELECT
-        c.nombre_carrera  AS carrera,
-        e.nombre          AS especialidad,
-        e.codigo          AS codigo_especialidad
-      FROM especialidades e
-      JOIN carreras c ON e.id_carrera = c.id_carrera
-      ORDER BY c.nombre_carrera, e.nombre
+      SELECT c.nombre AS carrera, c.codigo AS codigo_carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      FROM puestos_cargo pc
+      JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
+      LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
+      LEFT JOIN especialidades e ON e.id = pe.id_especialidad
+      WHERE pc.activo = 1
+
+      UNION ALL
+
+      SELECT c.nombre AS carrera, c.codigo AS codigo_carrera, pt.nombre AS puesto, NULL AS especialidad
+      FROM puestos_tec pt
+      CROSS JOIN carreras c
+      WHERE c.codigo = 'ENF' AND pt.activo = 1
+
+      ORDER BY carrera, puesto, especialidad
     `);
 
     if (!rows.length) {
@@ -171,21 +179,21 @@ async function getCatalogoCargos(req, res) {
 
     // Hoja resumen con todo
     const resumenData = [
-      ['Carrera', 'Especialidad', 'Código'],
-      ...rows.map(r => [r.carrera, r.especialidad, r.codigo_especialidad ?? '']),
+      ['Carrera', 'Cód. Carrera', 'Puesto', 'Especialidad'],
+      ...rows.map(r => [r.carrera, r.codigo_carrera, r.puesto, r.especialidad ?? '-']),
     ];
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-    wsResumen['!cols'] = [{ wch: 40 }, { wch: 40 }, { wch: 15 }];
+    wsResumen['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 35 }, { wch: 40 }];
     XLSX.utils.book_append_sheet(wb, wsResumen, 'Catálogo Completo');
 
     // Una hoja por carrera
     for (const [carrera, items] of Object.entries(porCarrera)) {
       const sheetData = [
-        ['Especialidad', 'Código'],
-        ...items.map(r => [r.especialidad, r.codigo_especialidad ?? '']),
+        ['Puesto', 'Especialidad'],
+        ...items.map(r => [r.puesto, r.especialidad ?? '-']),
       ];
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
-      ws['!cols'] = [{ wch: 40 }, { wch: 15 }];
+      ws['!cols'] = [{ wch: 35 }, { wch: 40 }];
       // Nombre de hoja máx 31 chars (límite Excel)
       const sheetName = carrera.substring(0, 31);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
