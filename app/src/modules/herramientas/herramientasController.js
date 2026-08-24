@@ -318,6 +318,17 @@ async function getPadronCargos(req, res) {
         modalidad    AS Modalidad
       FROM new_cargo
       WHERE estado = 'vigente'
+        AND carrera IN ('CPH', 'ENF', 'EG')
+        AND puesto NOT IN (
+          'Director (01)', 'Sub-Director (03)',
+          'Jefe de Departamento (02)', 'Jefe de División (04)',
+          'Jefe de Sección (06)', 'Jefe de Unidad (05)',
+          'Gerente Operativo', 'Gerente Operativo Concursado',
+          'Subgerente Operativo', 'Director General',
+          'Ministro', 'Subsecretario',
+          'No Aplica', 'Personal de Gabinete',
+          'Planta Gabinete Transitorio', 'Personal Transitorio'
+        )
       ORDER BY carrera, puesto, especialidad, modalidad
     `);
 
