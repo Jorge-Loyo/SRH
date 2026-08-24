@@ -130,8 +130,9 @@ module.exports.FROM_JOINS = `
   LEFT JOIN personas p ON r.id_persona = p.id_persona AND r.periodo = p.periodo
   LEFT JOIN siglas s   ON r.id_sigla   = s.id_sigla
 `;
- 
-  AppDataSource, 
+
+module.exports.handleDotacionTotal = async function handleDotacionTotal({
+  AppDataSource,
   req
 }) {
   try {
