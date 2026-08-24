@@ -140,42 +140,41 @@ async function getKpis(req, res) {
       : `WHERE r.periodo = ?`;
     const sp = sigla ? [periodo, sigla] : [periodo];
 
-    const [globalesRows, porEscalafon, porSitRevista, porSexo, porEfector] = await Promise.all([
+    const [globalesRows, porEscalafon, porSitRevista, porSexo, porEfector, porAgrupador, porUniverso, porEstado, porJefatura] = await Promise.all([
       db.query(`
         SELECT
           COUNT(*)                                                AS total,
-          SUM(r.situacion_revista = 'Activo')                    AS activos,
-          SUM(r.situacion_revista LIKE 'Retenci%n de Cargo')     AS retencion,
-          SUM(r.situacion_revista LIKE 'Comisi%n')               AS comision,
-          SUM(p.sexo = 'F')                                      AS mujeres,
-          SUM(p.sexo = 'M')                                      AS varones,
-          COUNT(DISTINCT s.sigla)                                AS efectores
+          COUNT(DISTINCT p.cuil)                                  AS personas_unicas,
+          COUNT(DISTINCT s.sigla)                                 AS efectores,
+          SUM(r.situacion_revista = 'Activo')                     AS activos,
+          SUM(r.situacion_revista LIKE 'Retenci%n de Cargo')      AS retencion,
+          SUM(r.situacion_revista LIKE 'Comisi%n')                AS comision,
+          SUM(p.sexo = 'F')                                       AS mujeres,
+          SUM(p.sexo = 'M')                                       AS varones,
+          SUM(r.jefaturas IS NOT NULL AND r.jefaturas != '')      AS jefaturas
         ${FROM} ${WHERE}
       `, sp),
 
+      db.query(`SELECT r.escalafon, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.escalafon ORDER BY total DESC`, sp),
+      db.query(`SELECT r.situacion_revista AS situacion, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.situacion_revista ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(p.sexo, 'Sin dato') AS sexo, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY p.sexo ORDER BY total DESC`, sp),
+
+      // Por efector con detalle
       db.query(`
-        SELECT r.escalafon, COUNT(*) AS total
+        SELECT s.sigla,
+          COUNT(*) AS total,
+          SUM(r.situacion_revista = 'Activo') AS activos,
+          SUM(r.situacion_revista LIKE 'Retenci%n de Cargo') AS retencion,
+          SUM(r.situacion_revista LIKE 'Comisi%n') AS comision,
+          SUM(r.jefaturas IS NOT NULL AND r.jefaturas != '') AS jefaturas
         ${FROM} ${WHERE}
-        GROUP BY r.escalafon ORDER BY total DESC
+        GROUP BY s.sigla ORDER BY total DESC
       `, sp),
 
-      db.query(`
-        SELECT r.situacion_revista AS situacion, COUNT(*) AS total
-        ${FROM} ${WHERE}
-        GROUP BY r.situacion_revista ORDER BY total DESC
-      `, sp),
-
-      db.query(`
-        SELECT COALESCE(p.sexo, 'Sin dato') AS sexo, COUNT(*) AS total
-        ${FROM} ${WHERE}
-        GROUP BY p.sexo ORDER BY total DESC
-      `, sp),
-
-      db.query(`
-        SELECT s.sigla, COUNT(*) AS total
-        ${FROM} ${WHERE}
-        GROUP BY s.sigla ORDER BY total DESC LIMIT 20
-      `, sp),
+      db.query(`SELECT COALESCE(r.agrupador,'Sin agrupador') AS agrupador, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.agrupador ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(s.universo_totalizador,'Sin universo') AS universo, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY s.universo_totalizador ORDER BY total DESC`, sp),
+      db.query(`SELECT COALESCE(r.situacion_revista,'Sin estado') AS estado, COUNT(*) AS total ${FROM} ${WHERE} GROUP BY r.situacion_revista ORDER BY total DESC`, sp),
+      db.query(`SELECT r.jefaturas AS jefe_escalafon, COUNT(*) AS total ${FROM} WHERE r.periodo = ? AND r.jefaturas IS NOT NULL AND r.jefaturas != '' ${sigla ? 'AND s.sigla = ?' : ''} GROUP BY r.jefaturas ORDER BY total DESC`, sp),
     ]);
 
     const globales = globalesRows[0];
@@ -185,11 +184,16 @@ async function getKpis(req, res) {
     );
 
     res.json({
+      periodo,
       globales:      Object.fromEntries(Object.entries(globales).map(([k, v]) => [k, toN(v)])),
       porEscalafon:  norm(porEscalafon),
       porSitRevista: norm(porSitRevista),
       porSexo:       norm(porSexo),
       porEfector:    norm(porEfector),
+      porAgrupador:  norm(porAgrupador),
+      porUniverso:   norm(porUniverso),
+      porEstado:     norm(porEstado),
+      porJefatura:   norm(porJefatura),
     });
   } catch (e) {
     logger.error('[Dotacion] Error en getKpis', { error: e.message });
