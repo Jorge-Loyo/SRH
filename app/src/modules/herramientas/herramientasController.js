@@ -147,29 +147,27 @@ async function getCatalogoCargos(req, res) {
   try {
     // JOIN carreras → especialidades para armar el catálogo completo
     const rows = await AppDataSource.query(`
-      -- Puestos NO medicos: sus especialidades via puesto_especialidades
-      SELECT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      SELECT DISTINCT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
       WHERE pc.activo = 1 AND pc.es_medico = 0
 
-      UNION ALL
+      UNION
 
-      -- Puestos medicos (es_medico=1): todas las especialidades CPH (id_carrera=1)
       SELECT c.nombre AS carrera, 'Médico' AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       CROSS JOIN especialidades e
       WHERE pc.activo = 1 AND pc.es_medico = 1 AND pc.nombre = 'MEDICO' AND e.id_carrera = 1 AND e.activo = 1
 
-      UNION ALL
+      UNION
 
       SELECT 'Enfermería (Ley 6.767)' AS carrera, puesto, NULL AS especialidad
-      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION ALL SELECT 'Enfermero Profesional') enf
+      FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION SELECT 'Enfermero Profesional') enf
 
-      UNION ALL
+      UNION
 
       SELECT 'Escalafón General - Enfermería (Ley 471)' AS carrera, 'Auxiliar de Enfermería' AS puesto, NULL AS especialidad
 
