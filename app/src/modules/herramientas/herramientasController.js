@@ -163,7 +163,8 @@ async function getCatalogoCargos(req, res) {
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       CROSS JOIN especialidades e
-      WHERE pc.activo = 1 AND pc.es_medico = 1 AND pc.nombre = 'MEDICO' AND e.id_carrera = 1 AND e.activo = 1
+      WHERE pc.activo = 1 AND pc.es_medico = 1 AND pc.nombre = 'MEDICO'
+        AND e.id_carrera = 1 AND e.activo = 1 AND e.id <= 78
 
       UNION
 
