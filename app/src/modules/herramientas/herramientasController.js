@@ -328,6 +328,9 @@ async function getPadronCargos(req, res) {
           'No Aplica'
         )
         AND (nc.carrera != 'EG' OR (pc.es_estructura = 0 AND pc.activo = 1))
+        AND NOT (nc.especialidad IS NULL AND nc.puesto IN (
+          'Psicólogo de Guardia', 'Terapista Ocupacional de Guardia', 'Médico de Planta'
+        ))
       ORDER BY nc.carrera, nc.puesto, nc.especialidad
     `);
 
