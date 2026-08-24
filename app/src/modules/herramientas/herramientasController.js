@@ -147,16 +147,17 @@ async function getCatalogoCargos(req, res) {
   try {
     // JOIN carreras → especialidades para armar el catálogo completo
     const rows = await AppDataSource.query(`
-      SELECT DISTINCT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      SELECT DISTINCT c.nombre AS escalafon, pc.nombre AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
       WHERE pc.activo = 1 AND pc.es_medico = 0
+        AND pc.id NOT IN (149, 150, 151, 152, 153)
 
       UNION
 
-      SELECT c.nombre AS carrera, 'Médico' AS puesto, e.nombre AS especialidad
+      SELECT c.nombre AS escalafon, 'Médico' AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       CROSS JOIN especialidades e
@@ -164,14 +165,14 @@ async function getCatalogoCargos(req, res) {
 
       UNION
 
-      SELECT 'Enfermería (Ley 6.767)' AS carrera, puesto, NULL AS especialidad
+      SELECT 'Enfermería (Ley 6.767)' AS escalafon, puesto, NULL AS especialidad
       FROM (SELECT 'Licenciado en Enfermería' AS puesto UNION SELECT 'Enfermero Profesional') enf
 
       UNION
 
-      SELECT 'Escalafón General - Enfermería (Ley 471)' AS carrera, 'Auxiliar de Enfermería' AS puesto, NULL AS especialidad
+      SELECT 'Escalafón General - Enfermería (Ley 471)' AS escalafon, 'Auxiliar de Enfermería' AS puesto, NULL AS especialidad
 
-      ORDER BY carrera, puesto, especialidad
+      ORDER BY escalafon, puesto, especialidad
     `);
 
     if (!rows.length) {
@@ -181,8 +182,8 @@ async function getCatalogoCargos(req, res) {
     // Agrupar por carrera para generar una hoja por carrera
     const porCarrera = {};
     for (const r of rows) {
-      if (!porCarrera[r.carrera]) porCarrera[r.carrera] = [];
-      porCarrera[r.carrera].push(r);
+      if (!porCarrera[r.escalafon]) porCarrera[r.escalafon] = [];
+      porCarrera[r.escalafon].push(r);
     }
 
     const wb = new ExcelJS.Workbook();
@@ -207,13 +208,13 @@ async function getCatalogoCargos(req, res) {
     }
 
     addSheet('Catálogo Completo',
-      ['Carrera', 'Puesto', 'Especialidad'],
-      rows.map(r => [r.carrera, r.puesto, r.especialidad ?? '-'])
+      ['Escalafón', 'Puesto', 'Especialidad'],
+      rows.map(r => [r.escalafon, r.puesto, r.especialidad ?? '-'])
     );
 
-    for (const [carrera, items] of Object.entries(porCarrera)) {
+    for (const [escalafon, items] of Object.entries(porCarrera)) {
       addSheet(
-        carrera.substring(0, 31),
+        escalafon.substring(0, 31),
         ['Puesto', 'Especialidad'],
         items.map(r => [r.puesto, r.especialidad ?? '-'])
       );
