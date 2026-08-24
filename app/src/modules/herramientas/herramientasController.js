@@ -158,7 +158,7 @@ async function getCatalogoCargos(req, res) {
     for (const r of modalidadesPuesto) modMap[r.id] = r.modalidades.split(',');
 
     // ── 2. CPH no médicos con sus especialidades ──────────────────────────────
-    const noMedicos = await AppDataSource.query(`
+    const noMedicosRaw = await AppDataSource.query(`
       SELECT DISTINCT pc.id, pc.nombre AS profesion, e.nombre AS subespecialidad
       FROM puestos_cargo pc
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
@@ -166,6 +166,14 @@ async function getCatalogoCargos(req, res) {
       WHERE pc.carrera = 'cph' AND pc.activo = 1 AND pc.es_medico = 0
       ORDER BY pc.nombre, e.nombre
     `);
+    // Deduplicar por (id, subespecialidad) — el DISTINCT SQL no es suficiente con JOINs múltiples
+    const noMedicosSet = new Set();
+    const noMedicos = noMedicosRaw.filter(r => {
+      const key = `${r.id}|${r.subespecialidad ?? ''}`;
+      if (noMedicosSet.has(key)) return false;
+      noMedicosSet.add(key);
+      return true;
+    });
 
     // ── 3. CPH médico con especialidades médicas (id<=78) ─────────────────────
     const medicos = await AppDataSource.query(`
@@ -190,7 +198,7 @@ async function getCatalogoCargos(req, res) {
 
     // CPH no médicos → una fila por (profesion × modalidad × subespecialidad)
     for (const r of noMedicos) {
-      const mods = modMap[r.id] ?? ['POF'];
+      const mods = modMap[r.id] ?? ['-'];
       for (const mod of mods) {
         filas.push({
           escalafon: 'CPH',
@@ -202,10 +210,10 @@ async function getCatalogoCargos(req, res) {
       }
     }
 
-    // CPH médico → una fila por (modalidad × especialidad)
-    for (const r of medicos) {
-      const [esp, subesp] = splitEsp(r.especialidad_raw);
-      for (const mod of modMedico) {
+    // CPH médico → una fila por (especialidad × modalidad)
+    for (const mod of modMedico) {
+      for (const r of medicos) {
+        const [esp, subesp] = splitEsp(r.especialidad_raw);
         filas.push({
           escalafon: 'CPH',
           puesto: 'Médico',
