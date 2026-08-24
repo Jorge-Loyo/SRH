@@ -158,11 +158,11 @@ async function getCatalogoCargos(req, res) {
       UNION ALL
 
       -- Puestos medicos (es_medico=1): todas las especialidades CPH (id_carrera=1)
-      SELECT c.nombre AS carrera, pc.nombre AS puesto, e.nombre AS especialidad
+      SELECT c.nombre AS carrera, 'Médico' AS puesto, e.nombre AS especialidad
       FROM puestos_cargo pc
       JOIN carreras c ON LOWER(c.codigo) = LOWER(pc.carrera)
       CROSS JOIN especialidades e
-      WHERE pc.activo = 1 AND pc.es_medico = 1 AND e.id_carrera = 1 AND e.activo = 1
+      WHERE pc.activo = 1 AND pc.es_medico = 1 AND pc.nombre = 'MEDICO' AND e.id_carrera = 1 AND e.activo = 1
 
       UNION ALL
 
