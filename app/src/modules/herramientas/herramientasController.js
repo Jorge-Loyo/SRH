@@ -161,9 +161,11 @@ async function getCatalogoCargos(req, res) {
     const noMedicosRaw = await AppDataSource.query(`
       SELECT DISTINCT pc.id, pc.nombre AS profesion, e.nombre AS subespecialidad
       FROM puestos_cargo pc
+      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
       WHERE pc.carrera = 'cph' AND pc.activo = 1 AND pc.es_medico = 0
+      GROUP BY pc.id, pc.nombre, e.nombre
       ORDER BY pc.nombre, e.nombre
     `);
     // Deduplicar por (id, subespecialidad) — el DISTINCT SQL no es suficiente con JOINs múltiples
@@ -229,11 +231,12 @@ async function getCatalogoCargos(req, res) {
       filas.push({ escalafon: 'Enfermería', puesto: p, modalidad: '-', especialidad: '-', subespecialidad: '-' });
     }
 
-    // Escalafón General (Anexo II) — activos, sin jefaturas/gerencias
+    // Escalafón General (Anexo II) — con cargos vigentes, sin jefaturas/gerencias
     const egPuestos = await AppDataSource.query(`
-      SELECT nombre FROM puestos_cargo
-      WHERE carrera = 'eg' AND activo = 1 AND id NOT IN (149,150,151,152,153)
-      ORDER BY nombre
+      SELECT DISTINCT pc.nombre FROM puestos_cargo pc
+      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
+      WHERE pc.carrera = 'eg' AND pc.activo = 1 AND pc.id NOT IN (149,150,151,152,153)
+      ORDER BY pc.nombre
     `);
     for (const r of egPuestos) {
       filas.push({ escalafon: 'Escalafón General (Anexo II)', puesto: r.nombre, modalidad: '-', especialidad: '-', subespecialidad: '-' });
@@ -243,8 +246,8 @@ async function getCatalogoCargos(req, res) {
     const tecPuestos = await AppDataSource.query(`
       SELECT pc.nombre, GROUP_CONCAT(DISTINCT m.id_cod ORDER BY m.id_cod) AS modalidades
       FROM puestos_cargo pc
-      LEFT JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
-      LEFT JOIN modalidades m ON m.id = nc.id_modalidad
+      JOIN new_cargo nc ON nc.id_puesto = pc.id AND nc.estado = 'vigente'
+      JOIN modalidades m ON m.id = nc.id_modalidad
       WHERE pc.carrera = 'tec' AND pc.activo = 1
       GROUP BY pc.id, pc.nombre
       ORDER BY pc.nombre
