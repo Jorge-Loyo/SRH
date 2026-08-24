@@ -165,6 +165,7 @@ async function getCatalogoCargos(req, res) {
       LEFT JOIN puesto_especialidades pe ON pe.id_puesto = pc.id
       LEFT JOIN especialidades e ON e.id = pe.id_especialidad
       WHERE pc.carrera = 'cph' AND pc.activo = 1 AND pc.es_medico = 0
+        AND (e.nombre IS NULL OR e.nombre NOT LIKE '%sin Especialidad%')
       GROUP BY pc.id, pc.nombre, e.nombre
       ORDER BY pc.nombre, e.nombre
     `);
@@ -177,11 +178,12 @@ async function getCatalogoCargos(req, res) {
       return true;
     });
 
-    // ── 3. CPH médico con especialidades médicas (id<=78) ─────────────────────
+    // ── 3. CPH médico con especialidades médicas (id<=78, sin 'sin Especialidad') ────────
     const medicos = await AppDataSource.query(`
       SELECT DISTINCT e.nombre AS especialidad_raw
       FROM especialidades e
       WHERE e.id_carrera = 1 AND e.activo = 1 AND e.id <= 78
+        AND e.nombre NOT LIKE '%sin Especialidad%'
       ORDER BY e.nombre
     `);
 
