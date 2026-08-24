@@ -108,34 +108,28 @@ async function handleDotacionTotalPage({ AppDataSource, req }){
 async function handleDotacionTotalFiltros({ AppDataSource, req }) {
   if (!req.query.periodo) return { distinctValues: {}, siglasDistinctValues: {} };
 
-  const { buildWhere, MULTI_FILTERS, SIGLAS_FILTERS, FROM_JOINS } = require('./common/dotacion-total-handler');
+  const { MULTI_FILTERS, SIGLAS_FILTERS } = require('./common/dotacion-total-handler');
+  const dotacionCache = require('./common/dotacion-cache');
   const periodo = req.query.periodo;
-  const query = req.query;
 
-  const allPromises = [
-    ...MULTI_FILTERS.map(({ key, column }) => {
-      const { params, whereSQL } = buildWhere(query, periodo, key);
-      return AppDataSource.query(
-        `SELECT DISTINCT ${column} AS val ${FROM_JOINS} WHERE r.periodo = ? ${whereSQL} AND ${column} IS NOT NULL ORDER BY val ASC`,
-        params
-      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean), type: 'multi' }));
-    }),
-    ...SIGLAS_FILTERS.map(({ key, column }) => {
-      const { params, whereSQL } = buildWhere(query, periodo, key);
-      return AppDataSource.query(
-        `SELECT DISTINCT ${column} AS val ${FROM_JOINS} WHERE r.periodo = ? ${whereSQL} AND ${column} IS NOT NULL ORDER BY val ASC`,
-        params
-      ).then(rows => ({ key, values: rows.map(r => r.val).filter(Boolean), type: 'siglas' }));
-    }),
-  ];
+  // Usar el caché — si ya está construido es instantáneo
+  const allRows = await dotacionCache.getRows(AppDataSource, periodo);
 
-  const results = await Promise.all(allPromises);
   const distinctValues = {};
   const siglasDistinctValues = {};
-  results.forEach(({ key, values, type }) => {
-    if (type === 'siglas') siglasDistinctValues[key] = values;
-    else distinctValues[key] = values;
-  });
+
+  for (const { key, col, internalCol } of MULTI_FILTERS) {
+    const field = internalCol || col;
+    const vals = [...new Set(allRows.map(r => r[field]).filter(Boolean))].sort();
+    distinctValues[key] = vals;
+  }
+
+  // Siglas: Hospital ya está en la fila
+  siglasDistinctValues['sigla'] = [...new Set(allRows.map(r => r['Hospital']).filter(Boolean))].sort();
+  // universo, tipo, monovalencia no están en el caché actual — devolver vacío por ahora
+  siglasDistinctValues['universo_totalizador'] = [];
+  siglasDistinctValues['tipo_hospital_sigla']  = [];
+  siglasDistinctValues['monovalencia']         = [];
 
   return { distinctValues, siglasDistinctValues };
 }
