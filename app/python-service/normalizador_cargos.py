@@ -25,6 +25,18 @@ CONECTORES_MINUSCULA = {
 # (ej. "6F", "7B", "12A"), que deben quedar en mayuscula.
 SUFIJOS_ORDINALES = {'er', 'ero', 'do', 'da', 'ro', 'ra', 'to', 'ta', 'vo', 'va', 'mo', 'ma', 'no', 'na'}
 
+# Nombres históricos del escalafón CPH que deben unificarse al nombre canónico actual.
+# Aplica a las columnas ESCALAFON y LIT_COD_REG del padrón.
+NOMBRES_CPH_VIEJOS = {
+    'MEDICOS',
+    'MÉDICOS',
+    'CPH',
+    'CARRERA PROFESIONAL HOSPITALARIA',
+    'NUEVA CARRERA PROF. HOSP',
+    'NUEVA CARRERA PROF HOSP',
+}
+NOMBRE_CPH_CANONICO = 'Nueva Carrera Profesional Hospitalaria'
+
 COLUMNAS_FECHA = ['FEC_NACIM', 'BLOQ_DESDE', 'CARGO_DESDE', 'CARGO_HASTA', 'SALUD_1ER_CARGO', 'POU_DESDE']
 COLUMNAS_EMAIL = ['MAIL_PERSONAL', 'MAIL_LABORAL']
 
@@ -196,7 +208,19 @@ def limpiar_telefono(valor):
 def limpiar_lit_cod_reg(valor):
     if not isinstance(valor, str):
         return valor
-    return limpiar_texto_generico(valor.replace('|', ''))
+    valor = limpiar_texto_generico(valor.replace('|', ''))
+    if isinstance(valor, str) and valor.strip().upper() in NOMBRES_CPH_VIEJOS:
+        return NOMBRE_CPH_CANONICO
+    return valor
+
+
+def normalizar_escalafon(valor):
+    if not isinstance(valor, str):
+        return valor
+    valor = limpiar_texto_generico(valor)
+    if isinstance(valor, str) and valor.strip().upper() in NOMBRES_CPH_VIEJOS:
+        return NOMBRE_CPH_CANONICO
+    return valor
 
 
 def limpiar_email(valor):
@@ -238,8 +262,11 @@ class NormalizadorCargos:
         # 3. TELEFONO
         self._aplicar_y_contar(df, 'TELEFONO', limpiar_telefono, 'formato')
 
-        # 4. LIT_COD_REG: sacar "|"
+        # 4. LIT_COD_REG: sacar "|" y unificar nombre CPH
         self._aplicar_y_contar(df, 'LIT_COD_REG', limpiar_lit_cod_reg, 'quitar simbolos')
+
+        # 4b. ESCALAFON: unificar variantes históricas de CPH
+        self._aplicar_y_contar(df, 'ESCALAFON', normalizar_escalafon, 'unificar CPH')
 
         # 5. AYN: Formato Titulo
         self._aplicar_y_contar(df, 'AYN', formato_titulo, 'formato titulo')
